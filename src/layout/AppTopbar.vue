@@ -1,17 +1,41 @@
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
+import { useAuthStore } from '@/stores/authStore';
+import cache from '@/utils/cache';
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import AppConfigurator from './AppConfigurator.vue';
 
+const router = useRouter();
+const authStore = useAuthStore();
+
+const logoutDialog = ref(false);
 const { onMenuToggle, toggleDarkMode, isDarkTheme } = useLayout();
+
+const goToProfile = () => {
+    router.push({ name: 'profile' });
+};
+
+const goToConfig = () => {
+    router.push({ name: 'config' });
+};
+
+const goToRefresh = () => {
+    cache.refresh();
+    window.location.reload();
+};
+const confirmLogout = () => {
+    logoutDialog.value = true;
+};
+const logout = async () => {
+    await authStore.logout();
+};
 </script>
 
 <template>
     <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
-            <button class="layout-menu-button layout-topbar-action" @click="onMenuToggle">
-                <i class="pi pi-bars"></i>
-            </button>
-            <router-link to="/" class="layout-topbar-logo">
+            <router-link to="/dashboard" class="layout-topbar-logo">
                 <svg viewBox="0 0 54 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
                         fill-rule="evenodd"
@@ -30,9 +54,13 @@ const { onMenuToggle, toggleDarkMode, isDarkTheme } = useLayout();
                     </g>
                 </svg>
 
-                <span>SAKAI</span>
+                <span>StockManager</span>
             </router-link>
         </div>
+
+        <button class="layout-menu-button layout-topbar-action" @click="onMenuToggle">
+            <i class="pi pi-bars"></i>
+        </button>
 
         <div class="layout-topbar-actions">
             <div class="layout-config-menu">
@@ -60,20 +88,42 @@ const { onMenuToggle, toggleDarkMode, isDarkTheme } = useLayout();
 
             <div class="layout-topbar-menu hidden lg:block">
                 <div class="layout-topbar-menu-content">
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-calendar"></i>
-                        <span>Calendar</span>
+                    <button @click="goToRefresh()" type="button" class="layout-topbar-action">
+                        <i class="pi pi-refresh"></i>
+                        <span>Actualizar</span>
                     </button>
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-inbox"></i>
-                        <span>Messages</span>
+                    <button @click="goToConfig()" type="button" class="layout-topbar-action">
+                        <i class="pi pi-cog"></i>
+                        <span>Configuración</span>
                     </button>
-                    <button type="button" class="layout-topbar-action">
+                    <button @click="goToProfile()" type="button" class="layout-topbar-action">
                         <i class="pi pi-user"></i>
-                        <span>Profile</span>
+                        <span>Perfil</span>
+                    </button>
+                    <button @click="confirmLogout()" type="button" class="layout-topbar-action">
+                        <i class="pi pi-sign-out"></i>
+                        <span>Salir</span>
                     </button>
                 </div>
             </div>
         </div>
     </div>
+    <Dialog v-model:visible="logoutDialog" :style="{ width: '450px' }" header="Cerrar Sesión" :modal="true">
+        <div class="flex items-center gap-4">
+            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <span>
+                Deseas cerrar sesión <b>{{ authStore.getUser?.name || 'Usuario' }}</b
+                >?
+            </span>
+        </div>
+        <template #footer>
+            <div v-if="authStore.getLoading">
+                <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+            </div>
+            <div v-else>
+                <Button label="No" icon="pi pi-times" text @click="logoutDialog = false" />
+                <Button label="Sí" icon="pi pi-check" @click="logout" />
+            </div>
+        </template>
+    </Dialog>
 </template>
