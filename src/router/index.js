@@ -17,6 +17,11 @@ const router = createRouter({
                     path: '/profile',
                     name: 'profile',
                     component: () => import('@/views/users/Profile.vue')
+                },
+                {
+                    path: '/databases',
+                    name: 'databases',
+                    component: () => import('@/views/databases/Databases.vue')
                 }
             ]
         },

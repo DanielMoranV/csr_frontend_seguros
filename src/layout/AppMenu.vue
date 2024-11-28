@@ -25,6 +25,11 @@ const model = ref([
                 ]
             }
         ]
+    },
+    {
+        label: 'Sistemas',
+        icon: 'pi pi-fw pi-sitemap',
+        items: [{ label: 'Bases de datos', icon: 'pi pi-fw pi-database', to: '/databases' }]
     }
 ]);
 </script>

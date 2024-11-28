@@ -19,6 +19,7 @@ const user = ref({
     email: '',
     phone: '',
     role: { id: '', name: '' },
+    position: '',
     url_photo_profile: ''
 });
 const urlPhotoProfile = ref('');
@@ -172,7 +173,7 @@ watch(() => user.value.phone, validatePhoneField);
         <Avatar :image="user.url_photo_profile" size="xlarge" shape="circle" class="mr-3" />
         <div>
             <h2>{{ user.name }}</h2>
-            <p>{{ user.role.name.toUpperCase() }}</p>
+            <p>{{ user.role.name.toUpperCase() }} | {{ user.position.toUpperCase() }}</p>
         </div>
     </div>
     <div class="card">
@@ -244,9 +245,12 @@ watch(() => user.value.phone, validatePhoneField);
 .profile-header h2 {
     margin: 0;
     color: white;
+    font-size: 1.2rem;
+    font-family: 'Poppins', sans-serif;
 }
 .profile-header p {
     margin: 0;
     color: white;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
 }
 </style>
