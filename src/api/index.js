@@ -14,3 +14,27 @@ export const fetchUsers = () => axios.get('/users');
 export const createUser = (payload) => axios.post('/users', payload);
 export const deleteUser = (id) => axios.delete(`/users/${id}`);
 export const updateUser = (payload, id) => axios.put(`/users/${id}`, payload);
+
+// Medical Records
+export const fetchMedicalRecords = () => axios.get('/medical-records');
+export const createMedicalRecord = (payload) => axios.post('/medical-records', payload);
+export const updateMedicalRecord = (payload, id) => axios.put(`/medical-records/${id}`, payload);
+export const deleteMedicalRecord = (id) => axios.delete(`/medical-records/${id}`);
+
+// Insurers
+export const fetchInsurers = () => axios.get('/insurers');
+export const createInsurer = (payload) => axios.post('/insurers', payload);
+export const updateInsurer = (payload, id) => axios.put(`/insurers/${id}`, payload);
+export const deleteInsurer = (id) => axios.delete(`/insurers/${id}`);
+
+// Admissions
+export const fetchAdmissions = () => axios.get('/admissions');
+export const createAdmission = (payload) => axios.post('/admissions', payload);
+export const updateAdmission = (payload, id) => axios.put(`/admissions/${id}`, payload);
+export const deleteAdmission = (id) => axios.delete(`/admissions/${id}`);
+
+// Invoices
+export const fetchInvoices = () => axios.get('/invoices');
+export const createInvoice = (payload) => axios.post('/invoices', payload);
+export const updateInvoice = (payload, id) => axios.put(`/invoices/${id}`, payload);
+export const deleteInvoice = (id) => axios.delete(`/invoices/${id}`);
