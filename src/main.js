@@ -26,6 +26,7 @@ app.use(PrimeVue, {
     locale: {
         accept: 'Aceptar',
         reject: 'Rechazar',
+        invalidFileSize: 'El archivo "{0}" tiene un tamaño inválido. Debe ser menor a {1} KB.',
         startsWith: 'Comienza con',
         contains: 'Contiene',
         notContains: 'No contiene',
