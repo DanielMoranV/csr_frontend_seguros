@@ -1,9 +1,17 @@
 <script setup>
+import { useAdmissionsStore } from '@/stores/admissionsStore';
+import { useInsurersStore } from '@/stores/insurersStore';
+import { useInvoicesStore } from '@/stores/invoicesStore';
+import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
 import ExcelJS from 'exceljs';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 const toast = useToast();
+const admissionsStore = useAdmissionsStore();
+const insurersStore = useInsurersStore();
+const invoicesStore = useInvoicesStore();
+const medicalRecordsStore = useMedicalRecordsStore();
 
 const value = ref(0);
 let interval = null;
@@ -36,6 +44,12 @@ const onUpload = async (event) => {
             await workbook.xlsx.load(file);
             const worksheet = workbook.worksheets[0];
             const rows = worksheet.getSheetValues();
+
+            if (rows.length < 3) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
+                return;
+            }
+
             const dataSet = rows
                 .slice(2)
                 .filter((row) => row[5] !== 'No existe...')
@@ -103,15 +117,32 @@ const onUpload = async (event) => {
                 }
             });
 
+            let admissionsData = Array.from(seenAdmissions.values());
+            let existingAdmissions = [];
+            let newAdmissions = [];
+
+            admissionsData.forEach((admission) => {
+                const exists = admissions.value.some((existingAdmission) => existingAdmission.number === admission.number);
+
+                if (exists) {
+                    existingAdmissions.push(admission);
+                } else {
+                    newAdmissions.push(admission);
+                }
+            });
+
+            console.log(existingAdmissions);
+            console.log(newAdmissions);
+
             // Convertimos el Map a un array
-            medical_records.value = Array.from(seenRecords.values());
-            insurers.value = Array.from(seenInsurers.values());
-            admissions.value = Array.from(seenAdmissions.values());
-            invoices.value = Array.from(seenInvoices.values());
-            console.log(medical_records.value);
-            console.log(insurers.value);
-            console.log(invoices.value);
-            console.log(admissions.value);
+            // medical_records.value = Array.from(seenRecords.values());
+            // insurers.value = Array.from(seenInsurers.values());
+            // admissions.value = Array.from(seenAdmissions.values());
+            // invoices.value = Array.from(seenInvoices.values());
+            // console.log(medical_records.value);
+            // console.log(insurers.value);
+            // console.log(invoices.value);
+            // console.log(admissions.value);
         } catch (error) {
             console.error('Error al procesar el archivo', error);
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al procesar el archivo', life: 3000 });
@@ -121,8 +152,29 @@ const onUpload = async (event) => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
     startProgress();
+
+    if (!admissionsStore.getAdmissions) {
+        await admissionsStore.fetchAdmissions();
+        admissions.value = admissionsStore.getAdmissions;
+    }
+    if (!insurersStore.getInsurers) {
+        await insurersStore.fetchInsurers();
+        insurers.value = insurersStore.getInsurers;
+    }
+    if (!invoicesStore.getInvoices) {
+        await invoicesStore.fetchInvoices();
+        invoices.value = invoicesStore.getInvoices;
+    }
+    if (!medicalRecordsStore.getMedicalRecords) {
+        await medicalRecordsStore.fetchMedicalRecords();
+        medical_records.value = medicalRecordsStore.getMedicalRecords;
+    }
+    console.log(admissions.value);
+    console.log(insurers.value);
+    console.log(invoices.value);
+    console.log(medical_records.value);
 });
 
 onBeforeUnmount(() => {

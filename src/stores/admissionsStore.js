@@ -1,4 +1,5 @@
-import { fetchAdmissions } from '@/api';
+import { createAdmission, deleteAdmission, fetchAdmissions, updateAdmission } from '@/api';
+import cache from '@/utils/cache';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
 
