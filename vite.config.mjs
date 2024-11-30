@@ -8,7 +8,8 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config/
 export default defineConfig({
     optimizeDeps: {
-        include: ['exceljs'],
+        include: ['exceljs', 'file-saver'],
+
         noDiscovery: true
     },
     plugins: [

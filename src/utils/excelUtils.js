@@ -44,3 +44,43 @@ export const exportToExcel = async (columns, data, sheetName = 'Sheet1', fileNam
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), fileName);
 };
+
+// Función para cargar el archivo Excel
+export const loadExcelFile = async (file) => {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(file);
+    return workbook.worksheets[0].getSheetValues();
+};
+
+// Función para validar los datos del archivo
+export const validateData = (rows) => {
+    if (rows.length < 3) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
+        return false;
+    }
+    return true;
+};
+
+// Función para procesar los datos
+export const processDataDatabase = (rows) => {
+    const dataSet = rows
+        .slice(2)
+        .filter((row) => row[5] !== 'No existe...')
+        .filter((row) => row[8] != null && row[8] !== '')
+        .map((row) => ({
+            admission_number: row[1],
+            attendance_date: row[2] ? row[2] : null,
+            number_medical_record: row[4] ? row[4] : null,
+            name_patient: row[5] ? row[5] : null,
+            company: row[7] ? row[7] : null,
+            name_insurers: row[8] ? row[8] : null,
+            type_attention: row[9] ? row[9] : null,
+            name_doctor: row[10] ? row[10] : null,
+            amount_attention: row[14] ? row[14] : 0,
+            number_invoice: row[15] ? row[15] : null,
+            invoice_date: row[16] ? row[16] : null,
+            number_payment: row[17] ? row[17] : null,
+            payment_date: row[18] ? row[18] : null
+        }));
+    return dataSet;
+};

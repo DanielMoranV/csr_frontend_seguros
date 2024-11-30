@@ -3,7 +3,7 @@ import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
 import { useInvoicesStore } from '@/stores/invoicesStore';
 import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
-import ExcelJS from 'exceljs';
+import { loadExcelFile, processDataDatabase } from '@/utils/excelUtils';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
@@ -39,38 +39,15 @@ function endProgress() {
 const onUpload = async (event) => {
     const file = event.files[0];
     if (file && file.name.endsWith('.xlsx')) {
-        const workbook = new ExcelJS.Workbook();
         try {
-            await workbook.xlsx.load(file);
-            const worksheet = workbook.worksheets[0];
-            const rows = worksheet.getSheetValues();
+            const rows = await loadExcelFile(file);
 
             if (rows.length < 3) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 return;
             }
 
-            const dataSet = rows
-                .slice(2)
-                .filter((row) => row[5] !== 'No existe...')
-                .filter((row) => row[8] != null && row[8] !== '')
-                .map((row) => ({
-                    admission_number: row[1],
-                    attendance_date: row[2] ? row[2] : null,
-                    number_medical_record: row[4] ? row[4] : null,
-                    name_patient: row[5] ? row[5] : null,
-                    company: row[7] ? row[7] : null,
-                    name_insurers: row[8] ? row[8] : null,
-                    type_attention: row[9] ? row[9] : null,
-                    name_doctor: row[10] ? row[10] : null,
-                    amount_attention: row[14] ? row[14] : 0,
-                    number_invoice: row[15] ? row[15] : null,
-                    invoice_date: row[16] ? row[16] : null,
-                    number_payment: row[17] ? row[17] : null,
-                    payment_date: row[18] ? row[18] : null
-                }));
-
-            console.log(dataSet.length);
+            const dataSet = processDataDatabase(rows);
 
             let seenRecords = new Map();
             let seenInsurers = new Map();
@@ -117,6 +94,77 @@ const onUpload = async (event) => {
                 }
             });
 
+            // Historias Clínicas
+            let medicalRecordsData = Array.from(seenRecords.values());
+            let existingMedicalRecords = [];
+            let newMedicalRecords = [];
+
+            medicalRecordsData.forEach((medicalRecord) => {
+                const exists = medical_records.value.some((existingMedicalRecord) => existingMedicalRecord.number === medicalRecord.number);
+
+                if (exists) {
+                    existingMedicalRecords.push(medicalRecord);
+                } else {
+                    newMedicalRecords.push(medicalRecord);
+                }
+            });
+
+            if (existingMedicalRecords.length > 0) {
+                const { status, success, error } = await medicalRecordsStore.updateMultiple(existingMedicalRecords);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar los registros médicos', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Registros médicos actualizados correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Registros médicos no actualizados', life: 3000 });
+                }
+            }
+            if (newMedicalRecords.length > 0) {
+                const { status, success, error } = await medicalRecordsStore.createMultiple(newMedicalRecords);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al crear los registros médicos', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Registros médicos creados correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Registros médicos no creados', life: 3000 });
+                }
+            }
+
+            // Aseguradoras
+            let insurersData = Array.from(seenInsurers.values());
+            let existingInsurers = [];
+            let newInsurers = [];
+
+            insurersData.forEach((insurer) => {
+                const exists = insurers.value.some((existingInsurer) => existingInsurer.insurers === insurer.insurers);
+
+                if (exists) {
+                    existingInsurers.push(insurer);
+                } else {
+                    newInsurers.push(insurer);
+                }
+            });
+
+            if (existingInsurers.length > 0) {
+                const { status, success, error } = await insurersStore.updateMultiple(existingInsurers);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar las aseguradoras', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Aseguradoras actualizadas correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Aseguradoras no actualizadas', life: 3000 });
+                }
+            }
+
+            if (newInsurers.length > 0) {
+                const { status, success, error } = await insurersStore.createMultiple(newInsurers);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al crear las aseguradoras', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Aseguradoras creadas correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Aseguradoras no creadas', life: 3000 });
+                }
+            }
+
+            // Admisiones
+
             let admissionsData = Array.from(seenAdmissions.values());
             let existingAdmissions = [];
             let newAdmissions = [];
@@ -131,18 +179,60 @@ const onUpload = async (event) => {
                 }
             });
 
-            console.log(existingAdmissions);
-            console.log(newAdmissions);
+            if (existingAdmissions.length > 0) {
+                const { status, success, error } = await admissionsStore.updateMultiple(existingAdmissions);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar las admisiones', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Admisiones actualizadas correctamente', life: 3000 });
 
-            // Convertimos el Map a un array
-            // medical_records.value = Array.from(seenRecords.values());
-            // insurers.value = Array.from(seenInsurers.values());
-            // admissions.value = Array.from(seenAdmissions.values());
-            // invoices.value = Array.from(seenInvoices.values());
-            // console.log(medical_records.value);
-            // console.log(insurers.value);
-            // console.log(invoices.value);
-            // console.log(admissions.value);
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Admisiones no actualizadas', life: 3000 });
+                }
+            }
+            if (newAdmissions.length > 0) {
+                const { status, success, error } = await admissionsStore.createMultiple(newAdmissions);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al crear las admisiones', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Admisiones creadas correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Admisiones no creadas', life: 3000 });
+                }
+            }
+
+            // Facturas
+
+            let invoicesData = Array.from(seenInvoices.values());
+            let existingInvoices = [];
+            let newInvoices = [];
+
+            invoicesData.forEach((invoice) => {
+                const exists = invoices.value.some((existingInvoice) => existingInvoice.number === invoice.number);
+
+                if (exists) {
+                    existingInvoices.push(invoice);
+                } else {
+                    newInvoices.push(invoice);
+                }
+            });
+
+            if (existingInvoices.length > 0) {
+                const { status, success, error } = await invoicesStore.updateMultiple(existingInvoices);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar las facturas', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Facturas actualizadas correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Facturas no actualizadas', life: 3000 });
+                }
+            }
+            if (newInvoices.length > 0) {
+                const { status, success, error } = await invoicesStore.createMultiple(newInvoices);
+                if (!status) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al crear las facturas', life: 3000 });
+                } else {
+                    toast.add({ severity: 'success', summary: 'Success', detail: success.length + ' Facturas creadas correctamente', life: 3000 });
+                    toast.add({ severity: 'error', summary: 'Error', detail: error.length + ' Facturas no creadas', life: 3000 });
+                }
+            }
         } catch (error) {
             console.error('Error al procesar el archivo', error);
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al procesar el archivo', life: 3000 });

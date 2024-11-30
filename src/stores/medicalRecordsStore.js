@@ -1,4 +1,4 @@
-import { createMedicalRecord, deleteMedicalRecord, fetchMedicalRecords, updateMedicalRecord } from '@/api';
+import { createMedicalRecord, createMedicalRecords, deleteMedicalRecord, fetchMedicalRecords, updateMedicalRecord, updateMedicalRecords } from '@/api';
 import cache from '@/utils/cache';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -54,6 +54,25 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
                 this.message = 'Registro médico eliminado correctamente';
             }
             return this.success;
+        },
+        async createMultiple(payload) {
+            const { data } = await handleResponseStore(createMedicalRecords(payload), this);
+            if (this.success) {
+                data.success.forEach((medicalRecord) => {
+                    this.medicalRecords.push(medicalRecord);
+                });
+                cache.setItem('medicalRecords', this.medicalRecords);
+            }
+            return { status: this.success, success: data.success, error: data.errors };
+        },
+        async updateMultiple(payload) {
+            const { data } = await handleResponseStore(updateMedicalRecords(payload), this);
+            if (this.success) {
+                payload.forEach((medicalRecordData) => {
+                    this.medicalRecords = this.medicalRecords.map((medicalRecord) => (medicalRecord.id === medicalRecordData.id ? medicalRecordData : medicalRecord));
+                });
+            }
+            return { status: this.success, success: data.success, error: data.errors };
         }
     }
 });

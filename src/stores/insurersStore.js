@@ -1,4 +1,4 @@
-import { createInsurer, deleteInsurer, fetchInsurers, updateInsurer } from '@/api';
+import { createInsurer, createInsurers, deleteInsurer, fetchInsurers, updateInsurer, updateInsurers } from '@/api';
 import cache from '@/utils/cache';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -54,6 +54,25 @@ export const useInsurersStore = defineStore('insurersStore', {
                 this.message = 'Aseguradora eliminada correctamente';
             }
             return this.success;
+        },
+        async createMultiple(payload) {
+            const { data } = await handleResponseStore(createInsurers(payload), this);
+            if (this.success) {
+                data.success.forEach((insurer) => {
+                    this.insurers.push(insurer);
+                });
+                cache.setItem('insurers', this.insurers);
+            }
+            return { status: this.success, success: data.success, error: data.errors };
+        },
+        async updateMultiple(payload) {
+            const { data } = await handleResponseStore(updateInsurers(payload), this);
+            if (this.success) {
+                payload.forEach((insurerData) => {
+                    this.insurers = this.insurers.map((insurer) => (insurer.id === insurerData.id ? insurerData : insurer));
+                });
+            }
+            return { status: this.success, success: data.success, error: data.errors };
         }
     }
 });

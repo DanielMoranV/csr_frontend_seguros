@@ -1,4 +1,4 @@
-import { createAdmission, deleteAdmission, fetchAdmissions, updateAdmission } from '@/api';
+import { createAdmission, createAdmissions, deleteAdmission, fetchAdmissions, updateAdmission, updateAdmissions } from '@/api';
 import cache from '@/utils/cache';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -54,6 +54,27 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
                 this.message = 'Admisión eliminada correctamente';
             }
             return this.success;
+        },
+        async createMultiple(payload) {
+            console.log(payload);
+            const { data } = await handleResponseStore(createAdmissions(payload), this);
+            if (this.success) {
+                data.success.forEach((admission) => {
+                    this.admissions.push(admission);
+                });
+                cache.setItem('admissions', this.admissions);
+            }
+            return data;
+        },
+        async updateMultiple(payload) {
+            const { data } = await handleResponseStore(updateAdmissions(payload), this);
+            if (this.success) {
+                payload.forEach((admissionData) => {
+                    this.admissions = this.admissions.map((admission) => (admission.id === admissionData.id ? admissionData : admission));
+                });
+                cache.setItem('admissions', this.admissions);
+            }
+            return { status: this.success, success: data.success, error: data.errors };
         }
     }
 });
