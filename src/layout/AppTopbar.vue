@@ -2,6 +2,7 @@
 import { useLayout } from '@/layout/composables/layout';
 import { useAuthStore } from '@/stores/authStore';
 import cache from '@/utils/cache';
+import indexedDB from '@/utils/indexedDB';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppConfigurator from './AppConfigurator.vue';
@@ -22,6 +23,7 @@ const goToConfig = () => {
 
 const goToRefresh = () => {
     cache.refresh();
+    indexedDB.cleanAll();
     window.location.reload();
 };
 const confirmLogout = () => {

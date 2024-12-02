@@ -1,11 +1,11 @@
 import { createAdmission, createAdmissions, deleteAdmission, fetchAdmissions, updateAdmission, updateAdmissions } from '@/api';
-import cache from '@/utils/cache';
+import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
 
 export const useAdmissionsStore = defineStore('admissionsStore', {
     state: () => ({
-        admissions: cache.getItem('admissions'),
+        admissions: [],
         message: {},
         success: false,
         status: null,
@@ -14,25 +14,34 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
     getters: {
         getAdmissions(state) {
             return state.admissions;
+        },
+        getMessage(state) {
+            return state.message;
         }
     },
     actions: {
+        async initializeStore() {
+            // Carga inicial desde IndexedDB
+            const admissionsFromCache = await indexedDB.getItem('admissions');
+            this.admissions = admissionsFromCache || [];
+        },
         async fetchAdmissions() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchAdmissions(), this);
             if (this.success) {
                 this.admissions = data;
-                cache.setItem('admissions', this.admissions);
+                await indexedDB.setItem('admissions', this.admissions);
             } else {
                 this.admissions = [];
             }
+            this.loading = false;
             return this.success;
         },
         async createAdmission(payload) {
             const { data } = await handleResponseStore(createAdmission(payload), this);
             if (this.success) {
                 this.admissions.push(data);
-                cache.setItem('admissions', this.admissions);
+                await indexedDB.setItem('admissions', this.admissions);
                 this.message = 'Admisión creada correctamente';
             }
             return this.success;
@@ -41,7 +50,7 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             const { data } = await handleResponseStore(updateAdmission(payload, id), this);
             if (this.success) {
                 this.admissions = this.admissions.map((admission) => (admission.id === id ? data : admission));
-                cache.setItem('admissions', this.admissions);
+                await indexedDB.setItem('admissions', this.admissions);
                 this.message = 'Admisión actualizada correctamente';
             }
             return this.success;
@@ -50,29 +59,24 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             await handleResponseStore(deleteAdmission(id), this);
             if (this.success) {
                 this.admissions = this.admissions.filter((admission) => admission.id !== id);
-                cache.setItem('admissions', this.admissions);
+                await indexedDB.setItem('admissions', this.admissions);
                 this.message = 'Admisión eliminada correctamente';
             }
             return this.success;
         },
         async createMultiple(payload) {
-            console.log(payload);
             const { data } = await handleResponseStore(createAdmissions(payload), this);
             if (this.success) {
-                data.success.forEach((admission) => {
-                    this.admissions.push(admission);
-                });
-                cache.setItem('admissions', this.admissions);
+                await this.fetchAdmissions();
+                this.message = 'Admisiones creadas correctamente';
             }
-            return data;
+            return { status: this.success, success: data.success, error: data.errors };
         },
         async updateMultiple(payload) {
             const { data } = await handleResponseStore(updateAdmissions(payload), this);
             if (this.success) {
-                payload.forEach((admissionData) => {
-                    this.admissions = this.admissions.map((admission) => (admission.id === admissionData.id ? admissionData : admission));
-                });
-                cache.setItem('admissions', this.admissions);
+                await this.fetchAdmissions();
+                this.message = 'Admisiones actualizadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
         }

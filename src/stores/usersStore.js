@@ -1,12 +1,12 @@
 import { createUser, deleteUser, fetchUsers, updateProfileUser, updateUser, uploadUsers } from '@/api';
-import cache from '@/utils/cache';
+import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
 
 export const useUsersStore = defineStore('userStore', {
     state: () => ({
-        users: cache.getItem('users'),
-        user: cache.getItem('user'),
+        users: indexedDB.getItem('users'),
+        user: indexedDB.getItem('user'),
         message: {},
         success: false,
         status: null,
@@ -38,7 +38,7 @@ export const useUsersStore = defineStore('userStore', {
                     }
                 });
                 this.users = data;
-                cache.setItem('users', this.users);
+                indexedDB.setItem('users', this.users);
             } else {
                 this.users = [];
             }
@@ -53,7 +53,7 @@ export const useUsersStore = defineStore('userStore', {
                 this.user = data;
                 this.users.push(data);
                 this.message = 'Usuario creado correctamente';
-                cache.setItem('users', this.users);
+                indexedDB.setItem('users', this.users);
             } else {
                 this.user = null;
             }
@@ -74,7 +74,7 @@ export const useUsersStore = defineStore('userStore', {
             const { data } = await handleResponseStore(uploadUsers(requestData), this);
             if (this.success) {
                 data.success.forEach((element) => this.users.push(element));
-                cache.setItem('users', this.users);
+                indexedDB.setItem('users', this.users);
                 // let currentUser = authStore.getUser;
                 // data.success.forEach(async (element) => {
                 //     let parameters = {
@@ -95,9 +95,9 @@ export const useUsersStore = defineStore('userStore', {
             const { data } = await handleResponseStore(updateUser(payload, id), this);
             if (this.success) {
                 this.user = data;
-                cache.setItem('user', this.user);
+                indexedDB.setItem('user', this.user);
                 this.users = this.users.map((user) => (user.id === id ? data : user));
-                cache.setItem('users', this.users);
+                indexedDB.setItem('users', this.users);
                 this.message = 'Usuario actualizado correctamente';
             }
             return this.success;
@@ -114,14 +114,14 @@ export const useUsersStore = defineStore('userStore', {
                 };
 
                 // También puedes actualizar el caché si es necesario
-                cache.setItem('users', this.users);
+                indexedDB.setItem('users', this.users);
             }
         },
         async updateProfileUser(payload, id) {
             this.loading = true;
             const { data } = await handleResponseStore(updateProfileUser(payload, id), this);
             if (this.success) {
-                cache.setItem('user', data);
+                indexedDB.setItem('user', data);
                 this.user = data;
             }
             return this.success;
@@ -144,7 +144,7 @@ export const useUsersStore = defineStore('userStore', {
                         this.message = 'Usuario eliminado exitosamente';
                     }
                     // Actualizar el caché con la lista de usuarios actualizada
-                    cache.setItem('users', this.users);
+                    indexedDB.setItem('users', this.users);
                 }
             }
             return this.success;

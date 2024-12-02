@@ -8,6 +8,41 @@ export const handleResponseToast = (success, message, status, toast) => {
     }
 };
 
+export const handleResponseMultipleNew = async (newRecords, store, toast) => {
+    const { status, success, error } = await store.createMultiple(newRecords);
+    let countSuccess = success.length;
+    let countError = error.length;
+
+    let message = store.getMessage;
+    if (!status) {
+        toast.add({ severity: 'error', summary: 'Error', detail: message, life: 3000 });
+        return { success: false };
+    } else {
+        toast.add({ severity: 'success', summary: 'Success', detail: countSuccess + ' ' + message, life: 3000 });
+        if (countError > 0) {
+            toast.add({ severity: 'error', summary: 'Error', detail: countError + ' ' + 'Registros no creados', life: 3000 });
+        }
+    }
+    return { success: true, countSuccess, countError };
+};
+
+export const handleResponseMultipleUpdate = async (updatedRecords, store, toast) => {
+    const { status, success, error } = await store.updateMultiple(updatedRecords);
+    let countSuccess = success.length;
+    let countError = error.length;
+    let message = store.getMessage;
+    if (!status) {
+        toast.add({ severity: 'error', summary: 'Error', detail: message, life: 3000 });
+        return { success: false };
+    } else {
+        toast.add({ severity: 'success', summary: 'Success', detail: countSuccess + ' ' + message, life: 3000 });
+        if (countError > 0) {
+            toast.add({ severity: 'error', summary: 'Error', detail: countError + ' ' + message, life: 3000 });
+        }
+    }
+    return { success: true, countSuccess, countError };
+};
+
 export async function handleResponseStore(promise, store) {
     try {
         const { data } = await promise;

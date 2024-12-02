@@ -1,6 +1,7 @@
 import { login, logout, me, updateUser } from '@/api';
 import router from '@/router';
 import cache from '@/utils/cache';
+import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
 
@@ -65,6 +66,7 @@ export const useAuthStore = defineStore('authStore', {
             const { data } = await handleResponseStore(logout(), this);
             this.message = 'Sesión cerrada correctamente';
             cache.cleanAll();
+            indexedDB.cleanAll();
             this.user = data;
             this.session = false;
             this.socketId = null;

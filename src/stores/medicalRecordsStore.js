@@ -1,11 +1,11 @@
 import { createMedicalRecord, createMedicalRecords, deleteMedicalRecord, fetchMedicalRecords, updateMedicalRecord, updateMedicalRecords } from '@/api';
-import cache from '@/utils/cache';
+import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
 
 export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
     state: () => ({
-        medicalRecords: cache.getItem('medicalRecords'),
+        medicalRecords: [],
         message: {},
         success: false,
         status: null,
@@ -14,15 +14,23 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
     getters: {
         getMedicalRecords(state) {
             return state.medicalRecords;
+        },
+        getMessage(state) {
+            return state.message;
         }
     },
     actions: {
+        async initializeStore() {
+            // Carga inicial desde IndexedDB
+            const medicalRecordsFromCache = await indexedDB.getItem('medicalRecords');
+            this.medicalRecords = medicalRecordsFromCache || [];
+        },
         async fetchMedicalRecords() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchMedicalRecords(), this);
             if (this.success) {
                 this.medicalRecords = data;
-                cache.setItem('medicalRecords', this.medicalRecords);
+                indexedDB.setItem('medicalRecords', this.medicalRecords);
             } else {
                 this.medicalRecords = [];
             }
@@ -32,7 +40,7 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
             const { data } = await handleResponseStore(createMedicalRecord(payload), this);
             if (this.success) {
                 this.medicalRecords.push(data);
-                cache.setItem('medicalRecords', this.medicalRecords);
+                indexedDB.setItem('medicalRecords', this.medicalRecords);
                 this.message = 'Registro médico creado correctamente';
             }
             return this.success;
@@ -41,7 +49,7 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
             const { data } = await handleResponseStore(updateMedicalRecord(payload, id), this);
             if (this.success) {
                 this.medicalRecords = this.medicalRecords.map((medicalRecord) => (medicalRecord.id === id ? data : medicalRecord));
-                cache.setItem('medicalRecords', this.medicalRecords);
+                indexedDB.setItem('medicalRecords', this.medicalRecords);
                 this.message = 'Registro médico actualizado correctamente';
             }
             return this.success;
@@ -50,7 +58,7 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
             await handleResponseStore(deleteMedicalRecord(id), this);
             if (this.success) {
                 this.medicalRecords = this.medicalRecords.filter((medicalRecord) => medicalRecord.id !== id);
-                cache.setItem('medicalRecords', this.medicalRecords);
+                indexedDB.setItem('medicalRecords', this.medicalRecords);
                 this.message = 'Registro médico eliminado correctamente';
             }
             return this.success;
@@ -58,19 +66,16 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
         async createMultiple(payload) {
             const { data } = await handleResponseStore(createMedicalRecords(payload), this);
             if (this.success) {
-                data.success.forEach((medicalRecord) => {
-                    this.medicalRecords.push(medicalRecord);
-                });
-                cache.setItem('medicalRecords', this.medicalRecords);
+                await this.fetchMedicalRecords();
+                this.message = 'Historias clínicas creadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
         },
         async updateMultiple(payload) {
             const { data } = await handleResponseStore(updateMedicalRecords(payload), this);
             if (this.success) {
-                payload.forEach((medicalRecordData) => {
-                    this.medicalRecords = this.medicalRecords.map((medicalRecord) => (medicalRecord.id === medicalRecordData.id ? medicalRecordData : medicalRecord));
-                });
+                await this.fetchMedicalRecords();
+                this.message = 'Historias clínicas actualizadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
         }

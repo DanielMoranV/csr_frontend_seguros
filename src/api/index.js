@@ -21,14 +21,14 @@ export const createMedicalRecord = (payload) => axios.post('/medical-records', p
 export const updateMedicalRecord = (payload, id) => axios.put(`/medical-records/${id}`, payload);
 export const deleteMedicalRecord = (id) => axios.delete(`/medical-records/${id}`);
 export const createMedicalRecords = (payload) => axios.post('/medical-records/store', payload);
-export const updateMedicalRecords = (payload) => axios.post('/medical-records/update', payload);
+export const updateMedicalRecords = (payload) => axios.patch('/medical-records/update', payload);
 // Insurers
 export const fetchInsurers = () => axios.get('/insurers');
 export const createInsurer = (payload) => axios.post('/insurers', payload);
 export const updateInsurer = (payload, id) => axios.put(`/insurers/${id}`, payload);
 export const deleteInsurer = (id) => axios.delete(`/insurers/${id}`);
 export const createInsurers = (payload) => axios.post('/insurers/store', payload);
-export const updateInsurers = (payload) => axios.post('/insurers/update', payload);
+export const updateInsurers = (payload) => axios.patch('/insurers/update', payload);
 
 // Admissions
 export const fetchAdmissions = () => axios.get('/admissions');
@@ -36,7 +36,7 @@ export const createAdmission = (payload) => axios.post('/admissions', payload);
 export const updateAdmission = (payload, id) => axios.put(`/admissions/${id}`, payload);
 export const deleteAdmission = (id) => axios.delete(`/admissions/${id}`);
 export const createAdmissions = (payload) => axios.post('/admissions/store', payload);
-export const updateAdmissions = (payload) => axios.post('/admissions/update', payload);
+export const updateAdmissions = (payload) => axios.patch('/admissions/update', payload);
 
 // Invoices
 export const fetchInvoices = () => axios.get('/invoices');
@@ -44,4 +44,4 @@ export const createInvoice = (payload) => axios.post('/invoices', payload);
 export const updateInvoice = (payload, id) => axios.put(`/invoices/${id}`, payload);
 export const deleteInvoice = (id) => axios.delete(`/invoices/${id}`);
 export const createInvoices = (payload) => axios.post('/invoices/store', payload);
-export const updateInvoices = (payload) => axios.post('/invoices/update', payload);
+export const updateInvoices = (payload) => axios.patch('/invoices/update', payload);

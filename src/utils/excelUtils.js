@@ -65,22 +65,43 @@ export const validateData = (rows) => {
 export const processDataDatabase = (rows) => {
     const dataSet = rows
         .slice(2)
+        .filter((row) => row[4] != '')
         .filter((row) => row[5] !== 'No existe...')
-        .filter((row) => row[8] != null && row[8] !== '')
+        .filter((row) => row[8] != '')
         .map((row) => ({
             admission_number: row[1],
-            attendance_date: row[2] ? row[2] : null,
+            attendance_date: row[2] ? validateDate(row[2]) : null,
             number_medical_record: row[4] ? row[4] : null,
             name_patient: row[5] ? row[5] : null,
             company: row[7] ? row[7] : null,
-            name_insurers: row[8] ? row[8] : null,
+            name_insurer: row[8] ? row[8] : null,
             type_attention: row[9] ? row[9] : null,
             name_doctor: row[10] ? row[10] : null,
             amount_attention: row[14] ? row[14] : 0,
             number_invoice: row[15] ? row[15] : null,
-            invoice_date: row[16] ? row[16] : null,
+            invoice_date: row[16] ? validateDate(row[16]) : null,
             number_payment: row[17] ? row[17] : null,
-            payment_date: row[18] ? row[18] : null
+            payment_date: row[18] ? validateDate(row[18]) : null
         }));
     return dataSet;
+};
+export const validateDate = (date) => {
+    const parsedDate = new Date(date);
+    if (!isNaN(parsedDate.getTime())) {
+        const year = parsedDate.getFullYear();
+        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+
+        // Verificar si la fecha contiene hora
+        const hours = String(parsedDate.getHours()).padStart(2, '0');
+        const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
+
+        // Si la hora es 00:00, devolver solo la fecha
+        if (hours === '00' && minutes === '00') {
+            return `${year}-${month}-${day}`;
+        }
+        // Devolver fecha con hora
+        return `${year}-${month}-${day} ${hours}:${minutes}:00`;
+    }
+    return null;
 };

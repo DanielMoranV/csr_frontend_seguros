@@ -1,11 +1,11 @@
 import { createInvoice, createInvoices, deleteInvoice, fetchInvoices, updateInvoice, updateInvoices } from '@/api';
-import cache from '@/utils/cache';
+import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
 
 export const useInvoicesStore = defineStore('invoicesStore', {
     state: () => ({
-        invoices: cache.getItem('invoices'),
+        invoices: [],
         message: {},
         success: false,
         status: null,
@@ -14,15 +14,23 @@ export const useInvoicesStore = defineStore('invoicesStore', {
     getters: {
         getInvoices(state) {
             return state.invoices;
+        },
+        getMessage(state) {
+            return state.message;
         }
     },
     actions: {
+        async initializeStore() {
+            // Carga inicial desde IndexedDB
+            const invoicesFromCache = await indexedDB.getItem('invoices');
+            this.invoices = invoicesFromCache || [];
+        },
         async fetchInvoices() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchInvoices(), this);
             if (this.success) {
                 this.invoices = data;
-                cache.setItem('invoices', this.invoices);
+                indexedDB.setItem('invoices', this.invoices);
             } else {
                 this.invoices = [];
             }
@@ -32,7 +40,7 @@ export const useInvoicesStore = defineStore('invoicesStore', {
             const { data } = await handleResponseStore(createInvoice(payload), this);
             if (this.success) {
                 this.invoices.push(data);
-                cache.setItem('invoices', this.invoices);
+                indexedDB.setItem('invoices', this.invoices);
                 this.message = 'Factura creada correctamente';
             }
             return this.success;
@@ -41,7 +49,7 @@ export const useInvoicesStore = defineStore('invoicesStore', {
             const { data } = await handleResponseStore(updateInvoice(payload, id), this);
             if (this.success) {
                 this.invoices = this.invoices.map((invoice) => (invoice.id === id ? data : invoice));
-                cache.setItem('invoices', this.invoices);
+                indexedDB.setItem('invoices', this.invoices);
                 this.message = 'Factura actualizada correctamente';
             }
             return this.success;
@@ -50,7 +58,7 @@ export const useInvoicesStore = defineStore('invoicesStore', {
             await handleResponseStore(deleteInvoice(id), this);
             if (this.success) {
                 this.invoices = this.invoices.filter((invoice) => invoice.id !== id);
-                cache.setItem('invoices', this.invoices);
+                indexedDB.setItem('invoices', this.invoices);
                 this.message = 'Factura eliminada correctamente';
             }
             return this.success;
@@ -58,19 +66,16 @@ export const useInvoicesStore = defineStore('invoicesStore', {
         async createMultiple(payload) {
             const { data } = await handleResponseStore(createInvoices(payload), this);
             if (this.success) {
-                data.success.forEach((invoice) => {
-                    this.invoices.push(invoice);
-                });
-                cache.setItem('invoices', this.invoices);
+                await this.fetchInvoices();
+                this.message = 'Facturas creadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
         },
-        async updateInvoices(payload) {
+        async updateMultiple(payload) {
             const { data } = await handleResponseStore(updateInvoices(payload), this);
             if (this.success) {
-                payload.forEach((invoiceData) => {
-                    this.invoices = this.invoices.map((invoice) => (invoice.id === invoiceData.id ? invoiceData : invoice));
-                });
+                await this.fetchInvoices();
+                this.message = 'Facturas actualizadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
         }
