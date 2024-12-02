@@ -71,6 +71,7 @@ export const processDataDatabase = (rows) => {
         .map((row) => ({
             admission_number: row[1],
             attendance_date: row[2] ? validateDate(row[2]) : null,
+            attendance_hour: row[24] ? validateTime(row[24]) : null,
             number_medical_record: row[4] ? row[4] : null,
             name_patient: row[5] ? row[5] : null,
             company: row[7] ? row[7] : null,
@@ -81,7 +82,8 @@ export const processDataDatabase = (rows) => {
             number_invoice: row[15] ? row[15] : null,
             invoice_date: row[16] ? validateDate(row[16]) : null,
             number_payment: row[17] ? row[17] : null,
-            payment_date: row[18] ? validateDate(row[18]) : null
+            payment_date: row[18] ? validateDate(row[18]) : null,
+            biller: row[25] ? row[25] : null
         }));
     return dataSet;
 };
@@ -102,6 +104,14 @@ export const validateDate = (date) => {
         }
         // Devolver fecha con hora
         return `${year}-${month}-${day} ${hours}:${minutes}:00`;
+    }
+    return null;
+};
+
+export const validateTime = (time) => {
+    const parsedTime = new Date(time);
+    if (!isNaN(parsedTime.getTime())) {
+        return time;
     }
     return null;
 };

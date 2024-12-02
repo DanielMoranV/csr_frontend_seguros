@@ -13,49 +13,53 @@ export const classifyData = (dataSet) => {
     const seenAdmissions = new Map();
     const seenInvoices = new Map();
 
-    dataSet.forEach(({ number_medical_record, name_patient, name_insurer, admission_number, attendance_date, type_attention, name_doctor, amount_attention, number_invoice, company, invoice_date, number_payment, payment_date }) => {
-        // Registrar historia clínica
-        if (!seenRecords.has(number_medical_record)) {
-            seenRecords.set(number_medical_record, {
-                number: number_medical_record,
-                patient: name_patient
-            });
-        }
+    dataSet.forEach(
+        ({ number_medical_record, name_patient, name_insurer, admission_number, attendance_date, attendance_hour, type_attention, name_doctor, amount_attention, number_invoice, company, invoice_date, number_payment, payment_date, biller }) => {
+            // Registrar historia clínica
+            if (!seenRecords.has(number_medical_record)) {
+                seenRecords.set(number_medical_record, {
+                    number: number_medical_record,
+                    patient: name_patient
+                });
+            }
 
-        // Registrar aseguradoras
-        if (!seenInsurers.has(name_insurer)) {
-            seenInsurers.set(name_insurer, { name: name_insurer });
-        }
+            // Registrar aseguradoras
+            if (!seenInsurers.has(name_insurer)) {
+                seenInsurers.set(name_insurer, { name: name_insurer });
+            }
 
-        // Registrar admisiones
-        if (!seenAdmissions.has(admission_number)) {
-            seenAdmissions.set(admission_number, {
-                number: admission_number,
-                attendance_date,
-                type: type_attention,
-                doctor: name_doctor,
-                amount: amount_attention,
-                invoice: number_invoice,
-                company,
-                insurer: name_insurer,
-                patient: name_patient,
-                status: number_invoice ? 'Liquidado' : 'Pendiente',
-                medical_record: number_medical_record
-            });
-        }
+            // Registrar admisiones
+            if (!seenAdmissions.has(admission_number)) {
+                seenAdmissions.set(admission_number, {
+                    number: admission_number,
+                    attendance_date,
+                    attendance_hour,
+                    type: type_attention,
+                    doctor: name_doctor,
+                    amount: amount_attention,
+                    invoice: number_invoice,
+                    company,
+                    insurer: name_insurer,
+                    patient: name_patient,
+                    status: number_invoice ? 'Liquidado' : 'Pendiente',
+                    medical_record: number_medical_record
+                });
+            }
 
-        // Registrar facturas
-        if (number_invoice && number_invoice.trim() !== '' && !seenInvoices.has(number_invoice)) {
-            seenInvoices.set(number_invoice, {
-                number: number_invoice,
-                issue_date: invoice_date,
-                amount: amount_attention,
-                status: number_payment ? 'Pagado' : 'Pendiente',
-                payment_date: payment_date ? payment_date : null,
-                admission_number
-            });
+            // Registrar facturas
+            if (number_invoice && number_invoice.trim() !== '' && !seenInvoices.has(number_invoice)) {
+                seenInvoices.set(number_invoice, {
+                    number: number_invoice,
+                    issue_date: invoice_date,
+                    biller,
+                    amount: amount_attention,
+                    status: number_payment ? 'Pagado' : 'Pendiente',
+                    payment_date: payment_date ? payment_date : null,
+                    admission_number
+                });
+            }
         }
-    });
+    );
 
     // Convertir Map a Array
     return {
