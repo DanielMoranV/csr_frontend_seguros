@@ -117,9 +117,14 @@ export const validateDate = (date) => {
 };
 
 export const validateTime = (time) => {
-    const parsedTime = new Date(time);
-    if (!isNaN(parsedTime.getTime())) {
-        return time;
+    // Expresión regular para validar el formato HH:mm (24 horas)
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/;
+
+    // Verificar si la hora cumple con el formato
+    if (timeRegex.test(time)) {
+        console.log('time', time);
+        return time; // Es válida, devolver la hora
     }
-    return null;
+
+    return null; // No es válida, devolver null
 };

@@ -8,7 +8,7 @@ import { defineConfig } from 'vite';
 // https://vitejs.dev/config/
 export default defineConfig({
     optimizeDeps: {
-        include: ['exceljs', 'file-saver'],
+        include: ['dayjs', 'dayjs/plugin/calendar', 'dayjs/plugin/customParseFormat', 'dayjs/plugin/timezone', 'dayjs/plugin/duration', 'dayjs/plugin/relativeTime', 'exceljs', 'file-saver', 'dayjs/locale/es'],
 
         noDiscovery: true
     },

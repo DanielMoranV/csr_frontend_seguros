@@ -101,7 +101,6 @@ const onUpload = async (event) => {
     const file = event.files[0];
     if (file && file.name.endsWith('.xlsx')) {
         resetAllCounts();
-        const incrementProgress = 25;
         try {
             const rows = await loadExcelFile(file);
             const isValidHeaders = validateHeaders(rows[1], headersAdmisionesGeneradas);
@@ -121,6 +120,7 @@ const onUpload = async (event) => {
             // Historias Clínicas
             medicalRecordsLoader.value = true;
             const responseMedicalRecords = await importMedicalRecords(seenRecords, medicalRecordsStore, toast);
+            console.log('responseMedicalRecords', responseMedicalRecords);
             successMedicalRecords.value = responseMedicalRecords.successComplete;
             countNewMedicalRecords.value = responseMedicalRecords.countNew;
             countUpdateMedicalRecords.value = responseMedicalRecords.countUpdate;
@@ -163,27 +163,24 @@ const onUpload = async (event) => {
 };
 
 onMounted(async () => {
-    if (admissionsStore.getAdmissions.length === 0) {
-        console.log(admissionsStore.getAdmissions);
-        await admissionsStore.fetchAdmissions();
-    }
-    admissions.value = admissionsStore.getAdmissions;
-    console.log('getAdmissions', admissionsStore.getAdmissions);
     if (insurersStore.getInsurers.length === 0) {
-        console.log('insurersStore.getInsurers.length === 0');
         await insurersStore.fetchInsurers();
     }
+
     insurers.value = insurersStore.getInsurers;
     if (invoicesStore.getInvoices.length === 0) {
-        console.log('invoicesStore.getInvoices.length === 0');
         await invoicesStore.fetchInvoices();
     }
     invoices.value = invoicesStore.getInvoices;
     if (medicalRecordsStore.getMedicalRecords.length === 0) {
-        console.log('medicalRecordsStore.getMedicalRecords.length === 0');
         await medicalRecordsStore.fetchMedicalRecords();
     }
     medical_records.value = medicalRecordsStore.getMedicalRecords;
+
+    if (admissionsStore.getAdmissions.length === 0) {
+        await admissionsStore.fetchAdmissions();
+    }
+    admissions.value = admissionsStore.getAdmissions;
 
     console.log(admissions.value);
     console.log(insurers.value);

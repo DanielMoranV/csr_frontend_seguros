@@ -41,7 +41,7 @@ export const classifyData = (dataSet) => {
                     company,
                     insurer: name_insurer,
                     patient: name_patient,
-                    status: number_invoice ? 'Liquidado' : 'Pendiente',
+                    status: number_invoice === null ? 'Pendiente' : payment_date === null ? 'Liquidado' : 'Pagado',
                     medical_record: number_medical_record
                 });
             }

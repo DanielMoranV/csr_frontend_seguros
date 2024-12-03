@@ -34,7 +34,6 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             } else {
                 this.admissions = [];
             }
-            this.loading = false;
             return this.success;
         },
         async createAdmission(payload) {
