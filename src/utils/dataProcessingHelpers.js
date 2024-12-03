@@ -169,9 +169,6 @@ export const importAdmissions = async (seenAdmissions, admissionsStore, toast) =
     const responseUpdate = await updateExistingRecords(existingAdmissions, admissionsStore, toast);
     const responseNew = await createNewRecords(newAdmissions, admissionsStore, toast);
 
-    console.log('responseUpdate', responseUpdate);
-    console.log('responseNew', responseNew);
-
     return { successComplete: responseUpdate.success && responseNew.success, countNew: responseNew.countSuccess, countUpdate: responseUpdate.countSuccess, countErrorNew: responseNew.countError, countErrorUpdate: responseUpdate.countError };
 };
 

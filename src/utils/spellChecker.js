@@ -15,7 +15,6 @@ export function checkSpelling(text, dictionary) {
     const spellingErrors = [];
 
     words.forEach((word) => {
-        console.log(`checking ${word}`);
         if (!dictionary.check(word)) {
             const wordSuggestions = dictionary.suggest(word);
             spellingErrors.push({

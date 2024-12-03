@@ -55,10 +55,18 @@ export const loadExcelFile = async (file) => {
 // Función para validar los datos del archivo
 export const validateData = (rows) => {
     if (rows.length < 3) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
         return false;
     }
     return true;
+};
+
+export const validateHeaders = (row, headers) => {
+    // Comparar los encabezados con los valores de la fila
+    const missingHeaders = headers.filter((header) => !row.includes(header));
+    if (missingHeaders.length > 0) {
+        return { success: false, missingHeaders: missingHeaders };
+    }
+    return { success: true };
 };
 
 // Función para procesar los datos

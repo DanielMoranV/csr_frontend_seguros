@@ -4,15 +4,33 @@ import { useInsurersStore } from '@/stores/insurersStore';
 import { useInvoicesStore } from '@/stores/invoicesStore';
 import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
 import { classifyData, importAdmissions, importInsurers, importInvoices, importMedicalRecords } from '@/utils/dataProcessingHelpers';
-import { loadExcelFile, processDataDatabase } from '@/utils/excelUtils';
+import { loadExcelFile, processDataDatabase, validateData, validateHeaders } from '@/utils/excelUtils';
 import { useToast } from 'primevue/usetoast';
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
 const toast = useToast();
 const admissionsStore = useAdmissionsStore();
 const insurersStore = useInsurersStore();
 const invoicesStore = useInvoicesStore();
 const medicalRecordsStore = useMedicalRecordsStore();
+
+const headersAdmisionesGeneradas = [
+    'num_doc', // Número de documento
+    'fec_doc', // Fecha del documento
+    'nh_pac', // Número de historia del paciente
+    'nom_pac', // Nombre del paciente
+    'nom_emp', // Nombre del empleado
+    'nom_cia', // Nombre de la compañía
+    'ta_doc', // Tipo de documento
+    'nom_ser', // Nombre del servicio
+    'tot_doc', // Total del documento
+    'num_fac', // Número de factura
+    'fec_fac', // Fecha de la factura
+    'num_pag', // Número de pago
+    'fec_pag', // Fecha del pago
+    'hi_doc', // Hora de ingreso del documento
+    'facturador' // Facturador
+];
 
 // Loaders
 const admissionsLoader = ref(false);
@@ -43,27 +61,11 @@ const countUpdateInsurers = ref(0);
 const countErrorNewInsurers = ref(0);
 const countErrorUpdateInsurers = ref(0);
 
-const value = ref(0);
-let interval = null;
 const admissions = ref([]);
 const medical_records = ref([]);
 const invoices = ref([]);
 const insurers = ref([]);
 const isLoading = ref(false);
-
-function startProgress() {
-    isLoading.value = true;
-    value.value = 0; // Inicia desde 0
-}
-function updateProgress(increment) {
-    value.value = Math.min(value.value + increment, 100); // Asegura que no supere 100
-}
-function endProgress() {
-    value.value = 100; // Completa al 100%
-    setTimeout(() => {
-        isLoading.value = false; // Oculta la barra después de un tiempo
-    }, 500);
-}
 
 function resetAllCounts() {
     // Reiniciar todos los contadores
@@ -99,12 +101,16 @@ const onUpload = async (event) => {
     const file = event.files[0];
     if (file && file.name.endsWith('.xlsx')) {
         resetAllCounts();
-        startProgress();
         const incrementProgress = 25;
         try {
             const rows = await loadExcelFile(file);
-
-            if (rows.length < 3) {
+            const isValidHeaders = validateHeaders(rows[1], headersAdmisionesGeneradas);
+            if (!isValidHeaders.success) {
+                toast.add({ severity: 'error', summary: 'Error', detail: `Faltan las cabeceras: ${isValidHeaders.missingHeaders.join(', ')}`, life: 3000 });
+                return;
+            }
+            const isValidData = validateData(rows);
+            if (!isValidData) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 return;
             }
@@ -121,8 +127,6 @@ const onUpload = async (event) => {
             countErrorNewMedicalRecords.value = responseMedicalRecords.countErrorNew;
             countErrorUpdateMedicalRecords.value = responseMedicalRecords.countErrorUpdate;
 
-            updateProgress(incrementProgress);
-
             // Aseguradoras
             insurersLoader.value = true;
             const responseInsurers = await importInsurers(seenInsurers, insurersStore, toast);
@@ -131,8 +135,6 @@ const onUpload = async (event) => {
             countUpdateInsurers.value = responseInsurers.countUpdate;
             countErrorNewInsurers.value = responseInsurers.countErrorNew;
             countErrorUpdateInsurers.value = responseInsurers.countErrorUpdate;
-
-            updateProgress(incrementProgress);
 
             // Admisiones
             admissionsLoader.value = true;
@@ -143,8 +145,6 @@ const onUpload = async (event) => {
             countErrorNewAdmissions.value = responseAdmissions.countErrorNew;
             countErrorUpdateAdmissions.value = responseAdmissions.countErrorUpdate;
 
-            updateProgress(incrementProgress);
-
             // Facturas
             invoicesLoader.value = true;
             const responseInvoices = await importInvoices(seenInvoices, invoicesStore, toast);
@@ -153,13 +153,9 @@ const onUpload = async (event) => {
             countUpdateInvoices.value = responseInvoices.countUpdate;
             countErrorNewInvoices.value = responseInvoices.countErrorNew;
             countErrorUpdateInvoices.value = responseInvoices.countErrorUpdate;
-
-            updateProgress(incrementProgress);
         } catch (error) {
             console.error('Error al procesar el archivo', error);
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al procesar el archivo', life: 3000 });
-        } finally {
-            endProgress();
         }
     } else {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Formato de archivo no válido', life: 3000 });
@@ -167,135 +163,189 @@ const onUpload = async (event) => {
 };
 
 onMounted(async () => {
-    await admissionsStore.initializeStore();
-    await insurersStore.initializeStore();
-    await invoicesStore.initializeStore();
-    await medicalRecordsStore.initializeStore();
-
     if (admissionsStore.getAdmissions.length === 0) {
+        console.log(admissionsStore.getAdmissions);
         await admissionsStore.fetchAdmissions();
     }
-
     admissions.value = admissionsStore.getAdmissions;
+    console.log('getAdmissions', admissionsStore.getAdmissions);
     if (insurersStore.getInsurers.length === 0) {
+        console.log('insurersStore.getInsurers.length === 0');
         await insurersStore.fetchInsurers();
     }
-
     insurers.value = insurersStore.getInsurers;
     if (invoicesStore.getInvoices.length === 0) {
+        console.log('invoicesStore.getInvoices.length === 0');
         await invoicesStore.fetchInvoices();
     }
-
     invoices.value = invoicesStore.getInvoices;
     if (medicalRecordsStore.getMedicalRecords.length === 0) {
+        console.log('medicalRecordsStore.getMedicalRecords.length === 0');
         await medicalRecordsStore.fetchMedicalRecords();
     }
     medical_records.value = medicalRecordsStore.getMedicalRecords;
 
-    console.log(medical_records.value);
-    console.log(insurers.value);
     console.log(admissions.value);
+    console.log(insurers.value);
     console.log(invoices.value);
-});
-
-onBeforeUnmount(() => {
-    endProgress();
+    console.log(medical_records.value);
 });
 </script>
 <template>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Primera fila -->
-        <div class="card">
-            <h3 class="text-lg font-semibold">Subir Archivo de Admisiones Generadas <i class="pi pi-file-excel ml-2"></i></h3>
-            <p class="text-sm text-gray-500 mb-4">Data actual: {{ admissions.length }}</p>
-            <FileUpload mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Admisiones Generadas" class="mr-2 inline-block" :auto="true" @select="onUpload($event)" :loading="isLoading" />
-            <div class="mb-4" v-if="isLoading">
-                <ProgressSpinner style="width: 50px; height: 50px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
-            </div>
-
-            <div class="flex flex-col md:flex-row gap-4">
-                <div class="md:w-1/2">
-                    <ProgressBar v-if="isLoading" :value="value"></ProgressBar>
+    <div class="grid grid-cols-12 gap-8">
+        <div class="col-span-12 lg:col-span-6 xl:col-span-3">
+            <div class="card mb-0">
+                <div class="flex justify-between mb-4">
+                    <div>
+                        <span class="block text-muted-color font-medium mb-4">Admisiones</span>
+                        <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ admissions.length }}</div>
+                    </div>
+                    <div class="flex items-center justify-center bg-blue-100 dark:bg-blue-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
+                        <i class="pi pi-users text-blue-500 !text-xl"></i>
+                    </div>
                 </div>
-            </div>
-            <div v-if="medicalRecordsLoader" class="font-semibold text-md mb-4 mt-4" :class="successMedicalRecords ? 'text-green-500' : 'text-red-500'">
-                Historias Clínicas <ProgressSpinner v-if="!successMedicalRecords" style="width: 10px; height: 10px" />
-                <span class="text-sm text-gray-500">({{ medical_records.length }})</span>
-                <span v-if="successMedicalRecords" class="ml-5">
-                    <i class="pi pi-check" aria-hidden="true"></i>
-                </span>
-                <span v-else class="ml-5">
-                    <i class="pi pi-times" aria-hidden="true"></i>
-                </span>
-                <div class="mt-2">
-                    <Tag v-if="successMedicalRecords" severity="success" class="mr-2"> {{ countNewMedicalRecords }} nuevos </Tag>
-                    <Tag v-if="successMedicalRecords" severity="info" class="mr-2"> {{ countUpdateMedicalRecords }} actualizados </Tag>
-                    <Tag v-if="!successMedicalRecords" severity="danger" class="mr-2"> {{ countErrorNewMedicalRecords }} errores al crear </Tag>
-                    <Tag v-if="!successMedicalRecords" severity="danger" class="mr-2"> {{ countErrorUpdateMedicalRecords }} errores al actualizar </Tag>
+                <span class="text-muted-color">Admisiones Generadas <i class="pi pi-file-excel ml-2"></i></span>
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUpload($event)" />
+                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                    <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
                 </div>
-            </div>
-            <div v-if="insurersLoader" class="font-semibold text-md mt-4 mb-4" :class="successInsurers ? 'text-green-500' : 'text-red-500'">
-                Aseguradoras <ProgressSpinner v-if="!successInsurers" style="width: 10px; height: 10px" />
-                <span class="text-sm text-gray-500">({{ insurers.length }})</span>
-                <span v-if="successInsurers" class="ml-5">
-                    <i class="pi pi-check" aria-hidden="true"></i>
-                </span>
-                <span v-else class="ml-5">
-                    <i class="pi pi-times" aria-hidden="true"></i>
-                </span>
-                <div class="mt-2">
-                    <Tag v-if="successInsurers" severity="success" class="mr-2"> {{ countNewInsurers }} nuevos </Tag>
-                    <Tag v-if="successInsurers" severity="info" class="mr-2"> {{ countUpdateInsurers }} actualizados </Tag>
-                    <Tag v-if="!successInsurers" severity="danger" class="mr-2"> {{ countErrorNewInsurers }} errores al crear </Tag>
-                    <Tag v-if="!successInsurers" severity="danger" class="mr-2"> {{ countErrorUpdateInsurers }} errores al actualizar </Tag>
+                <div v-if="medicalRecordsLoader" class="font-semibold text-xs mb-4 mt-4" :class="successMedicalRecords ? 'text-green-500' : 'text-red-500'">
+                    Historias Clínicas <ProgressSpinner v-if="!successMedicalRecords" style="width: 10px; height: 10px" class="mr-2" />
+                    <span class="text-xs text-gray-500">({{ medical_records.length }})</span>
+                    <span v-if="successMedicalRecords" class="ml-5">
+                        <i class="pi pi-check" aria-hidden="true"></i>
+                    </span>
+                    <span v-else class="ml-5">
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                    </span>
+                    <div class="mt-2">
+                        <Tag v-if="successMedicalRecords" severity="success" class="mr-2 mt-2 text-xs"> {{ countNewMedicalRecords }} nuevos </Tag>
+                        <Tag v-if="successMedicalRecords" severity="info" class="mr-2 mt-2 text-xs"> {{ countUpdateMedicalRecords }} actualizados </Tag>
+                        <Tag v-if="!successMedicalRecords" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorNewMedicalRecords }} errores al crear </Tag>
+                        <Tag v-if="!successMedicalRecords" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorUpdateMedicalRecords }} errores al actualizar </Tag>
+                    </div>
                 </div>
-            </div>
-            <div v-if="admissionsLoader" class="font-semibold text-md mt-4 mb-4" :class="successAdmissions ? 'text-green-500' : 'text-red-500'">
-                Admisiones <ProgressSpinner v-if="!successAdmissions" style="width: 10px; height: 10px" />
-                <span class="text-sm text-gray-500">({{ admissions.length }})</span>
-                <span v-if="successAdmissions" class="ml-5">
-                    <i class="pi pi-check" aria-hidden="true"></i>
-                </span>
-                <span v-else class="ml-5">
-                    <i class="pi pi-times" aria-hidden="true"></i>
-                </span>
-                <div class="mt-2">
-                    <Tag v-if="successAdmissions" severity="success" class="mr-2"> {{ countNewAdmissions }} nuevos </Tag>
-                    <Tag v-if="successAdmissions" severity="info" class="mr-2"> {{ countUpdateAdmissions }} actualizados </Tag>
-                    <Tag v-if="!successAdmissions" severity="danger" class="mr-2"> {{ countErrorNewAdmissions }} errores al crear </Tag>
-                    <Tag v-if="!successAdmissions" severity="danger" class="mr-2"> {{ countErrorUpdateAdmissions }} errores al actualizar </Tag>
+                <div v-if="insurersLoader" class="font-semibold text-xs mt-4 mb-4" :class="successInsurers ? 'text-green-500' : 'text-red-500'">
+                    Aseguradoras <ProgressSpinner v-if="!successInsurers" style="width: 10px; height: 10px" class="mr-2" />
+                    <span class="text-xs text-gray-500">({{ insurers.length }})</span>
+                    <span v-if="successInsurers" class="ml-5">
+                        <i class="pi pi-check" aria-hidden="true"></i>
+                    </span>
+                    <span v-else class="ml-5">
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                    </span>
+                    <div class="mt-2">
+                        <Tag v-if="successInsurers" severity="success" class="mr-2 mt-2 text-xs"> {{ countNewInsurers }} nuevos </Tag>
+                        <Tag v-if="successInsurers" severity="info" class="mr-2 mt-2 text-xs"> {{ countUpdateInsurers }} actualizados </Tag>
+                        <Tag v-if="!successInsurers" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorNewInsurers }} errores al crear </Tag>
+                        <Tag v-if="!successInsurers" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorUpdateInsurers }} errores al actualizar </Tag>
+                    </div>
                 </div>
-            </div>
-            <div v-if="invoicesLoader" class="font-semibold text-md mb-4" :class="successInvoices ? 'text-green-500' : 'text-red-500'">
-                Facturas <ProgressSpinner v-if="!successInvoices" style="width: 10px; height: 10px" />
-                <span class="text-sm text-gray-500">({{ invoices.length }})</span>
-                <span v-if="successInvoices" class="ml-5">
-                    <i class="pi pi-check" aria-hidden="true"></i>
-                </span>
-                <span v-else class="ml-5">
-                    <i class="pi pi-times" aria-hidden="true"></i>
-                </span>
-                <div class="mt-2">
-                    <Tag v-if="successInvoices" severity="success" class="mr-2"> {{ countNewInvoices }} nuevos </Tag>
-                    <Tag v-if="successInvoices" severity="info" class="mr-2"> {{ countUpdateInvoices }} actualizados </Tag>
-                    <Tag v-if="!successInvoices" severity="danger" class="mr-2"> {{ countErrorNewInvoices }} errores al crear </Tag>
-                    <Tag v-if="!successInvoices" severity="danger" class="mr-2"> {{ countErrorUpdateInvoices }} errores al actualizar </Tag>
+                <div v-if="admissionsLoader" class="font-semibold text-xs mt-4 mb-4" :class="successAdmissions ? 'text-green-500' : 'text-red-500'">
+                    Admisiones <ProgressSpinner v-if="!successAdmissions" style="width: 10px; height: 10px" />
+                    <span class="text-xs text-gray-500">({{ admissions.length }})</span>
+                    <span v-if="successAdmissions" class="ml-5">
+                        <i class="pi pi-check" aria-hidden="true"></i>
+                    </span>
+                    <span v-else class="ml-5">
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                    </span>
+                    <div class="mt-2">
+                        <Tag v-if="successAdmissions" severity="success" class="mr-2 mt-2 text-xs"> {{ countNewAdmissions }} nuevos </Tag>
+                        <Tag v-if="successAdmissions" severity="info" class="mr-2 mt-2 text-xs"> {{ countUpdateAdmissions }} actualizados </Tag>
+                        <Tag v-if="!successAdmissions" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorNewAdmissions }} errores al crear </Tag>
+                        <Tag v-if="!successAdmissions" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorUpdateAdmissions }} errores al actualizar </Tag>
+                    </div>
+                </div>
+                <div v-if="invoicesLoader" class="font-semibold text-xs mb-4" :class="successInvoices ? 'text-green-500' : 'text-red-500'">
+                    Facturas <ProgressSpinner v-if="!successInvoices" style="width: 10px; height: 10px" />
+                    <span class="text-xs text-gray-500">({{ invoices.length }})</span>
+                    <span v-if="successInvoices" class="ml-5">
+                        <i class="pi pi-check" aria-hidden="true"></i>
+                    </span>
+                    <span v-else class="ml-5">
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                    </span>
+                    <div class="mt-2">
+                        <Tag v-if="successInvoices" severity="success" class="mr-2 mt-2 text-xs"> {{ countNewInvoices }} nuevos </Tag>
+                        <Tag v-if="successInvoices" severity="info" class="mr-2 mt-2 text-xs"> {{ countUpdateInvoices }} actualizados </Tag>
+                        <Tag v-if="!successInvoices" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorNewInvoices }} errores al crear </Tag>
+                        <Tag v-if="!successInvoices" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorUpdateInvoices }} errores al actualizar </Tag>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Segunda fila -->
-        <div class="card">
-            <h3 class="text-lg font-semibold">Subir Archivo de Envío de Facturas <i class="pi pi-file-excel ml-2"></i></h3>
-            <p class="text-sm text-gray-500 mb-4">Data actual: {{ invoices.length }}</p>
-            <FileUpload mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Envío de Facturas" class="mr-2 inline-block" :auto="true" @select="onUpload($event)" :loading="isLoading" />
+        <div class="col-span-12 lg:col-span-6 xl:col-span-3">
+            <div class="card mb-0">
+                <div class="flex justify-between mb-4">
+                    <div>
+                        <span class="block text-muted-color font-medium mb-4">Historias Clínicas</span>
+                        <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ medical_records.length }}</div>
+                    </div>
+                    <div class="flex items-center justify-center bg-orange-100 dark:bg-orange-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
+                        <i class="pi pi-history text-orange-500 !text-xl"></i>
+                    </div>
+                </div>
+                <span class="text-muted-color">Exp. Particulares <i class="pi pi-file-excel ml-2"></i></span>
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUpload($event)" />
+                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                    <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                </div>
+            </div>
         </div>
-
-        <!-- Tercera fila (puedes agregar aquí tu tercer card) -->
-        <div class="card">
-            <h3 class="text-lg font-semibold">Subir Archivo de Historias Particulares <i class="pi pi-file-excel ml-2"></i></h3>
-            <p class="text-sm text-gray-500 mb-4">Historias Totales: {{ medical_records.length }}</p>
-            <FileUpload mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Historias Particulares" class="mr-2 inline-block" :auto="true" @select="onUpload($event)" :loading="isLoading" />
+        <div class="col-span-12 lg:col-span-6 xl:col-span-3">
+            <div class="card mb-0">
+                <div class="flex justify-between mb-4">
+                    <div>
+                        <span class="block text-muted-color font-medium mb-4">Envios Facturas</span>
+                        <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">{{ invoices.length }}</div>
+                    </div>
+                    <div class="flex items-center justify-center bg-cyan-100 dark:bg-cyan-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
+                        <i class="pi pi-send text-cyan-500 !text-xl"></i>
+                    </div>
+                </div>
+                <span class="text-muted-color">Envios Facturas <i class="pi pi-file-excel ml-2"></i></span>
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUpload($event)" />
+                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                    <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                </div>
+            </div>
+        </div>
+        <div class="col-span-12 lg:col-span-6 xl:col-span-3">
+            <div class="card mb-0">
+                <div class="flex justify-between mb-4">
+                    <div>
+                        <span class="block text-muted-color font-medium mb-4">Devoluciones</span>
+                        <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">152 Unread</div>
+                    </div>
+                    <div class="flex items-center justify-center bg-purple-100 dark:bg-purple-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
+                        <i class="pi pi-ban text-red-500 !text-xl"></i>
+                    </div>
+                </div>
+                <span class="text-muted-color">Devoluciones <i class="pi pi-file-excel ml-2"></i></span>
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUpload($event)" />
+                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                    <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                </div>
+            </div>
+        </div>
+        <div class="col-span-12 lg:col-span-6 xl:col-span-3">
+            <div class="card mb-0">
+                <div class="flex justify-between mb-4">
+                    <div>
+                        <span class="block text-muted-color font-medium mb-4">Notas de Crédito</span>
+                        <div class="text-surface-900 dark:text-surface-0 font-medium text-xl">152 Unread</div>
+                    </div>
+                    <div class="flex items-center justify-center bg-yellow-100 dark:bg-yellow-400/10 rounded-border" style="width: 2.5rem; height: 2.5rem">
+                        <i class="pi pi-dollar text-yellow-500 !text-xl"></i>
+                    </div>
+                </div>
+                <span class="text-muted-color">Notas de Crédito <i class="pi pi-file-excel ml-2"></i></span>
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUpload($event)" />
+                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                    <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                </div>
+            </div>
         </div>
     </div>
 </template>

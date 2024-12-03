@@ -1,14 +1,22 @@
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
+import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useInsurersStore } from '@/stores/insurersStore';
+import { useInvoicesStore } from '@/stores/invoicesStore';
+import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
 import cache from '@/utils/cache';
 import indexedDB from '@/utils/indexedDB';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppConfigurator from './AppConfigurator.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const admissionsStore = useAdmissionsStore();
+const insurersStore = useInsurersStore();
+const invoicesStore = useInvoicesStore();
+const medicalRecordsStore = useMedicalRecordsStore();
 
 const logoutDialog = ref(false);
 const { onMenuToggle, toggleDarkMode, isDarkTheme } = useLayout();
@@ -32,6 +40,13 @@ const confirmLogout = () => {
 const logout = async () => {
     await authStore.logout();
 };
+
+onMounted(async () => {
+    await admissionsStore.initializeStore();
+    await insurersStore.initializeStore();
+    await invoicesStore.initializeStore();
+    await medicalRecordsStore.initializeStore();
+});
 </script>
 
 <template>

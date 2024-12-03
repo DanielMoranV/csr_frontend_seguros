@@ -13,7 +13,6 @@ const model = ref([
     },
     {
         label: 'Administrador',
-        icon: 'pi pi-fw pi-cog',
         items: [
             { label: 'Usuarios', icon: 'pi pi-fw pi-users', to: '/users' },
             {
@@ -27,9 +26,26 @@ const model = ref([
         ]
     },
     {
+        label: 'Facturación',
+        items: [
+            { label: 'Admisiones', icon: 'pi pi-fw pi-ticket', to: '/admissions' },
+            { label: 'Liquidaciones', icon: 'pi pi-fw pi-money-bill', to: '/liquidations' },
+            { label: 'Devoluciones', icon: 'pi pi-fw pi-ban', to: '/returns' },
+            { label: 'Notas de Crédito', icon: 'pi pi-fw pi-dollar', to: '/credit-notes' },
+            { label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/send-invoices' }
+        ]
+    },
+    {
+        label: 'Gestión de Expedientes',
+        items: [
+            { label: 'Historia Clínicas', icon: 'pi pi-fw pi-book', to: '/medical-records' },
+            { label: 'Seguimiento Seguros', icon: 'pi pi-fw pi-plus', to: '/insurers-tracking' },
+            { label: 'Solicitudes Expedientes', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking' }
+        ]
+    },
+    {
         label: 'Sistemas',
-        icon: 'pi pi-fw pi-sitemap',
-        items: [{ label: 'Bases de datos', icon: 'pi pi-fw pi-database', to: '/databases' }]
+        items: [{ label: 'Base de datos', icon: 'pi pi-fw pi-database', to: '/databases' }]
     }
 ]);
 </script>

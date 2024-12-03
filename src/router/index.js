@@ -22,6 +22,11 @@ const router = createRouter({
                     path: '/databases',
                     name: 'databases',
                     component: () => import('@/views/databases/Databases.vue')
+                },
+                {
+                    path: '/admissions',
+                    name: 'admissions',
+                    component: () => import('@/views/invoicing/Admissions.vue')
                 }
             ]
         },
