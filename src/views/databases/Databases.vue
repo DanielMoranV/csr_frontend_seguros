@@ -163,24 +163,10 @@ const onUpload = async (event) => {
 };
 
 onMounted(async () => {
-    if (insurersStore.getInsurers.length === 0) {
-        await insurersStore.fetchInsurers();
-    }
-
-    insurers.value = insurersStore.getInsurers;
-    if (invoicesStore.getInvoices.length === 0) {
-        await invoicesStore.fetchInvoices();
-    }
-    invoices.value = invoicesStore.getInvoices;
-    if (medicalRecordsStore.getMedicalRecords.length === 0) {
-        await medicalRecordsStore.fetchMedicalRecords();
-    }
-    medical_records.value = medicalRecordsStore.getMedicalRecords;
-
-    if (admissionsStore.getAdmissions.length === 0) {
-        await admissionsStore.fetchAdmissions();
-    }
-    admissions.value = admissionsStore.getAdmissions;
+    insurers.value = await insurersStore.initializeStore();
+    invoices.value = await invoicesStore.initializeStore();
+    medical_records.value = await medicalRecordsStore.initializeStore();
+    admissions.value = await admissionsStore.initializeStore();
 
     console.log(admissions.value);
     console.log(insurers.value);

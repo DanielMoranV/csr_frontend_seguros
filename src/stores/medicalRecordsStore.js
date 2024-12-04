@@ -24,6 +24,10 @@ export const useMedicalRecordsStore = defineStore('medicalRecordsStore', {
             // Carga inicial desde IndexedDB
             const medicalRecordsFromCache = await indexedDB.getItem('medicalRecords');
             this.medicalRecords = medicalRecordsFromCache || [];
+            if (this.medicalRecords.length === 0) {
+                await this.fetchMedicalRecords();
+            }
+            return this.medicalRecords;
         },
         async fetchMedicalRecords() {
             this.loading = true;

@@ -122,7 +122,6 @@ export const validateTime = (time) => {
 
     // Verificar si la hora cumple con el formato
     if (timeRegex.test(time)) {
-        console.log('time', time);
         return time; // Es válida, devolver la hora
     }
 

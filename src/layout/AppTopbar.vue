@@ -42,9 +42,9 @@ const logout = async () => {
 };
 
 onMounted(async () => {
-    await insurersStore.initializeStore();
-    await invoicesStore.initializeStore();
-    await medicalRecordsStore.initializeStore();
+    // await insurersStore.initializeStore();
+    // await invoicesStore.initializeStore();
+    // await medicalRecordsStore.initializeStore();
 });
 </script>
 

@@ -24,6 +24,10 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             // Carga inicial desde IndexedDB
             const admissionsFromCache = await indexedDB.getItem('admissions');
             this.admissions = admissionsFromCache || [];
+            if (this.admissions.length === 0) {
+                await this.fetchAdmissions();
+            }
+            return this.admissions;
         },
         async fetchAdmissions() {
             this.loading = true;

@@ -123,5 +123,13 @@ export default {
         if (currentUser) {
             await this.setItem('currentUser', currentUser);
         }
+    },
+    async initialize() {
+        try {
+            await openDB();
+            console.log('IndexedDB initialized successfully.');
+        } catch (error) {
+            console.error('Error initializing IndexedDB:', error);
+        }
     }
 };

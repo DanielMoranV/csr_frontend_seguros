@@ -21,9 +21,12 @@ export const useInsurersStore = defineStore('insurersStore', {
     },
     actions: {
         async initializeStore() {
-            // Carga inicial desde IndexedDB
             const insurersFromCache = await indexedDB.getItem('insurers');
             this.insurers = insurersFromCache || [];
+            if (this.insurers.length === 0) {
+                await this.fetchInsurers();
+            }
+            return this.insurers;
         },
         async fetchInsurers() {
             this.loading = true;

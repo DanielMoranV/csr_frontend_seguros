@@ -24,6 +24,15 @@ export const useUsersStore = defineStore('userStore', {
         }
     },
     actions: {
+        async initializeStore() {
+            // Carga inicial desde IndexedDB
+            const usersFromCache = await indexedDB.getItem('users');
+            this.users = usersFromCache || [];
+            if (this.users.length === 0) {
+                await this.fetchUsers();
+            }
+            return this.users;
+        },
         async fetchUsers() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchUsers(), this);

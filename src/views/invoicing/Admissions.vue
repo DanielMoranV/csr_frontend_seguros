@@ -8,11 +8,7 @@ import { onMounted, ref } from 'vue';
 const admissionsStore = useAdmissionsStore();
 
 onMounted(async () => {
-    admissionsStore.initializeStore;
-    // if (admissionsStore.getAdmissions.length === 0) {
-    //     await admissionsStore.fetchAdmissions();
-    // }
-    admissions.value = admissionsStore.getAdmissions;
+    admissions.value = await admissionsStore.initializeStore();
 });
 
 const toast = useToast();

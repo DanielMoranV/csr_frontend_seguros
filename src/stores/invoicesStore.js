@@ -24,6 +24,10 @@ export const useInvoicesStore = defineStore('invoicesStore', {
             // Carga inicial desde IndexedDB
             const invoicesFromCache = await indexedDB.getItem('invoices');
             this.invoices = invoicesFromCache || [];
+            if (this.invoices.length === 0) {
+                await this.fetchInvoices();
+            }
+            return this.invoices;
         },
         async fetchInvoices() {
             this.loading = true;
