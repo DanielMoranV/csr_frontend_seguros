@@ -1,16 +1,20 @@
 import day from 'dayjs';
-import timezone from 'dayjs/plugin/timezone';
-import duration from 'dayjs/plugin/duration';
-import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/es';
 import calendar from 'dayjs/plugin/calendar';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
-import 'dayjs/locale/es';
+import duration from 'dayjs/plugin/duration';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import timezone from 'dayjs/plugin/timezone';
 day.locale('es');
 day.extend(timezone);
 day.tz.setDefault('America/Lima');
 
 export function dparse(date) {
     return day(date);
+}
+export function getDaysPassed(date) {
+    const today = day();
+    return today.diff(date, 'days');
 }
 export function dparseFromFormat(date, format) {
     const extday = day;

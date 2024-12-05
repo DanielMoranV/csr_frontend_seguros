@@ -1,6 +1,6 @@
 <script setup>
 import { useAdmissionsStore } from '@/stores/admissionsStore';
-import { dformat } from '@/utils/day';
+import { dformat, getDaysPassed } from '@/utils/day';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
@@ -9,6 +9,17 @@ const admissionsStore = useAdmissionsStore();
 
 onMounted(async () => {
     admissions.value = await admissionsStore.initializeStore();
+
+    admissions.value.forEach((admission) => {
+        let daysPassed = getDaysPassed(admission.attendance_date);
+        if (daysPassed <= admission.insurer.shipping_period || admission.status === 'Pagado') {
+            admission.daysPassed = getDaysPassed(admission.attendance_date);
+        } else {
+            admission.daysPassed = 'Extemporáneo';
+        }
+    });
+
+    console.log(admissions.value);
 });
 
 const toast = useToast();
@@ -92,6 +103,16 @@ function getStatusLabel(status) {
                 <Column field="attendance_date" header="Fecha" sortable style="min-width: 10rem">
                     <template #body="slotProps">
                         {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
+                    </template>
+                </Column>
+                <Column field="daysPassed" header="Días" sortable style="min-width: 10rem">
+                    <template #body="slotProps">
+                        {{ slotProps.data.daysPassed }}
+                    </template>
+                </Column>
+                <Column field="insurer.payment_period" header="Periodo" sortable style="min-width: 10rem">
+                    <template #body="slotProps">
+                        {{ slotProps.data.insurer.payment_period || '-' }}
                     </template>
                 </Column>
                 <!-- <Column field="attendance_hour" header="Hora" sortable style="min-width: 8rem">

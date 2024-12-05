@@ -71,7 +71,7 @@ export const classifyData = (dataSet) => {
 };
 
 export const importMedicalRecords = async (seenRecords, medicalRecordsStore, toast) => {
-    let medicalRecords = medicalRecordsStore.getMedicalRecords;
+    let medicalRecords = await medicalRecordsStore.initializeStore();
     let medicalRecordsData = seenRecords;
     let existingMedicalRecords = [];
     let newMedicalRecords = [];
@@ -93,7 +93,7 @@ export const importMedicalRecords = async (seenRecords, medicalRecordsStore, toa
 };
 
 export const importInsurers = async (seenInsurers, insurersStore, toast) => {
-    let insurers = insurersStore.getInsurers;
+    let insurers = await insurersStore.initializeStore();
     let insurersData = seenInsurers;
     let existingInsurers = [];
     let newInsurers = [];
@@ -115,8 +115,8 @@ export const importInsurers = async (seenInsurers, insurersStore, toast) => {
 };
 
 export const importInvoices = async (seenInvoices, invoicesStore, toast) => {
-    let invoices = invoicesStore.getInvoices;
-    let admissions = admissionsStore.getAdmissions;
+    let invoices = await invoicesStore.initializeStore();
+    let admissions = await admissionsStore.initializeStore();
     let invoicesData = seenInvoices;
     let existingInvoices = [];
     let newInvoices = [];
@@ -142,9 +142,9 @@ export const importInvoices = async (seenInvoices, invoicesStore, toast) => {
 };
 
 export const importAdmissions = async (seenAdmissions, admissionsStore, toast) => {
-    let admissions = admissionsStore.getAdmissions;
-    let insurers = insurersStore.getInsurers;
-    let medicalRecords = medicalRecordsStore.getMedicalRecords;
+    let admissions = await admissionsStore.initializeStore();
+    let insurers = await insurersStore.initializeStore();
+    let medicalRecords = await medicalRecordsStore.initializeStore();
     let admissionsData = seenAdmissions;
     let existingAdmissions = [];
     let newAdmissions = [];
