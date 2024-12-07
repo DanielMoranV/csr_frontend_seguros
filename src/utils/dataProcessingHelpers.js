@@ -6,7 +6,6 @@ import { handleResponseMultipleNew, handleResponseMultipleUpdate } from './respo
 const insurersStore = useInsurersStore();
 const admissionsStore = useAdmissionsStore();
 const medicalRecordsStore = useMedicalRecordsStore();
-
 export const classifyData = (dataSet) => {
     const seenRecords = new Map();
     const seenInsurers = new Map();
@@ -70,6 +69,17 @@ export const classifyData = (dataSet) => {
     };
 };
 
+export const classifyDataDevolutions = (dataSet) => {
+    const seenDevolutions = new Map();
+
+    dataSet.forEach(({ date_devolution, period_devolution, invoice_number, insurer, amount_devolution, patient, admission_number, type_attention, biller, reason_devolution }) => {
+        if (!seenDevolutions.has(invoice_number)) {
+            seenDevolutions.set(invoice_number, { date_devolution, period_devolution, invoice_number, insurer, amount_devolution, patient, admission_number, type_attention, biller, reason_devolution });
+        }
+    });
+
+    return Array.from(seenDevolutions.values());
+};
 export const importMedicalRecords = async (seenRecords, medicalRecordsStore, toast) => {
     let medicalRecords = await medicalRecordsStore.initializeStore();
     let medicalRecordsData = seenRecords;
@@ -138,6 +148,8 @@ export const importInvoices = async (seenInvoices, invoicesStore, toast) => {
     const responseUpdate = await updateExistingRecords(existingInvoices, invoicesStore, toast);
     const responseNew = await createNewRecords(newInvoices, invoicesStore, toast);
 
+    await invoicesStore.fetchInvoices();
+
     return { successComplete: responseUpdate.success && responseNew.success, countNew: responseNew.countSuccess, countUpdate: responseUpdate.countSuccess, countErrorNew: responseNew.countError, countErrorUpdate: responseUpdate.countError };
 };
 
@@ -169,7 +181,18 @@ export const importAdmissions = async (seenAdmissions, admissionsStore, toast) =
     const responseUpdate = await updateExistingRecords(existingAdmissions, admissionsStore, toast);
     const responseNew = await createNewRecords(newAdmissions, admissionsStore, toast);
 
+    await admissionsStore.fetchAdmissions();
+
     return { successComplete: responseUpdate.success && responseNew.success, countNew: responseNew.countSuccess, countUpdate: responseUpdate.countSuccess, countErrorNew: responseNew.countError, countErrorUpdate: responseUpdate.countError };
+};
+
+export const importDevolutions = async (seenDevolutions, devolutionsStore, toast) => {
+    let devolutions = await devolutionsStore.initializeStore();
+    let invoices = await invoicesStore.initializeStore();
+    let admissions = await admissionsStore.initializeStore();
+    let devolutionsData = seenDevolutions;
+    let existingDevolutions = [];
+    let newDevolutions = [];
 };
 
 const updateExistingRecords = async (records, store, toast) => {

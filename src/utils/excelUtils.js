@@ -13,7 +13,15 @@ export const exportToExcel = async (columns, data, sheetName = 'Sheet1', fileNam
         const row = worksheet.addRow(item);
 
         // Aplicar estilo a las celdas de la fila
-        row.eachCell({ includeEmpty: true }, (cell) => {
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            // Obtener la configuración de la columna
+            const columnConfig = columns[colNumber - 1];
+
+            // Aplicar formato numérico si está definido
+            if (columnConfig?.style?.numFmt) {
+                cell.numFmt = columnConfig.style.numFmt;
+            }
+
             cell.font = { color: { argb: '000000' } }; // Color del texto
             cell.alignment = { vertical: 'middle', horizontal: 'left' };
             cell.border = {
@@ -67,6 +75,25 @@ export const validateHeaders = (row, headers) => {
         return { success: false, missingHeaders: missingHeaders };
     }
     return { success: true };
+};
+
+export const processDataDatabaseDevolutions = (rows) => {
+    const dataSetDevolutions = rows
+        .slice(2)
+        .filter((row) => row[11] != '')
+        .map((row) => ({
+            date_devolution: row[2] ? validateDate(row[2]) : null,
+            period_devolution: row[3] ? row[3] : null,
+            invoice_number: row[4] ? row[4] : null,
+            insurer: row[6] ? row[6] : null,
+            amount_devolution: row[7] ? row[7] : 0,
+            patient: row[10] ? row[10] : null,
+            admission_number: row[11] ? row[11] : null,
+            type_attention: row[12] ? row[12] : null,
+            biller: row[13] ? row[13] : null,
+            reason_devolution: row[14] ? row[14] : null
+        }));
+    return dataSetDevolutions;
 };
 
 // Función para procesar los datos

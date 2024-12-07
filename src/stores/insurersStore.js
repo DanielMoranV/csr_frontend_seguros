@@ -69,7 +69,7 @@ export const useInsurersStore = defineStore('insurersStore', {
         async createMultiple(payload) {
             const { data } = await handleResponseStore(createInsurers(payload), this);
             if (this.success) {
-                await this.fetchInsurers();
+                //await this.fetchInsurers();
                 this.message = 'Aseguradoras creadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
@@ -77,7 +77,7 @@ export const useInsurersStore = defineStore('insurersStore', {
         async updateMultiple(payload) {
             const { data } = await handleResponseStore(updateInsurers(payload), this);
             if (this.success) {
-                await this.fetchInsurers();
+                //await this.fetchInsurers();
                 this.message = 'Aseguradoras actualizadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };

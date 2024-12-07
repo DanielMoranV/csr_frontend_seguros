@@ -1,6 +1,7 @@
 <script setup>
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { dformat, getDaysPassed } from '@/utils/day';
+import { exportToExcel } from '@/utils/excelUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
@@ -12,10 +13,13 @@ onMounted(async () => {
 
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
-        if (daysPassed <= admission.insurer.shipping_period || admission.status === 'Pagado') {
-            admission.daysPassed = getDaysPassed(admission.attendance_date);
-        } else {
-            admission.daysPassed = 'Extemporáneo';
+
+        if (admission.status === 'Pendiente') {
+            if (daysPassed <= admission.insurer.shipping_period) {
+                admission.daysPassed = getDaysPassed(admission.attendance_date);
+            } else {
+                admission.daysPassed = `Extemporáneo (${daysPassed - admission.insurer.shipping_period} días)`;
+            }
         }
     });
 
@@ -56,6 +60,43 @@ function getStatusLabel(status) {
             return null;
     }
 }
+
+// Exportar a Excel
+const exportExcelPending = async () => {
+    const columns = [
+        { header: 'Admisión', key: 'admission', width: 15 },
+        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Días', key: 'daysPassed', width: 20 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer', width: 15 },
+        { header: 'Facturador', key: 'last_invoice_biller', width: 15 },
+        { header: 'Periodo', key: 'period', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } }
+    ];
+
+    let admissionsPending = admissions.value.filter((admission) => admission.status === 'Pendiente');
+    admissionsPending.forEach((admission) => {
+        // Convertir la fecha a formato Excel (número serial)
+        const date = new Date(admission.attendance_date);
+        admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+
+        // Enviar el monto como número, sin formatear
+        admission.amount = Number(admission.amount);
+    });
+
+    const data = admissionsPending.map((admission) => ({
+        admission: admission.number,
+        attendance_date: admission.attendance_date,
+        daysPassed: admission.daysPassed,
+        doctor: admission.doctor,
+        insurer: admission.insurer.name,
+        last_invoice_biller: admission.last_invoice_biller,
+        period: admission.period,
+        amount: admission.amount
+    }));
+
+    await exportToExcel(columns, data, 'admisiones_pendientes', 'admisiones_pendientes');
+};
 </script>
 
 <template>
@@ -68,7 +109,7 @@ function getStatusLabel(status) {
                 </template>
 
                 <template #end>
-                    <Button label="Exportar" icon="pi pi-upload" severity="secondary" class="mr-5" @click="exportCSV($event)" />
+                    <Button label="Exportar Pendientes" icon="pi pi-upload" severity="secondary" class="mr-5" @click="exportExcelPending" />
                     <Button label="Meta Liquidación" severity="success" icon="pi pi-download" @click="downloadMetaLiquidation($event)" />
                 </template>
             </Toolbar>
@@ -82,7 +123,7 @@ function getStatusLabel(status) {
                 :rows="10"
                 :filters="filters"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                :rowsPerPageOptions="[5, 10, 25]"
+                :rowsPerPageOptions="[5, 10, 25, 50, 100]"
                 currentPageReportTemplate="Showing {first} to {last} of {totalRecords} admisiones"
             >
                 <template #header>
@@ -107,14 +148,14 @@ function getStatusLabel(status) {
                 </Column>
                 <Column field="daysPassed" header="Días" sortable style="min-width: 10rem">
                     <template #body="slotProps">
-                        {{ slotProps.data.daysPassed }}
+                        {{ slotProps.data.daysPassed || '-' }}
                     </template>
                 </Column>
-                <Column field="insurer.payment_period" header="Periodo" sortable style="min-width: 10rem">
+                <!-- <Column field="insurer.payment_period" header="Periodo" sortable style="min-width: 10rem">
                     <template #body="slotProps">
                         {{ slotProps.data.insurer.payment_period || '-' }}
                     </template>
-                </Column>
+                </Column> -->
                 <!-- <Column field="attendance_hour" header="Hora" sortable style="min-width: 8rem">
                     <template #body="slotProps">
                         {{ slotProps.data.attendance_hour || '-' }}

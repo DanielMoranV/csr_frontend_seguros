@@ -45,3 +45,11 @@ export const updateInvoice = (payload, id) => axios.put(`/invoices/${id}`, paylo
 export const deleteInvoice = (id) => axios.delete(`/invoices/${id}`);
 export const createInvoices = (payload) => axios.post('/invoices/store', payload);
 export const updateInvoices = (payload) => axios.patch('/invoices/update', payload);
+
+// Devolutions
+export const fetchDevolutions = () => axios.get('/devolutions');
+export const createDevolution = (payload) => axios.post('/devolutions', payload);
+export const updateDevolution = (payload, id) => axios.put(`/devolutions/${id}`, payload);
+export const deleteDevolution = (id) => axios.delete(`/devolutions/${id}`);
+export const createDevolutions = (payload) => axios.post('/devolutions/store', payload);
+export const updateDevolutions = (payload) => axios.patch('/devolutions/update', payload);

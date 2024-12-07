@@ -70,7 +70,7 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         async createMultiple(payload) {
             const { data } = await handleResponseStore(createAdmissions(payload), this);
             if (this.success) {
-                await this.fetchAdmissions();
+                //await this.fetchAdmissions();
                 this.message = 'Admisiones creadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
@@ -78,7 +78,7 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         async updateMultiple(payload) {
             const { data } = await handleResponseStore(updateAdmissions(payload), this);
             if (this.success) {
-                await this.fetchAdmissions();
+                //await this.fetchAdmissions();
                 this.message = 'Admisiones actualizadas correctamente';
             }
             return { status: this.success, success: data.success, error: data.errors };
