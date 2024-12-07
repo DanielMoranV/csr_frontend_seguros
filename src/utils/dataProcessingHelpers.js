@@ -1,11 +1,14 @@
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
+import { useInvoicesStore } from '@/stores/invoicesStore';
 import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
 import { handleResponseMultipleNew, handleResponseMultipleUpdate } from './response';
 
 const insurersStore = useInsurersStore();
 const admissionsStore = useAdmissionsStore();
 const medicalRecordsStore = useMedicalRecordsStore();
+const invoicesStore = useInvoicesStore();
+
 export const classifyData = (dataSet) => {
     const seenRecords = new Map();
     const seenInsurers = new Map();
@@ -69,16 +72,34 @@ export const classifyData = (dataSet) => {
     };
 };
 
-export const classifyDataDevolutions = (dataSet) => {
+export const classifyDataDevolutions = async (dataSet) => {
+    console.log(dataSet);
     const seenDevolutions = new Map();
+    let admissions = await admissionsStore.initializeStore();
+
+    dataSet = dataSet.filter(({ admission_number }) => admissions.find((admission) => admission.number === admission_number));
+
+    console.log('dataSet Filtrado', dataSet);
 
     dataSet.forEach(({ date_devolution, period_devolution, invoice_number, insurer, amount_devolution, patient, admission_number, type_attention, biller, reason_devolution }) => {
         if (!seenDevolutions.has(invoice_number)) {
-            seenDevolutions.set(invoice_number, { date_devolution, period_devolution, invoice_number, insurer, amount_devolution, patient, admission_number, type_attention, biller, reason_devolution });
+            seenDevolutions.set(invoice_number, {
+                date: date_devolution,
+                period: period_devolution,
+                invoice_number,
+                insurer,
+                amount: amount_devolution,
+                patient,
+                admission_number,
+                type: type_attention,
+                biller,
+                reason: reason_devolution
+            });
         }
     });
+    console.log('seenDevolutions', seenDevolutions);
 
-    return Array.from(seenDevolutions.values());
+    return { seenDevolutions: Array.from(seenDevolutions.values()) };
 };
 export const importMedicalRecords = async (seenRecords, medicalRecordsStore, toast) => {
     let medicalRecords = await medicalRecordsStore.initializeStore();
@@ -188,11 +209,36 @@ export const importAdmissions = async (seenAdmissions, admissionsStore, toast) =
 
 export const importDevolutions = async (seenDevolutions, devolutionsStore, toast) => {
     let devolutions = await devolutionsStore.initializeStore();
-    let invoices = await invoicesStore.initializeStore();
     let admissions = await admissionsStore.initializeStore();
+    let invoices = await invoicesStore.initializeStore();
     let devolutionsData = seenDevolutions;
     let existingDevolutions = [];
     let newDevolutions = [];
+
+    devolutionsData.forEach((devolution) => {
+        const invoice = invoices.find((invoice) => invoice.number === devolution.invoice_number);
+        const admission = admissions.find((admission) => admission.number === devolution.admission_number);
+        devolution = {
+            invoice_id: invoice?.id,
+            admission_id: admission?.id,
+            status: invoice?.status || 'Pendiente',
+            ...devolution
+        };
+        const exists = devolutions.some((existingDevolution) => existingDevolution.invoice_id === devolution.invoice_id);
+
+        if (exists) {
+            existingDevolutions.push(devolution);
+        } else {
+            newDevolutions.push(devolution);
+        }
+    });
+    console.log('existingDevolutions', existingDevolutions);
+    console.log('newDevolutions', newDevolutions);
+
+    const responseUpdate = await updateExistingRecords(existingDevolutions, devolutionsStore, toast);
+    const responseNew = await createNewRecords(newDevolutions, devolutionsStore, toast);
+
+    return { successComplete: responseUpdate.success && responseNew.success, countNew: responseNew.countSuccess, countUpdate: responseUpdate.countSuccess, countErrorNew: responseNew.countError, countErrorUpdate: responseUpdate.countError };
 };
 
 const updateExistingRecords = async (records, store, toast) => {

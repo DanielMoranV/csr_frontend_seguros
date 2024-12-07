@@ -4,8 +4,8 @@ import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
 import { useInvoicesStore } from '@/stores/invoicesStore';
 import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
-import { classifyData, importAdmissions, importInsurers, importInvoices, importMedicalRecords } from '@/utils/dataProcessingHelpers';
-import { loadExcelFile, processDataDatabase, validateData, validateHeaders } from '@/utils/excelUtils';
+import { classifyData, classifyDataDevolutions, importAdmissions, importDevolutions, importInsurers, importInvoices, importMedicalRecords } from '@/utils/dataProcessingHelpers';
+import { loadExcelFile, processDataDatabase, processDataDatabaseDevolutions, validateData, validateHeaders } from '@/utils/excelUtils';
 import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
 
@@ -15,6 +15,8 @@ const insurersStore = useInsurersStore();
 const invoicesStore = useInvoicesStore();
 const medicalRecordsStore = useMedicalRecordsStore();
 const devolutionsStore = useDevolutionsStore();
+
+// Headers
 
 const headersDevoluciones = [
     'id_dev', // Id de la devolución
@@ -57,6 +59,8 @@ const insurersLoader = ref(false);
 const invoicesLoader = ref(false);
 const medicalRecordsLoader = ref(false);
 const devolutionsLoader = ref(false);
+const isLoadingDevolutions = ref(false);
+
 // Complete
 const successMedicalRecords = ref(false);
 const successDevolutions = ref(false);
@@ -131,17 +135,20 @@ function resetAllCounts() {
 const onUpload = async (event) => {
     const file = event.files[0];
     if (file && file.name.endsWith('.xlsx')) {
+        isLoading.value = true;
         resetAllCounts();
         try {
             const rows = await loadExcelFile(file);
             const isValidHeaders = validateHeaders(rows[1], headersAdmisionesGeneradas);
             if (!isValidHeaders.success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: `Faltan las cabeceras: ${isValidHeaders.missingHeaders.join(', ')}`, life: 3000 });
+                isLoading.value = false;
                 return;
             }
             const isValidData = validateData(rows);
             if (!isValidData) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
+                isLoading.value = false;
                 return;
             }
 
@@ -191,12 +198,14 @@ const onUpload = async (event) => {
     } else {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Formato de archivo no válido', life: 3000 });
     }
+    isLoading.value = false;
 };
 
 const onUploadDevolutions = async (event) => {
     const file = event.files[0];
     if (file && file.name.endsWith('.xlsx')) {
         resetAllCounts();
+        isLoadingDevolutions.value = true;
         try {
             const rows = await loadExcelFile(file);
             const isValidHeadersDevolutions = validateHeaders(rows[1], headersDevoluciones);
@@ -209,22 +218,37 @@ const onUploadDevolutions = async (event) => {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 return;
             }
-            const dataSetDevolutions = processDataDatabase(rows);
-            console.log(rows);
+            const dataSetDevolutions = processDataDatabaseDevolutions(rows);
+            const { seenDevolutions } = await classifyDataDevolutions(dataSetDevolutions);
+
+            // Devoluciones
+            devolutionsLoader.value = true;
+            const responseDevolutions = await importDevolutions(seenDevolutions, devolutionsStore, toast);
+            successDevolutions.value = responseDevolutions.successComplete;
+            countNewDevolutions.value = responseDevolutions.countNew;
+            countUpdateDevolutions.value = responseDevolutions.countUpdate;
+            countErrorNewDevolutions.value = responseDevolutions.countErrorNew;
+            countErrorUpdateDevolutions.value = responseDevolutions.countErrorUpdate;
         } catch (error) {
             console.error('Error al procesar el archivo', error);
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al procesar el archivo', life: 3000 });
         }
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Formato de archivo no válido', life: 3000 });
     }
+    isLoadingDevolutions.value = false;
 };
 
 onMounted(async () => {
+    isLoading.value = true;
     insurers.value = await insurersStore.initializeStore();
     invoices.value = await invoicesStore.initializeStore();
     medical_records.value = await medicalRecordsStore.initializeStore();
     admissions.value = await admissionsStore.initializeStore();
+    isLoading.value = false;
+    isLoadingDevolutions.value = true;
     devolutions.value = await devolutionsStore.initializeStore();
-
-    console.log(devolutions.value);
+    isLoadingDevolutions.value = false;
 });
 </script>
 <template>
@@ -359,9 +383,25 @@ onMounted(async () => {
                     </div>
                 </div>
                 <span class="text-muted-color">Devoluciones <i class="pi pi-file-excel ml-2"></i></span>
-                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUploadDevolutions($event)" />
-                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                <FileUpload v-if="!isLoadingDevolutions" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUploadDevolutions($event)" />
+                <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoadingDevolutions">
                     <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                </div>
+                <div v-if="devolutionsLoader" class="font-semibold text-xs mb-4 mt-4" :class="successDevolutions ? 'text-green-500' : 'text-red-500'">
+                    Devoluciones <ProgressSpinner v-if="!successDevolutions" style="width: 10px; height: 10px" />
+                    <span class="text-xs text-gray-500">({{ devolutions.length }})</span>
+                    <span v-if="successDevolutions" class="ml-5">
+                        <i class="pi pi-check" aria-hidden="true"></i>
+                    </span>
+                    <span v-else class="ml-5">
+                        <i class="pi pi-times" aria-hidden="true"></i>
+                    </span>
+                    <div class="mt-2">
+                        <Tag v-if="successDevolutions" severity="success" class="mr-2 mt-2 text-xs"> {{ countNewDevolutions }} nuevos </Tag>
+                        <Tag v-if="successDevolutions" severity="info" class="mr-2 mt-2 text-xs"> {{ countUpdateDevolutions }} actualizados </Tag>
+                        <Tag v-if="!successDevolutions" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorNewDevolutions }} errores al crear </Tag>
+                        <Tag v-if="!successDevolutions" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorUpdateDevolutions }} errores al actualizar </Tag>
+                    </div>
                 </div>
             </div>
         </div>
@@ -380,22 +420,6 @@ onMounted(async () => {
                 <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar" chooseLabel="Importar" class="w-full mr-2 mt-2 inline-block" :auto="true" @select="onUpload($event)" />
                 <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
                     <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
-                </div>
-                <div v-if="devolutionsLoader" class="font-semibold text-xs mb-4 mt-4" :class="successDevolutions ? 'text-green-500' : 'text-red-500'">
-                    Devoluciones <ProgressSpinner v-if="!successDevolutions" style="width: 10px; height: 10px" />
-                    <span class="text-xs text-gray-500">({{ devolutions.length }})</span>
-                    <span v-if="successDevolutions" class="ml-5">
-                        <i class="pi pi-check" aria-hidden="true"></i>
-                    </span>
-                    <span v-else class="ml-5">
-                        <i class="pi pi-times" aria-hidden="true"></i>
-                    </span>
-                    <div class="mt-2">
-                        <Tag v-if="successDevolutions" severity="success" class="mr-2 mt-2 text-xs"> {{ countNewDevolutions }} nuevos </Tag>
-                        <Tag v-if="successDevolutions" severity="info" class="mr-2 mt-2 text-xs"> {{ countUpdateDevolutions }} actualizados </Tag>
-                        <Tag v-if="!successDevolutions" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorNewDevolutions }} errores al crear </Tag>
-                        <Tag v-if="!successDevolutions" severity="danger" class="mr-2 mt-2 text-xs"> {{ countErrorUpdateDevolutions }} errores al actualizar </Tag>
-                    </div>
                 </div>
             </div>
         </div>

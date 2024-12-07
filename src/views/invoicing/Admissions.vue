@@ -1,5 +1,6 @@
 <script setup>
 import { useAdmissionsStore } from '@/stores/admissionsStore';
+import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { dformat, getDaysPassed } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -7,6 +8,7 @@ import { useToast } from 'primevue/usetoast';
 import { onMounted, ref } from 'vue';
 
 const admissionsStore = useAdmissionsStore();
+const devolutionsStore = useDevolutionsStore();
 
 onMounted(async () => {
     admissions.value = await admissionsStore.initializeStore();
@@ -20,6 +22,9 @@ onMounted(async () => {
             } else {
                 admission.daysPassed = `Extemporáneo (${daysPassed - admission.insurer.shipping_period} días)`;
             }
+        }
+        if (admission.is_devolution && admission.status !== 'Pagado') {
+            admission.status = 'Devolución';
         }
     });
 
@@ -60,6 +65,56 @@ function getStatusLabel(status) {
             return null;
     }
 }
+
+// Exportar devoluciones
+const exportExcelDevolutions = async () => {
+    let devolutions = await devolutionsStore.initializeStore();
+    const columnsDevolutions = [
+        { header: 'Admisión', key: 'admission', width: 15 },
+        { header: 'Fecha Atención', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Fecha Devolución', key: 'devolution_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Factura', key: 'invoice_number', width: 20 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer', width: 15 },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Periodo', key: 'period', width: 15 },
+        { header: 'Tipo', key: 'type', width: 15 },
+        { header: 'Motivo', key: 'reason', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Estado', key: 'status', width: 15 }
+    ];
+    let admissionsDevolutions = admissions.value.filter((admission) => admission.status === 'Devolución');
+
+    devolutions = devolutions.filter((devolution) => admissionsDevolutions.some((admission) => admission.number === devolution.admission.number));
+
+    devolutions.forEach((devolution) => {
+        // Convertir la fecha a formato Excel (número serial)
+        const date = new Date(devolution.admission.attendance_date);
+        devolution.admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+        const dateDevolution = new Date(devolution.date);
+        devolution.date = (dateDevolution - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+        devolution.invoice_number = devolution.last_invoice_number;
+        // Enviar el monto como número, sin formatear
+        devolution.invoice.amount = Number(devolution.invoice.amount);
+    });
+
+    const data = devolutions.map((devolution) => ({
+        admission: devolution.admission.number,
+        attendance_date: devolution.admission.attendance_date,
+        devolution_date: devolution.date,
+        invoice_number: devolution.invoice.number,
+        doctor: devolution.admission.doctor,
+        insurer: devolution.admission.insurer.name,
+        biller: devolution.biller,
+        period: devolution.period,
+        type: devolution.type,
+        reason: devolution.reason,
+        amount: devolution.invoice.amount,
+        status: devolution.status
+    }));
+
+    await exportToExcel(columnsDevolutions, data, 'devoluciones', 'devoluciones');
+};
 
 // Exportar a Excel
 const exportExcelPending = async () => {
@@ -104,6 +159,7 @@ const exportExcelPending = async () => {
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
+                    <Button label="Exportar Devoluciones" icon="pi pi-upload" severity="secondary" class="mr-5" @click="exportExcelDevolutions" />
                     <!-- <Button label="Nuevo" icon="pi pi-plus" severity="secondary" class="mr-2" @click="openNew" />
                     <Button label="Eliminar" icon="pi pi-trash" severity="secondary" @click="confirmDeleteSelected" :disabled="!selectedAdmissions || !selectedAdmissions.length" /> -->
                 </template>
