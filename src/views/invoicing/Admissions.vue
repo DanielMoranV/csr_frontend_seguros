@@ -247,7 +247,7 @@ const onUploadSettlements = async (event) => {
                 </template>
 
                 <template #end>
-                    <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Meta Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
+                    <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
                     <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
                         <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
                     </div>
