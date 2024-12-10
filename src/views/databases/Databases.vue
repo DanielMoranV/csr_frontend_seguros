@@ -146,24 +146,25 @@ const onUpload = async (event) => {
                 return;
             }
             const isValidData = validateData(rows);
-            if (!isValidData) {
+            const dataSet = processDataDatabase(rows);
+
+            if (!isValidData || dataSet.length === 0) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 isLoading.value = false;
                 return;
             }
-
-            const dataSet = processDataDatabase(rows);
             const { seenRecords, seenInsurers, seenAdmissions, seenInvoices } = classifyData(dataSet);
 
             // Historias Clínicas
             medicalRecordsLoader.value = true;
             const responseMedicalRecords = await importMedicalRecords(seenRecords, medicalRecordsStore, toast);
-            console.log('responseMedicalRecords', responseMedicalRecords);
             successMedicalRecords.value = responseMedicalRecords.successComplete;
             countNewMedicalRecords.value = responseMedicalRecords.countNew;
             countUpdateMedicalRecords.value = responseMedicalRecords.countUpdate;
             countErrorNewMedicalRecords.value = responseMedicalRecords.countErrorNew;
             countErrorUpdateMedicalRecords.value = responseMedicalRecords.countErrorUpdate;
+
+            medical_records.value = await medicalRecordsStore.initializeStore();
 
             // Aseguradoras
             insurersLoader.value = true;
@@ -174,6 +175,8 @@ const onUpload = async (event) => {
             countErrorNewInsurers.value = responseInsurers.countErrorNew;
             countErrorUpdateInsurers.value = responseInsurers.countErrorUpdate;
 
+            insurers.value = await insurersStore.initializeStore();
+
             // Admisiones
             admissionsLoader.value = true;
             const responseAdmissions = await importAdmissions(seenAdmissions, admissionsStore, toast);
@@ -183,6 +186,8 @@ const onUpload = async (event) => {
             countErrorNewAdmissions.value = responseAdmissions.countErrorNew;
             countErrorUpdateAdmissions.value = responseAdmissions.countErrorUpdate;
 
+            admissions.value = await admissionsStore.initializeStore();
+
             // Facturas
             invoicesLoader.value = true;
             const responseInvoices = await importInvoices(seenInvoices, invoicesStore, toast);
@@ -191,6 +196,8 @@ const onUpload = async (event) => {
             countUpdateInvoices.value = responseInvoices.countUpdate;
             countErrorNewInvoices.value = responseInvoices.countErrorNew;
             countErrorUpdateInvoices.value = responseInvoices.countErrorUpdate;
+
+            invoices.value = await invoicesStore.initializeStore();
         } catch (error) {
             console.error('Error al procesar el archivo', error);
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al procesar el archivo', life: 3000 });
@@ -214,21 +221,27 @@ const onUploadDevolutions = async (event) => {
                 return;
             }
             const isValidDataDevolutions = validateData(rows);
-            if (!isValidDataDevolutions) {
+
+            const dataSetDevolutions = processDataDatabaseDevolutions(rows);
+
+            if (!isValidDataDevolutions || dataSetDevolutions.length === 0) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 return;
             }
-            const dataSetDevolutions = processDataDatabaseDevolutions(rows);
             const { seenDevolutions } = await classifyDataDevolutions(dataSetDevolutions);
 
             // Devoluciones
             devolutionsLoader.value = true;
             const responseDevolutions = await importDevolutions(seenDevolutions, devolutionsStore, toast);
+
             successDevolutions.value = responseDevolutions.successComplete;
             countNewDevolutions.value = responseDevolutions.countNew;
             countUpdateDevolutions.value = responseDevolutions.countUpdate;
             countErrorNewDevolutions.value = responseDevolutions.countErrorNew;
             countErrorUpdateDevolutions.value = responseDevolutions.countErrorUpdate;
+
+            devolutions.value = await devolutionsStore.initializeStore();
+            await admissionsStore.fetchAdmissions();
         } catch (error) {
             console.error('Error al procesar el archivo', error);
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al procesar el archivo', life: 3000 });

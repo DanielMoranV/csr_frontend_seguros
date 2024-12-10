@@ -73,13 +73,10 @@ export const classifyData = (dataSet) => {
 };
 
 export const classifyDataDevolutions = async (dataSet) => {
-    console.log(dataSet);
     const seenDevolutions = new Map();
     let admissions = await admissionsStore.initializeStore();
 
     dataSet = dataSet.filter(({ admission_number }) => admissions.find((admission) => admission.number === admission_number));
-
-    console.log('dataSet Filtrado', dataSet);
 
     dataSet.forEach(({ date_devolution, period_devolution, invoice_number, insurer, amount_devolution, patient, admission_number, type_attention, biller, reason_devolution }) => {
         if (!seenDevolutions.has(invoice_number)) {
@@ -97,10 +94,51 @@ export const classifyDataDevolutions = async (dataSet) => {
             });
         }
     });
-    console.log('seenDevolutions', seenDevolutions);
 
     return { seenDevolutions: Array.from(seenDevolutions.values()) };
 };
+
+export const classifyDataSettlements = async (dataSet) => {
+    const seenSettlements = new Map();
+    let admissions = await admissionsStore.initializeStore();
+
+    dataSet = dataSet.filter(({ admission_number }) => admissions.find((admission) => admission.number === admission_number));
+
+    dataSet.forEach(({ biller, period, admission_number }) => {
+        let admission = admissions.find((admission) => admission.number === admission_number);
+        if (!seenSettlements.has(admission_number)) {
+            seenSettlements.set(admission_number, { biller, period, admission_number, admission_id: admission?.id });
+        }
+    });
+
+    return { seenSettlements: Array.from(seenSettlements.values()) };
+};
+
+export const importSettlements = async (seenSettlements, settlementsStore, toast) => {
+    let settlements = await settlementsStore.initializeStore();
+    let settlementsData = seenSettlements;
+    let existingSettlements = [];
+    let newSettlements = [];
+
+    settlementsData.forEach((settlement) => {
+        const exists = settlements.some((existingSettlement) => existingSettlement.admission_id === settlement.admission_id);
+
+        if (exists) {
+            settlement.id = settlements.find((existingSettlement) => existingSettlement.admission_id === settlement.admission_id).id;
+            existingSettlements.push(settlement);
+        } else {
+            newSettlements.push(settlement);
+        }
+    });
+
+    console.log('existingSettlements', existingSettlements);
+
+    const responseUpdate = await updateExistingRecords(existingSettlements, settlementsStore, toast);
+    const responseNew = await createNewRecords(newSettlements, settlementsStore, toast);
+
+    return { successComplete: responseUpdate.success && responseNew.success, countNew: responseNew.countSuccess, countUpdate: responseUpdate.countSuccess, countErrorNew: responseNew.countError, countErrorUpdate: responseUpdate.countError };
+};
+
 export const importMedicalRecords = async (seenRecords, medicalRecordsStore, toast) => {
     let medicalRecords = await medicalRecordsStore.initializeStore();
     let medicalRecordsData = seenRecords;
@@ -232,8 +270,11 @@ export const importDevolutions = async (seenDevolutions, devolutionsStore, toast
             newDevolutions.push(devolution);
         }
     });
-    console.log('existingDevolutions', existingDevolutions);
-    console.log('newDevolutions', newDevolutions);
+    let payloadUpdateInvoices = existingDevolutions.map((devolution) => ({
+        number: devolution.invoice_number,
+        status: 'NC'
+    }));
+    await invoicesStore.updateMultiple(payloadUpdateInvoices);
 
     const responseUpdate = await updateExistingRecords(existingDevolutions, devolutionsStore, toast);
     const responseNew = await createNewRecords(newDevolutions, devolutionsStore, toast);

@@ -96,6 +96,24 @@ export const processDataDatabaseDevolutions = (rows) => {
     return dataSetDevolutions;
 };
 
+// Procesar Meta Liquidación
+export const processDataDatabaseSettlements = (rows) => {
+    console.log('rows', rows);
+    const dataSetSettlements = rows
+        .slice(2) // Omite las dos primeras filas
+        .filter((row) => row[1] != '')
+        .filter((row) => row[6])
+        .filter((row) => row[7])
+        .map((row) => ({
+            admission_number: row[1],
+            biller: row[6],
+            period: row[7]
+        }));
+
+    console.log('dataSetSettlements', dataSetSettlements);
+    return dataSetSettlements;
+};
+
 // Función para procesar los datos
 export const processDataDatabase = (rows) => {
     const dataSet = rows

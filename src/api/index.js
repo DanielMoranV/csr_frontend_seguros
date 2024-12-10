@@ -53,3 +53,11 @@ export const updateDevolution = (payload, id) => axios.put(`/devolutions/${id}`,
 export const deleteDevolution = (id) => axios.delete(`/devolutions/${id}`);
 export const createDevolutions = (payload) => axios.post('/devolutions/store', payload);
 export const updateDevolutions = (payload) => axios.patch('/devolutions/update', payload);
+
+// Settlements
+export const fetchSettlements = () => axios.get('/settlements');
+export const createSettlement = (payload) => axios.post('/settlements', payload);
+export const updateSettlement = (payload, id) => axios.put(`/settlements/${id}`, payload);
+export const deleteSettlement = (id) => axios.delete(`/settlements/${id}`);
+export const createSettlements = (payload) => axios.post('/settlements/store', payload);
+export const updateSettlements = (payload) => axios.patch('/settlements/update', payload);

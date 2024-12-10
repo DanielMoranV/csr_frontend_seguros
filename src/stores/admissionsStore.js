@@ -22,11 +22,13 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
     actions: {
         async initializeStore() {
             // Carga inicial desde IndexedDB
+            this.loading = true;
             const admissionsFromCache = await indexedDB.getItem('admissions');
             this.admissions = admissionsFromCache || [];
             if (this.admissions.length === 0) {
                 await this.fetchAdmissions();
             }
+            this.loading = false;
             return this.admissions;
         },
         async fetchAdmissions() {

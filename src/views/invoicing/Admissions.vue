@@ -1,18 +1,35 @@
 <script setup>
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
+import { useSettlementsStore } from '@/stores/settlementsStore';
+import { classifyDataSettlements, importSettlements } from '@/utils/dataProcessingHelpers';
 import { dformat, getDaysPassed } from '@/utils/day';
-import { exportToExcel } from '@/utils/excelUtils';
-import { FilterMatchMode } from '@primevue/core/api';
+import { exportToExcel, loadExcelFile, processDataDatabaseSettlements, validateData, validateHeaders } from '@/utils/excelUtils';
+import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
-import { onMounted, ref } from 'vue';
+import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsStore = useAdmissionsStore();
 const devolutionsStore = useDevolutionsStore();
+const settlementsStore = useSettlementsStore();
+
+// Headers
+const headerSettlements = [
+    'Admisión', // Número de documento
+    'Fecha', // Fecha del documento
+    'Días', // Número de historia del paciente
+    'Médico', // Nombre del paciente
+    'Aseguradora', // Nombre del empleado
+    'Facturador', // Nombre de la compañía
+    'Periodo', // Monto
+    'Monto' // Monto
+];
 
 onMounted(async () => {
+    // contar segundos desde aqui
+    const start = performance.now();
     admissions.value = await admissionsStore.initializeStore();
-
+    console.log('admissions', admissions.value);
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
 
@@ -20,18 +37,21 @@ onMounted(async () => {
             if (daysPassed <= admission.insurer.shipping_period) {
                 admission.daysPassed = getDaysPassed(admission.attendance_date);
             } else {
-                admission.daysPassed = `Extemporáneo (${daysPassed - admission.insurer.shipping_period} días)`;
+                admission.daysPassed = `Extemp. (${daysPassed - admission.insurer.shipping_period} d.)`;
             }
         }
         if (admission.is_devolution && admission.status !== 'Pagado') {
             admission.status = 'Devolución';
         }
     });
-
-    console.log(admissions.value);
+    const end = performance.now();
+    console.log(`Tiempo de ejecución: ${end - start} milisegundos`);
+    // tiempo en segundos
+    console.log(`Tiempo de ejecución: ${((end - start) / 1000).toFixed(2)} segundos`);
 });
 
 const toast = useToast();
+const isLoading = ref(false);
 const dt = ref();
 const admissions = ref([]);
 const admission = ref({});
@@ -44,6 +64,32 @@ const submitted = ref(false);
 function formatCurrency(value) {
     if (value) return value.toLocaleString('es-PE', { style: 'currency', currency: 'PEN' });
     return;
+}
+
+function initFilters() {
+    filters.value = {
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+        number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        attendance_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+        daysPassed: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+        doctor: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        'insurer.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        last_invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        last_invoice_biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        last_settlement_period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] }
+    };
+}
+
+onBeforeMount(() => {
+    initFilters();
+});
+
+function clearFilter() {
+    filters.value = {
+        global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+    };
+    initFilters();
 }
 
 function exportCSV() {
@@ -93,30 +139,34 @@ const exportExcelDevolutions = async () => {
         devolution.admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
         const dateDevolution = new Date(devolution.date);
         devolution.date = (dateDevolution - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
-        devolution.invoice_number = devolution.last_invoice_number;
         // Enviar el monto como número, sin formatear
-        devolution.invoice.amount = Number(devolution.invoice.amount);
+        devolution.admission.amount = Number(devolution.admission.amount);
     });
 
-    const data = devolutions.map((devolution) => ({
+    let data = devolutions.map((devolution) => ({
         admission: devolution.admission.number,
         attendance_date: devolution.admission.attendance_date,
         devolution_date: devolution.date,
-        invoice_number: devolution.invoice.number,
+        invoice_number: devolution.admission?.last_invoice_number,
         doctor: devolution.admission.doctor,
         insurer: devolution.admission.insurer.name,
         biller: devolution.biller,
         period: devolution.period,
         type: devolution.type,
         reason: devolution.reason,
-        amount: devolution.invoice.amount,
-        status: devolution.status
+        amount: devolution.admission.amount,
+        status: devolution.admission?.last_invoice_biller && devolution.admission?.last_invoice_status !== 'NC' ? 'Liquidado' : 'Pendiente'
     }));
+
+    // Filtrar las devoluciones con igual admision y solo dejar el registro con devolution_date más reciente
+    data = data.filter((devolution, index, self) => {
+        return index === self.findIndex((t) => t.admission === devolution.admission);
+    });
 
     await exportToExcel(columnsDevolutions, data, 'devoluciones', 'devoluciones');
 };
 
-// Exportar a Excel
+// Exportar a Excel admisiones pendientes
 const exportExcelPending = async () => {
     const columns = [
         { header: 'Admisión', key: 'admission', width: 15 },
@@ -145,12 +195,45 @@ const exportExcelPending = async () => {
         daysPassed: admission.daysPassed,
         doctor: admission.doctor,
         insurer: admission.insurer.name,
-        last_invoice_biller: admission.last_invoice_biller,
-        period: admission.period,
+        last_invoice_biller: admission.last_invoice_biller || admission.last_settlement_biller,
+        period: admission.last_settlement_period,
         amount: admission.amount
     }));
 
     await exportToExcel(columns, data, 'admisiones_pendientes', 'admisiones_pendientes');
+};
+
+// Importar Meta Liquidación
+const onUploadSettlements = async (event) => {
+    const file = event.files[0];
+    if (file && file.name.endsWith('.xlsx')) {
+        try {
+            isLoading.value = true;
+            const rows = await loadExcelFile(file);
+            const isValidHeaders = validateHeaders(rows[1], headerSettlements);
+            if (!isValidHeaders.success) {
+                toast.add({ severity: 'error', summary: 'Error', detail: `Faltan las cabeceras: ${isValidHeaders.missingHeaders.join(', ')}`, life: 3000 });
+                isLoading.value = false;
+                return;
+            }
+            const isValidData = validateData(rows);
+            const dataSet = processDataDatabaseSettlements(rows);
+            if (!isValidData || dataSet.length === 0) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
+                isLoading.value = false;
+                return;
+            }
+
+            const { seenSettlements } = await classifyDataSettlements(dataSet);
+
+            await importSettlements(seenSettlements, settlementsStore, toast);
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
+        }
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no es válido', life: 3000 });
+    }
+    isLoading.value = false;
 };
 </script>
 
@@ -159,14 +242,15 @@ const exportExcelPending = async () => {
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
-                    <Button label="Exportar Devoluciones" icon="pi pi-upload" severity="secondary" class="mr-5" @click="exportExcelDevolutions" />
-                    <!-- <Button label="Nuevo" icon="pi pi-plus" severity="secondary" class="mr-2" @click="openNew" />
-                    <Button label="Eliminar" icon="pi pi-trash" severity="secondary" @click="confirmDeleteSelected" :disabled="!selectedAdmissions || !selectedAdmissions.length" /> -->
+                    <Button label="Exportar Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" />
+                    <Button label="Exportar Pendientes" icon="pi pi-download" severity="success" @click="exportExcelPending" />
                 </template>
 
                 <template #end>
-                    <Button label="Exportar Pendientes" icon="pi pi-upload" severity="secondary" class="mr-5" @click="exportExcelPending" />
-                    <Button label="Meta Liquidación" severity="success" icon="pi pi-download" @click="downloadMetaLiquidation($event)" />
+                    <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Meta Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
+                    <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                        <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                    </div>
                 </template>
             </Toolbar>
 
@@ -177,71 +261,99 @@ const exportExcelPending = async () => {
                 dataKey="id"
                 :paginator="true"
                 :rows="10"
-                :filters="filters"
+                v-model:filters="filters"
+                selectionMode="single"
+                stripedRows
+                size="small"
+                filterDisplay="menu"
+                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer.name', 'last_invoice_number', 'last_invoice_biller', 'last_settlement_period', 'amount']"
+                :loading="admissionsStore.loading"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
-                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} admisiones"
+                showGridlines
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
             >
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
                         <h4 class="m-0">Gestión de admisiones de seguro CSR</h4>
+                        <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                         <IconField>
                             <InputIcon>
                                 <i class="pi pi-search" />
                             </InputIcon>
-                            <InputText v-model="filters['global'].value" placeholder="Search..." />
+                            <InputText v-model="filters['global'].value" placeholder="Buscar..." />
                         </IconField>
                     </div>
                 </template>
+                <template #empty> No hay datos. </template>
+                <template #loading> Cargando datos. Por favor, espere. </template>
 
                 <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
 
-                <Column field="number" header="Número" sortable style="min-width: 10rem"></Column>
-                <Column field="attendance_date" header="Fecha" sortable style="min-width: 10rem">
+                <Column field="number" header="Número" sortable style="min-width: 5rem"></Column>
+                <Column field="attendance_date" header="Fecha" sortable style="min-width: 5rem">
                     <template #body="slotProps">
                         {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                     </template>
                 </Column>
-                <Column field="daysPassed" header="Días" sortable style="min-width: 10rem">
+                <Column field="daysPassed" header="Días" sortable style="min-width: 3rem">
                     <template #body="slotProps">
                         {{ slotProps.data.daysPassed || '-' }}
                     </template>
                 </Column>
-                <!-- <Column field="insurer.payment_period" header="Periodo" sortable style="min-width: 10rem">
-                    <template #body="slotProps">
-                        {{ slotProps.data.insurer.payment_period || '-' }}
+                <Column field="doctor" header="Médico" sortable style="min-width: 10rem">
+                    <template #body="{ data }">
+                        {{ data.doctor || '-' }}
                     </template>
-                </Column> -->
-                <!-- <Column field="attendance_hour" header="Hora" sortable style="min-width: 8rem">
-                    <template #body="slotProps">
-                        {{ slotProps.data.attendance_hour || '-' }}
-                    </template>
-                </Column> -->
-                <Column field="doctor" header="Médico" sortable style="min-width: 10rem"></Column>
-                <Column field="insurer.name" header="Aseguradora" sortable style="min-width: 10rem"></Column>
-                <Column field="last_invoice_number" header="Factura" sortable style="min-width: 10rem"></Column>
-                <Column field="last_invoice_biller" header="Facturador" sortable style="min-width: 10rem"></Column>
-                <Column field="period" header="Periodo" sortable style="min-width: 10rem">
-                    <template #body="slotProps">
-                        {{ slotProps.data.period || 'Sin Asignar' }}
+                    <template #filter="{ filterModel }">
+                        <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
                     </template>
                 </Column>
-                <Column field="amount" header="Monto" sortable style="min-width: 8rem">
+                <Column field="insurer.name" header="Aseguradora" sortable style="min-width: 10rem">
+                    <template #body="slotProps">
+                        {{ slotProps.data.insurer.name || '-' }}
+                    </template>
+                </Column>
+                <Column field="last_invoice_number" header="Factura" sortable style="min-width: 8rem"></Column>
+                <Column field="last_invoice_biller" header="Facturador" sortable style="min-width: 7rem">
+                    <template #body="{ data }">
+                        {{ data.last_invoice_biller || data.last_settlement_biller }}
+                    </template>
+                    <template #filter="{ filterModel }">
+                        <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
+                    </template>
+                </Column>
+                <Column field="last_settlement_period" header="Periodo" sortable style="min-width: 7rem">
+                    <template #body="slotProps">
+                        {{ slotProps.data.last_settlement_period || 'Sin Asignar' }}
+                    </template>
+                </Column>
+                <Column field="amount" header="Monto" sortable style="min-width: 5rem">
                     <template #body="slotProps">
                         {{ formatCurrency(slotProps.data.amount) }}
                     </template>
+                    <template #filter="{ filterModel }">
+                        <InputNumber v-model="filterModel.value" mode="currency" currency="PEN" locale="es-PE" />
+                    </template>
                 </Column>
-                <Column field="status" header="Estado" sortable style="min-width: 12rem">
+                <Column field="status" header="Estado" sortable style="min-width: 7rem">
                     <template #body="slotProps">
                         <Tag :value="slotProps.data.status" :severity="getStatusLabel(slotProps.data.status)" />
                     </template>
                 </Column>
-                <Column :exportable="false" style="min-width: 12rem">
+                <!-- <Column :exportable="false" style="min-width: 7rem">
                     <template #body="slotProps">
                         <Button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editProduct(slotProps.data)" />
                         <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteProduct(slotProps.data)" />
                     </template>
-                </Column>
+                </Column> -->
+                <!-- suma de totales -->
+
+                <template #footer>
+                    <div class="flex justify-end items-center gap-2">
+                        <span>Total Monto:</span>
+                    </div>
+                </template>
             </DataTable>
         </div>
     </div>
