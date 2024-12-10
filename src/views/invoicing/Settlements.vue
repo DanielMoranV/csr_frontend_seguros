@@ -7,29 +7,31 @@ const settlementsStore = useSettlementsStore();
 const isLoading = ref(false);
 const settlements = ref([]);
 
-const summaryStatistics = ref([
-    {
-        totalSettlements: 0,
-        totalReceivedFile: 0,
-        totalSettled: 0,
-        totalAudited: 0,
-        totalBilled: 0,
-        totalShipped: 0
-    }
-]);
-
 const chartData = ref();
 const chartOptions = ref();
 const chartDataReceivedFile = ref();
 const chartOptionsReceivedFile = ref();
+const chartDataSettled = ref();
+const chartOptionsSettled = ref();
+
+const biller = ref('FHUAYAMA');
 
 onMounted(async () => {
     settlements.value = await settlementsStore.initializeStore();
+
+    if (biller.value) {
+        settlements.value = settlements.value.filter((settlement) => settlement.biller == biller.value);
+    }
+
+    console.log(settlements.value);
     chartData.value = setChartData();
     chartOptions.value = setChartOptions();
 
     chartDataReceivedFile.value = setChartDataReceivedFile();
     chartOptionsReceivedFile.value = setChartOptionsReceivedFile();
+
+    chartDataSettled.value = setChartDataSettled();
+    chartOptionsSettled.value = setChartOptionsSettled();
 });
 
 const setChartData = () => {
@@ -143,6 +145,34 @@ const setChartOptionsReceivedFile = () => {
         }
     };
 };
+
+const setChartDataSettled = () => {
+    const documentStyle = getComputedStyle(document.body);
+    const pendingSettled = settlements.value.filter((settlement) => settlement.settled == false).length;
+    const progressSettled = settlements.value.filter((settlement) => settlement.settled).length;
+
+    return {
+        labels: ['Liquidadas', 'No Liquidadas'],
+        datasets: [
+            {
+                data: [progressSettled, pendingSettled],
+                backgroundColor: [documentStyle.getPropertyValue('--p-green-500'), documentStyle.getPropertyValue('--p-yellow-500'), documentStyle.getPropertyValue('--p-gray-500')]
+            }
+        ]
+    };
+};
+const setChartOptionsSettled = () => {
+    const documentStyle = getComputedStyle(document.body);
+    const textColor = documentStyle.getPropertyValue('--p-text-color');
+
+    return {
+        plugins: {
+            legend: {
+                labels: { usePointStyle: true, color: textColor }
+            }
+        }
+    };
+};
 </script>
 
 <template>
@@ -171,7 +201,7 @@ const setChartOptionsReceivedFile = () => {
                     <h5>Expedientes Liquidados</h5>
                 </div>
                 <div class="flex justify-center">
-                    <Chart type="pie" :data="chartDataReceivedFile" :options="chartOptionsReceivedFile" class="w-full md:w-[15rem]" />
+                    <Chart type="pie" :data="chartDataSettled" :options="chartOptionsSettled" class="w-full md:w-[15rem]" />
                 </div>
             </div>
         </div>
