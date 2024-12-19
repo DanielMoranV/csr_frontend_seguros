@@ -1,7 +1,6 @@
 <script setup>
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
-import { useInsurersStore } from '@/stores/insurersStore';
 import { useSettlementsStore } from '@/stores/settlementsStore';
 import { classifyDataSettlements, importSettlements } from '@/utils/dataProcessingHelpers';
 import { dformat, getDaysPassed } from '@/utils/day';
@@ -13,7 +12,6 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 const admissionsStore = useAdmissionsStore();
 const devolutionsStore = useDevolutionsStore();
 const settlementsStore = useSettlementsStore();
-const insurersStore = useInsurersStore();
 
 // Headers
 const headerSettlements = [
@@ -28,49 +26,27 @@ const headerSettlements = [
 ];
 
 onMounted(async () => {
-    let payload = {
-        start_date: dformat(starDate.value, 'MM-DD-YYYY'),
-        end_date: dformat(endDate.value, 'MM-DD-YYYY')
-    };
-    insurers.value = await insurersStore.initializeStore();
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
-
-    if (!success) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
-    }
-    admissions.value = data;
-
+    // contar segundos desde aqui
+    const start = performance.now();
+    admissions.value = await admissionsStore.initializeStore();
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
-        admission.daysPassed = daysPassed;
-
-        if (admission.invoice_number === null) {
-            admission.status = 'Pendiente';
-        } else {
-            admission.status = 'Liquidado';
-        }
-        if (admission.devolution_date !== null) {
-            admission.status = 'Devolución';
-        }
-        if (admission.paid_invoice_number !== null) {
-            admission.status = 'Pagado';
-        }
-
-        // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
-        // insurers.vaue.name = admission.insurer_name;
-        let shipping_period = insurers.value.find((insurer) => {
-            return insurer.name.trim().toLowerCase() === admission.insurer_name.trim().toLowerCase();
-        });
-        admission.shipping_period = shipping_period.shipping_period;
 
         if (admission.status === 'Pendiente') {
-            if (daysPassed <= admission.shipping_period) {
+            if (daysPassed <= admission.insurer.shipping_period) {
                 admission.daysPassed = getDaysPassed(admission.attendance_date);
             } else {
-                admission.daysPassed = `Extemp. (${daysPassed - admission.shipping_period} d.)`;
+                admission.daysPassed = `Extemp. (${daysPassed - admission.insurer.shipping_period} d.)`;
             }
         }
+        if (admission.is_devolution && admission.status !== 'Pagado') {
+            admission.status = 'Devolución';
+        }
     });
+    const end = performance.now();
+    //console.log(`Tiempo de ejecución: ${end - start} milisegundos`);
+    // tiempo en segundos
+    //console.log(`Tiempo de ejecución: ${((end - start) / 1000).toFixed(2)} segundos`);
 });
 
 const toast = useToast();
@@ -78,7 +54,6 @@ const isLoading = ref(false);
 const dt = ref();
 const admissions = ref([]);
 const admission = ref({});
-const insurers = ref([]);
 const selectedAdmissions = ref();
 const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 const endDate = ref(new Date());
@@ -97,12 +72,11 @@ function initFilters() {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
         number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         attendance_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        patient: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         daysPassed: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
         doctor: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        insurer_name: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        'insurer.name': { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        last_invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        last_invoice_biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         last_settlement_period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] }
     };
@@ -263,49 +237,12 @@ const onUploadSettlements = async (event) => {
     isLoading.value = false;
 };
 
-const searchAdmissionsByDate = async () => {
+const searchAdmissionsByDate = () => {
     let payload = {
         start_date: dformat(starDate.value, 'MM-DD-YYYY'),
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
-
-    if (!success) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
-    }
-    admissions.value = data;
-
-    admissions.value.forEach((admission) => {
-        let daysPassed = getDaysPassed(admission.attendance_date);
-        admission.daysPassed = daysPassed;
-
-        if (admission.invoice_number === null) {
-            admission.status = 'Pendiente';
-        } else {
-            admission.status = 'Liquidado';
-        }
-        if (admission.devolution_date !== null) {
-            admission.status = 'Devolución';
-        }
-        if (admission.paid_invoice_number !== null) {
-            admission.status = 'Pagado';
-        }
-
-        // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
-        // insurers.vaue.name = admission.insurer_name;
-        let shipping_period = insurers.value.find((insurer) => {
-            return insurer.name.trim().toLowerCase() === admission.insurer_name.trim().toLowerCase();
-        });
-        admission.shipping_period = shipping_period.shipping_period;
-
-        if (admission.status === 'Pendiente') {
-            if (daysPassed <= admission.shipping_period) {
-                admission.daysPassed = getDaysPassed(admission.attendance_date);
-            } else {
-                admission.daysPassed = `Extemp. (${daysPassed - admission.shipping_period} d.)`;
-            }
-        }
-    });
+    admissionsStore.fetchAdmissionsDateRange(payload);
 };
 </script>
 
@@ -333,7 +270,7 @@ const searchAdmissionsByDate = async () => {
                 ref="dt"
                 v-model:selection="selectedAdmissions"
                 :value="admissions"
-                dataKey="number"
+                dataKey="id"
                 :paginator="true"
                 :rows="10"
                 v-model:filters="filters"
@@ -341,7 +278,7 @@ const searchAdmissionsByDate = async () => {
                 stripedRows
                 size="small"
                 filterDisplay="menu"
-                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'last_settlement_period', 'amount', 'patient']"
+                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer.name', 'last_invoice_number', 'last_invoice_biller', 'last_settlement_period', 'amount']"
                 :loading="admissionsStore.loading"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
@@ -371,7 +308,6 @@ const searchAdmissionsByDate = async () => {
                         {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                     </template>
                 </Column>
-                <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
                 <Column field="daysPassed" header="Días" sortable style="min-width: 3rem">
                     <template #body="slotProps">
                         {{ slotProps.data.daysPassed || '-' }}
@@ -385,15 +321,15 @@ const searchAdmissionsByDate = async () => {
                         <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
                     </template>
                 </Column>
-                <Column field="insurer_name" header="Aseguradora" sortable style="min-width: 10rem">
+                <Column field="insurer.name" header="Aseguradora" sortable style="min-width: 10rem">
                     <template #body="slotProps">
-                        {{ slotProps.data.insurer_name || '-' }}
+                        {{ slotProps.data.insurer.name || '-' }}
                     </template>
                 </Column>
-                <Column field="invoice_number" header="Factura" sortable style="min-width: 8rem"></Column>
-                <Column field="biller" header="Facturador" sortable style="min-width: 7rem">
+                <Column field="last_invoice_number" header="Factura" sortable style="min-width: 8rem"></Column>
+                <Column field="last_invoice_biller" header="Facturador" sortable style="min-width: 7rem">
                     <template #body="{ data }">
-                        {{ data.biller }}
+                        {{ data.last_invoice_biller || data.last_settlement_biller }}
                     </template>
                     <template #filter="{ filterModel }">
                         <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />

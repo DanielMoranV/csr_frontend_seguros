@@ -33,17 +33,15 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         },
 
         async fetchAdmissionsDateRange(payload) {
-            console.log(payload);
             this.loading = true;
             const { data } = await handleResponseStore(fetchAdmissionsDateRange(payload), this);
-            console.log(data);
             if (this.success) {
                 this.admissions = data;
-                //await indexedDB.setItem('admissions', this.admissions);
+                await indexedDB.setItem('admissions', this.admissions);
             } else {
                 this.admissions = [];
             }
-            return this.success;
+            return { success: this.success, data: this.admissions };
         },
         async fetchAdmissions() {
             this.loading = true;
