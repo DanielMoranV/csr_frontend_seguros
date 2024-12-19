@@ -29,7 +29,6 @@ onMounted(async () => {
     // contar segundos desde aqui
     const start = performance.now();
     admissions.value = await admissionsStore.initializeStore();
-    console.log('admissions', admissions.value);
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
 
@@ -45,9 +44,9 @@ onMounted(async () => {
         }
     });
     const end = performance.now();
-    console.log(`Tiempo de ejecución: ${end - start} milisegundos`);
+    //console.log(`Tiempo de ejecución: ${end - start} milisegundos`);
     // tiempo en segundos
-    console.log(`Tiempo de ejecución: ${((end - start) / 1000).toFixed(2)} segundos`);
+    //console.log(`Tiempo de ejecución: ${((end - start) / 1000).toFixed(2)} segundos`);
 });
 
 const toast = useToast();
@@ -56,6 +55,8 @@ const dt = ref();
 const admissions = ref([]);
 const admission = ref({});
 const selectedAdmissions = ref();
+const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+const endDate = ref(new Date());
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
@@ -235,6 +236,14 @@ const onUploadSettlements = async (event) => {
     }
     isLoading.value = false;
 };
+
+const searchAdmissionsByDate = () => {
+    let payload = {
+        start_date: dformat(starDate.value, 'MM-DD-YYYY'),
+        end_date: dformat(endDate.value, 'MM-DD-YYYY')
+    };
+    admissionsStore.fetchAdmissionsDateRange(payload);
+};
 </script>
 
 <template>
@@ -242,15 +251,18 @@ const onUploadSettlements = async (event) => {
         <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
-                    <Button label="Exportar Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" />
-                    <Button label="Exportar Pendientes" icon="pi pi-download" severity="success" @click="exportExcelPending" />
-                </template>
-
-                <template #end>
+                    <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" />
+                    <Button label="Exp.Pendientes" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelPending" />
                     <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
                     <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
                         <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
                     </div>
+                </template>
+
+                <template #end>
+                    <DatePicker v-model="starDate" placeholder="Fecha Inicial" class="mr-2" />
+                    <DatePicker v-model="endDate" placeholder="Fecha Final" class="mr-2" />
+                    <Button label="Buscar" icon="pi pi-search" class="mr-2" @click="searchAdmissionsByDate" />
                 </template>
             </Toolbar>
 
