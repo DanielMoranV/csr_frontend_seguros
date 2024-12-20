@@ -38,7 +38,7 @@ export const deleteAdmission = (id) => axios.delete(`/admissions/${id}`);
 export const createAdmissions = (payload) => axios.post('/admissions/store', payload);
 export const updateAdmissions = (payload) => axios.patch('/admissions/update', payload);
 export const fetchAdmissionsDateRange = (payload) => axios.post('/admissions/date-range', payload);
-export const fetchAdmissionByNumber = (payload) => axios.post('/admissions/by-number', payload);
+export const fetchAdmissionByNumber = (number) => axios.get(`/admissions/by-number/${number}`);
 
 // Invoices
 export const fetchInvoices = () => axios.get('/invoices');

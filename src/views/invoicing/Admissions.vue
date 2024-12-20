@@ -38,39 +38,7 @@ onMounted(async () => {
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     }
-    admissions.value = data;
-
-    admissions.value.forEach((admission) => {
-        let daysPassed = getDaysPassed(admission.attendance_date);
-        admission.daysPassed = daysPassed;
-
-        if (admission.invoice_number === null) {
-            admission.status = 'Pendiente';
-        } else {
-            admission.status = 'Liquidado';
-        }
-        if (admission.devolution_date !== null) {
-            admission.status = 'Devolución';
-        }
-        if (admission.paid_invoice_number !== null) {
-            admission.status = 'Pagado';
-        }
-
-        // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
-        // insurers.vaue.name = admission.insurer_name;
-        let shipping_period = insurers.value.find((insurer) => {
-            return insurer.name.trim().toLowerCase() === admission.insurer_name.trim().toLowerCase();
-        });
-        admission.shipping_period = shipping_period.shipping_period;
-
-        if (admission.status === 'Pendiente') {
-            if (daysPassed <= admission.shipping_period) {
-                admission.daysPassed = getDaysPassed(admission.attendance_date);
-            } else {
-                admission.daysPassed = `Extemp. (${daysPassed - admission.shipping_period} d.)`;
-            }
-        }
-    });
+    formatAdmissions(data);
 });
 
 const toast = useToast();
@@ -263,19 +231,8 @@ const onUploadSettlements = async (event) => {
     }
     isLoading.value = false;
 };
-
-const searchAdmissionsByDate = async () => {
-    let payload = {
-        start_date: dformat(starDate.value, 'MM-DD-YYYY'),
-        end_date: dformat(endDate.value, 'MM-DD-YYYY')
-    };
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
-
-    if (!success) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
-    }
+const formatAdmissions = (data) => {
     admissions.value = data;
-
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
         admission.daysPassed = daysPassed;
@@ -309,8 +266,27 @@ const searchAdmissionsByDate = async () => {
     });
 };
 
+const searchAdmissionsByDate = async () => {
+    let payload = {
+        start_date: dformat(starDate.value, 'MM-DD-YYYY'),
+        end_date: dformat(endDate.value, 'MM-DD-YYYY')
+    };
+    const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
+
+    if (!success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
+    }
+
+    formatAdmissions(data);
+};
+
 const searchAdmissions = async () => {
     console.log(searchAdmission.value);
+    const { success, data } = await admissionsStore.fetchAdmissionByNumber(searchAdmission.value);
+    if (!success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
+    }
+    formatAdmissions(data);
 };
 </script>
 
