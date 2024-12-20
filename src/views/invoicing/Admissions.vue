@@ -78,6 +78,7 @@ const isLoading = ref(false);
 const dt = ref();
 const admissions = ref([]);
 const admission = ref({});
+const searchAdmission = ref('');
 const insurers = ref([]);
 const selectedAdmissions = ref();
 const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -307,19 +308,34 @@ const searchAdmissionsByDate = async () => {
         }
     });
 };
+
+const searchAdmissions = async () => {
+    console.log(searchAdmission.value);
+};
 </script>
 
 <template>
     <div>
         <div class="card">
+            <div class="flex justify-start">
+                <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" />
+                <Button label="Exp.Pendientes" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelPending" />
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
+            </div>
+            <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+            </div>
+        </div>
+        <div class="card">
             <Toolbar class="mb-6">
                 <template #start>
-                    <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" />
-                    <Button label="Exp.Pendientes" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelPending" />
-                    <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
-                    <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
-                        <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
-                    </div>
+                    <IconField>
+                        <InputIcon>
+                            <i class="pi pi-search" />
+                        </InputIcon>
+                        <InputText v-model="searchAdmission" placeholder="N° Admisión" />
+                    </IconField>
+                    <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" />
                 </template>
 
                 <template #end>

@@ -1,4 +1,4 @@
-import { createAdmission, createAdmissions, deleteAdmission, fetchAdmissions, fetchAdmissionsDateRange, updateAdmission, updateAdmissions } from '@/api';
+import { createAdmission, createAdmissions, deleteAdmission, fetchAdmissionByNumber, fetchAdmissions, fetchAdmissionsDateRange, updateAdmission, updateAdmissions } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -35,6 +35,18 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         async fetchAdmissionsDateRange(payload) {
             this.loading = true;
             const { data } = await handleResponseStore(fetchAdmissionsDateRange(payload), this);
+            if (this.success) {
+                this.admissions = data;
+                await indexedDB.setItem('admissions', this.admissions);
+            } else {
+                this.admissions = [];
+            }
+            return { success: this.success, data: this.admissions };
+        },
+
+        async fetchAdmissionByNumber(number) {
+            this.loading = true;
+            const { data } = await handleResponseStore(fetchAdmissionByNumber(number), this);
             if (this.success) {
                 this.admissions = data;
                 await indexedDB.setItem('admissions', this.admissions);
