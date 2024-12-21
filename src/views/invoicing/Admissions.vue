@@ -73,7 +73,8 @@ function initFilters() {
         invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         last_settlement_period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] }
+        amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
 }
 
@@ -168,9 +169,10 @@ const exportExcelPending = async () => {
         { header: 'Admisión', key: 'admission', width: 15 },
         { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Días', key: 'daysPassed', width: 20 },
+        { header: 'Paciente', key: 'patient', width: 30 },
         { header: 'Médico', key: 'doctor', width: 30 },
         { header: 'Aseguradora', key: 'insurer', width: 15 },
-        { header: 'Facturador', key: 'last_invoice_biller', width: 15 },
+        { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Periodo', key: 'period', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } }
     ];
@@ -189,9 +191,10 @@ const exportExcelPending = async () => {
         admission: admission.number,
         attendance_date: admission.attendance_date,
         daysPassed: admission.daysPassed,
+        patient: admission.patient,
         doctor: admission.doctor,
-        insurer: admission.insurer.name,
-        last_invoice_biller: admission.last_invoice_biller || admission.last_settlement_biller,
+        insurer: admission.insurer_name,
+        biller: admission.biller,
         period: admission.last_settlement_period,
         amount: admission.amount
     }));
@@ -232,36 +235,49 @@ const onUploadSettlements = async (event) => {
     isLoading.value = false;
 };
 const formatAdmissions = (data) => {
-    admissions.value = data;
+    // Agrupar por número de admisión
+    const groupedAdmissions = data.reduce((acc, admission) => {
+        if (!acc[admission.number]) {
+            acc[admission.number] = [];
+        }
+        acc[admission.number].push(admission);
+        return acc;
+    }, {});
+
+    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
+    const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
+        return group.reduce((latest, current) => {
+            return new Date(latest.invoice_date) > new Date(current.invoice_date) ? latest : current;
+        });
+    });
+
+    // Obtener los periodos de envío de las aseguradoras en un objeto para acceso rápido
+    const shippingPeriods = insurers.value.reduce((acc, insurer) => {
+        acc[insurer.name.trim().toLowerCase()] = insurer.shipping_period;
+        return acc;
+    }, {});
+
+    admissions.value = uniqueAdmissions;
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
         admission.daysPassed = daysPassed;
 
-        if (admission.invoice_number === null) {
+        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
+            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
             admission.status = 'Pendiente';
+        } else if (admission.devolution_date !== null && admission.paid_invoice_number === null) {
+            admission.status = 'Devolución';
+        } else if (admission.paid_invoice_number !== null) {
+            admission.status = 'Pagado';
         } else {
             admission.status = 'Liquidado';
         }
-        if (admission.devolution_date !== null) {
-            admission.status = 'Devolución';
-        }
-        if (admission.paid_invoice_number !== null) {
-            admission.status = 'Pagado';
-        }
 
         // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
-        // insurers.vaue.name = admission.insurer_name;
-        let shipping_period = insurers.value.find((insurer) => {
-            return insurer.name.trim().toLowerCase() === admission.insurer_name.trim().toLowerCase();
-        });
-        admission.shipping_period = shipping_period.shipping_period;
+        admission.shipping_period = shippingPeriods[admission.insurer_name.trim().toLowerCase()];
 
         if (admission.status === 'Pendiente') {
-            if (daysPassed <= admission.shipping_period) {
-                admission.daysPassed = getDaysPassed(admission.attendance_date);
-            } else {
-                admission.daysPassed = `Extemp. (${daysPassed - admission.shipping_period} d.)`;
-            }
+            admission.daysPassed = daysPassed <= admission.shipping_period ? daysPassed : `Extemp. (${daysPassed - admission.shipping_period} d.)`;
         }
     });
 };
@@ -333,7 +349,7 @@ const searchAdmissions = async () => {
                 stripedRows
                 size="small"
                 filterDisplay="menu"
-                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'last_settlement_period', 'amount', 'patient']"
+                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'status']"
                 :loading="admissionsStore.loading"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
@@ -366,7 +382,7 @@ const searchAdmissions = async () => {
                 <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
                 <Column field="daysPassed" header="Días" sortable style="min-width: 3rem">
                     <template #body="slotProps">
-                        {{ slotProps.data.daysPassed || '-' }}
+                        {{ slotProps.data.daysPassed || '0' }}
                     </template>
                 </Column>
                 <Column field="doctor" header="Médico" sortable style="min-width: 10rem">
@@ -389,11 +405,6 @@ const searchAdmissions = async () => {
                     </template>
                     <template #filter="{ filterModel }">
                         <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
-                    </template>
-                </Column>
-                <Column field="last_settlement_period" header="Periodo" sortable style="min-width: 7rem">
-                    <template #body="slotProps">
-                        {{ slotProps.data.last_settlement_period || 'Sin Asignar' }}
                     </template>
                 </Column>
                 <Column field="amount" header="Monto" sortable style="min-width: 5rem">
