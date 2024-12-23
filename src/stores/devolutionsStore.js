@@ -1,4 +1,4 @@
-import { createDevolution, createDevolutions, deleteDevolution, fetchDevolutions, updateDevolution, updateDevolutions } from '@/api';
+import { createDevolution, createDevolutions, deleteDevolution, fetchDevolutions, fetchDevolutionsDateRange, updateDevolution, updateDevolutions } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -28,6 +28,16 @@ export const useDevolutionsStore = defineStore('devolutionsStore', {
                 await this.fetchDevolutions();
             }
             return this.devolutions;
+        },
+
+        async fetchDevolutionsDateRange(payload) {
+            this.loading = true;
+            const { data } = await handleResponseStore(fetchDevolutionsDateRange(payload), this);
+            if (this.success) {
+                this.devolutions = data;
+                await indexedDB.setItem('devolutions', this.devolutions);
+            }
+            return { success: this.success, data };
         },
         async fetchDevolutions() {
             this.loading = true;

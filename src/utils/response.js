@@ -45,10 +45,16 @@ export const handleResponseMultipleUpdate = async (updatedRecords, store, toast)
 
 export async function handleResponseStore(promise, store) {
     try {
+        const startTime = performance.now();
         const { data } = await promise;
+        const endTime = performance.now();
+        const requestTime = endTime - startTime;
+
         if (import.meta.env.VITE_DEBUG) {
             console.info('----MODO DEBUG----');
             console.log('data', data);
+            // calcular en segundos
+            console.log(`Tiempo de petición: ${requestTime / 1000} s`);
         }
         store.loading = false;
         store.message = 'Operación exitosa';

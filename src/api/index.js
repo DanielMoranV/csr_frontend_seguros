@@ -55,6 +55,7 @@ export const updateDevolution = (payload, id) => axios.put(`/devolutions/${id}`,
 export const deleteDevolution = (id) => axios.delete(`/devolutions/${id}`);
 export const createDevolutions = (payload) => axios.post('/devolutions/store', payload);
 export const updateDevolutions = (payload) => axios.patch('/devolutions/update', payload);
+export const fetchDevolutionsDateRange = (payload) => axios.post('/devolutions/date-range', payload);
 
 // Settlements
 export const fetchSettlements = () => axios.get('/settlements');

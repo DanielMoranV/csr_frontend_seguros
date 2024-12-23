@@ -1,4 +1,5 @@
 import { createAdmission, createAdmissions, deleteAdmission, fetchAdmissionByNumber, fetchAdmissions, fetchAdmissionsDateRange, updateAdmission, updateAdmissions } from '@/api';
+import FastApiService from '@/service/FastApiService';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -41,6 +42,19 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             } else {
                 this.admissions = [];
             }
+            return { success: this.success, data: this.admissions };
+        },
+        async fetchAdmissionsDateRangeApi(payload) {
+            this.loading = true;
+            const { data } = await FastApiService.admisionsByRange(payload);
+            console.log('ResponseStore', data);
+            if (data) {
+                this.admissions = data;
+                await indexedDB.setItem('admissions', this.admissions);
+            } else {
+                this.admissions = [];
+            }
+            this.loading = false;
             return { success: this.success, data: this.admissions };
         },
 

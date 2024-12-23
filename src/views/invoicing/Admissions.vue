@@ -34,6 +34,7 @@ onMounted(async () => {
     };
     insurers.value = await insurersStore.initializeStore();
     const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
+    await admissionsStore.fetchAdmissionsDateRangeApi(payload);
 
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
@@ -46,6 +47,7 @@ const isLoading = ref(false);
 const dt = ref();
 const admissions = ref([]);
 const admission = ref({});
+const devolutions = ref([]);
 const searchAdmission = ref('');
 const insurers = ref([]);
 const selectedAdmissions = ref();
@@ -111,9 +113,20 @@ function getStatusLabel(status) {
 
 // Exportar devoluciones
 const exportExcelDevolutions = async () => {
-    let devolutions = await devolutionsStore.initializeStore();
+    let payload = {
+        start_date: '01-01-2023',
+        end_date: dformat(new Date(), 'MM-DD-YYYY')
+    };
+    let { success, data } = await devolutionsStore.fetchDevolutionsDateRange(payload);
+
+    if (!success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
+    }
+
+    formatDevolutionsPending(data);
+
     const columnsDevolutions = [
-        { header: 'Admisión', key: 'admission', width: 15 },
+        { header: 'Admisión', key: 'admission_number', width: 15 },
         { header: 'Fecha Atención', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Fecha Devolución', key: 'devolution_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Factura', key: 'invoice_number', width: 20 },
@@ -121,46 +134,14 @@ const exportExcelDevolutions = async () => {
         { header: 'Aseguradora', key: 'insurer', width: 15 },
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Periodo', key: 'period', width: 15 },
-        { header: 'Tipo', key: 'type', width: 15 },
+        { header: 'Tipo', key: 'devolution_type', width: 15 },
         { header: 'Motivo', key: 'reason', width: 15 },
-        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Monto', key: 'invoice_amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Estado', key: 'status', width: 15 }
     ];
-    let admissionsDevolutions = admissions.value.filter((admission) => admission.status === 'Devolución');
 
-    devolutions = devolutions.filter((devolution) => admissionsDevolutions.some((admission) => admission.number === devolution.admission.number));
-
-    devolutions.forEach((devolution) => {
-        // Convertir la fecha a formato Excel (número serial)
-        const date = new Date(devolution.admission.attendance_date);
-        devolution.admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
-        const dateDevolution = new Date(devolution.date);
-        devolution.date = (dateDevolution - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
-        // Enviar el monto como número, sin formatear
-        devolution.admission.amount = Number(devolution.admission.amount);
-    });
-
-    let data = devolutions.map((devolution) => ({
-        admission: devolution.admission.number,
-        attendance_date: devolution.admission.attendance_date,
-        devolution_date: devolution.date,
-        invoice_number: devolution.admission?.last_invoice_number,
-        doctor: devolution.admission.doctor,
-        insurer: devolution.admission.insurer.name,
-        biller: devolution.biller,
-        period: devolution.period,
-        type: devolution.type,
-        reason: devolution.reason,
-        amount: devolution.admission.amount,
-        status: devolution.admission?.last_invoice_biller && devolution.admission?.last_invoice_status !== 'NC' ? 'Liquidado' : 'Pendiente'
-    }));
-
-    // Filtrar las devoluciones con igual admision y solo dejar el registro con devolution_date más reciente
-    data = data.filter((devolution, index, self) => {
-        return index === self.findIndex((t) => t.admission === devolution.admission);
-    });
-
-    await exportToExcel(columnsDevolutions, data, 'devoluciones', 'devoluciones');
+    console.log(devolutions.value);
+    await exportToExcel(columnsDevolutions, devolutions.value, 'devoluciones', 'devoluciones');
 };
 
 // Exportar a Excel admisiones pendientes
@@ -233,6 +214,42 @@ const onUploadSettlements = async (event) => {
         toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no es válido', life: 3000 });
     }
     isLoading.value = false;
+};
+const formatDevolutionsPending = (data) => {
+    const groupedDevolutions = data.reduce((acc, devolution) => {
+        if (!acc[devolution.admission_number]) {
+            acc[devolution.admission_number] = [];
+        }
+        acc[devolution.admission_number].push(devolution);
+        return acc;
+    }, {});
+
+    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
+    const uniqueDevolutions = Object.values(groupedDevolutions).map((group) => {
+        return group.reduce((latest, current) => {
+            return new Date(latest.invoice_date) > new Date(current.invoice_date) ? latest : current;
+        });
+    });
+    devolutions.value = uniqueDevolutions;
+    devolutions.value.forEach((devolution) => {
+        if (devolution.paid_invoice_number === null) {
+            if (new Date(devolution.devolution_date) > new Date(devolution.invoice_date)) {
+                devolution.status = 'Pendiente';
+            } else {
+                devolution.status = 'Liquidado';
+            }
+        } else {
+            devolution.status = 'Pagado';
+        }
+
+        // Convertir la fecha a formato Excel (número serial)
+        let attendance_date = new Date(devolution.attendance_date);
+        devolution.attendance_date = (attendance_date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+        let dateDevolution = new Date(devolution.devolution_date);
+        devolution.devolution_date = (dateDevolution - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+        // Enviar el monto como número, sin formatear
+        devolution.invoice_amount = Number(devolution.invoice_amount);
+    });
 };
 const formatAdmissions = (data) => {
     // Agrupar por número de admisión
@@ -310,7 +327,7 @@ const searchAdmissions = async () => {
     <div>
         <div class="card">
             <div class="flex justify-start">
-                <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" />
+                <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" :loading="devolutionsStore.loading" />
                 <Button label="Exp.Pendientes" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelPending" />
                 <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
             </div>
