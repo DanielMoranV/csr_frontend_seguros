@@ -46,15 +46,13 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         },
         async fetchAdmissionsDateRangeApi(payload) {
             this.loading = true;
-            const { data } = await FastApiService.admisionsByRange(payload);
-            console.log('ResponseStore', data);
-            if (data) {
+            const { data } = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
+            if (this.success) {
                 this.admissions = data;
                 await indexedDB.setItem('admissions', this.admissions);
             } else {
                 this.admissions = [];
             }
-            this.loading = false;
             return { success: this.success, data: this.admissions };
         },
 

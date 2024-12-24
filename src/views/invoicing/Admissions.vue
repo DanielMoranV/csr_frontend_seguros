@@ -33,8 +33,7 @@ onMounted(async () => {
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     insurers.value = await insurersStore.initializeStore();
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
-    await admissionsStore.fetchAdmissionsDateRangeApi(payload);
+    const { success, data } = await admissionsStore.fetchAdmissionsDateRangeApi(payload);
 
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
@@ -305,6 +304,7 @@ const searchAdmissionsByDate = async () => {
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
+    await admissionsStore.fetchAdmissionsDateRangeApi(payload);
 
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
