@@ -303,8 +303,7 @@ const searchAdmissionsByDate = async () => {
         start_date: dformat(starDate.value, 'MM-DD-YYYY'),
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRange(payload);
-    await admissionsStore.fetchAdmissionsDateRangeApi(payload);
+    const { success, data } = await admissionsStore.fetchAdmissionsDateRangeApi(payload);
 
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
@@ -315,7 +314,12 @@ const searchAdmissionsByDate = async () => {
 
 const searchAdmissions = async () => {
     console.log(searchAdmission.value);
-    const { success, data } = await admissionsStore.fetchAdmissionByNumber(searchAdmission.value);
+    // Validacion de numero de admision
+    if (searchAdmission.value === '' || searchAdmission.value === null || searchAdmission.value.length <= 5) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Ingrese un número de admisión', life: 3000 });
+        return;
+    }
+    const { success, data } = await admissionsStore.fetchAdmissionByNumberApi(searchAdmission.value);
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     }

@@ -67,6 +67,18 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             }
             return { success: this.success, data: this.admissions };
         },
+
+        async fetchAdmissionByNumberApi(number) {
+            this.loading = true;
+            const { data } = await handleResponseStore(FastApiService.admisionsByNumber(number), this);
+            if (this.success) {
+                this.admissions = data;
+                await indexedDB.setItem('admissions', this.admissions);
+            } else {
+                this.admissions = [];
+            }
+            return { success: this.success, data: this.admissions };
+        },
         async fetchAdmissions() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchAdmissions(), this);
