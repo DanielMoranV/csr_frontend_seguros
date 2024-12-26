@@ -148,13 +148,15 @@ const exportExcelPending = async () => {
     const columns = [
         { header: 'Admisión', key: 'admission', width: 15 },
         { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
-        { header: 'Días', key: 'daysPassed', width: 20 },
+        { header: 'Días', key: 'daysPassed', width: 5 },
         { header: 'Paciente', key: 'patient', width: 30 },
         { header: 'Médico', key: 'doctor', width: 30 },
         { header: 'Aseguradora', key: 'insurer', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Periodo', key: 'period', width: 15 },
-        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } }
+        { header: 'Fecha Inicio', key: 'start_date', width: 13 },
+        { header: 'Fecha Final', key: 'end_date', width: 13 }
     ];
 
     let admissionsPending = admissions.value.filter((admission) => admission.status === 'Pendiente');
@@ -281,6 +283,7 @@ const formatAdmissions = (data) => {
         if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
             admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
             admission.status = 'Pendiente';
+            admission.biller = '';
         } else if (admission.devolution_date !== null && admission.paid_invoice_number === null) {
             admission.status = 'Devolución';
         } else if (admission.paid_invoice_number !== null) {
