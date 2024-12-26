@@ -15,7 +15,7 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json'
     },
-    timeout: 300000 // Ajusta el timeout en milisegundos (por ejemplo, 10000 ms = 10 segundos)
+    timeout: 3000000 // Ajusta el timeout en milisegundos (por ejemplo, 10000 ms = 10 segundos)
 });
 
 const handleResponse = (response) => {

@@ -64,3 +64,27 @@ export const updateSettlement = (payload, id) => axios.put(`/settlements/${id}`,
 export const deleteSettlement = (id) => axios.delete(`/settlements/${id}`);
 export const createSettlements = (payload) => axios.post('/settlements/store', payload);
 export const updateSettlements = (payload) => axios.patch('/settlements/update', payload);
+
+// Admissions Lists
+export const fetchAdmissionsLists = () => axios.get('/admissions-list');
+export const createAdmissionsList = (payload) => axios.post('/admissions-list', payload);
+export const updateAdmissionsList = (payload, id) => axios.put(`/admissions-list/${id}`, payload);
+export const deleteAdmissionsList = (id) => axios.delete(`/admissions-list/${id}`);
+export const createAdmissionsLists = (payload) => axios.post('/admissions-list/store', payload);
+export const updateAdmissionsLists = (payload) => axios.patch('/admissions-list/update', payload);
+
+// Audits
+export const fetchAudit = () => axios.get('/audits');
+export const createAudit = (payload) => axios.post('/audits', payload);
+export const updateAudit = (payload, id) => axios.put(`/audits/${id}`, payload);
+export const deleteAudit = (id) => axios.delete(`/audits/${id}`);
+export const createAudits = (payload) => axios.post('/audits/store', payload);
+export const updateAudits = (payload) => axios.patch('/audits/update', payload);
+
+// Medical Records Requests
+export const fetchMedicalRecordsRequests = () => axios.get('/medical-records-requests');
+export const createMedicalRecordsRequest = (payload) => axios.post('/medical-records-requests', payload);
+export const updateMedicalRecordsRequest = (payload, id) => axios.put(`/medical-records-requests/${id}`, payload);
+export const deleteMedicalRecordsRequest = (id) => axios.delete(`/medical-records-requests/${id}`);
+export const createMedicalRecordsRequests = (payload) => axios.post('/medical-records-requests/store', payload);
+export const updateMedicalRecordsRequests = (payload) => axios.patch('/medical-records-requests/update', payload);

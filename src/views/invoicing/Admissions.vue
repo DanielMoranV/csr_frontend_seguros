@@ -23,8 +23,10 @@ const headerSettlements = [
     'Médico', // Nombre del paciente
     'Aseguradora', // Nombre del empleado
     'Facturador', // Nombre de la compañía
-    'Periodo', // Monto
-    'Monto' // Monto
+    'Periodo', // Periodo de lista
+    'Monto', // Monto
+    'Fecha Inicio', // Fecha Inicio
+    'Fecha Final' // Fecha Final
 ];
 
 onMounted(async () => {
@@ -73,7 +75,6 @@ function initFilters() {
         insurer_name: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        last_settlement_period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
         status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };

@@ -106,8 +106,10 @@ export const processDataDatabaseSettlements = (rows) => {
         .filter((row) => row[7])
         .map((row) => ({
             admission_number: row[1],
-            biller: row[6],
-            period: row[7]
+            biller: row[8],
+            period: row[9],
+            start_date: row[10] ? validateDate(row[10]) : null,
+            end_date: row[11] ? validateDate(row[11]) : null
         }));
 
     console.log('dataSetSettlements', dataSetSettlements);
