@@ -114,6 +114,19 @@ export const classifyDataSettlements = async (dataSet) => {
     return { seenSettlements: Array.from(seenSettlements.values()) };
 };
 
+export const classifyAdmissionsLists = async (dataSet) => {
+    const admissionsLists = new Map();
+    const medialRecordsRequests = new Map();
+    dataSet.forEach(({ biller, period, admission_number }) => {
+        let admission = admissions.find((admission) => admission.number === admission_number);
+        if (!seenSettlements.has(admission_number)) {
+            seenSettlements.set(admission_number, { biller, period, admission_number, admission_id: admission?.id });
+        }
+    });
+
+    return { seenSettlements: Array.from(seenSettlements.values()) };
+};
+
 export const importSettlements = async (seenSettlements, settlementsStore, toast) => {
     let settlements = await settlementsStore.initializeStore();
     let settlementsData = seenSettlements;
