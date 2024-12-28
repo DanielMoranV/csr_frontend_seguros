@@ -72,6 +72,7 @@ export const updateAdmissionsList = (payload, id) => axios.put(`/admissions-list
 export const deleteAdmissionsList = (id) => axios.delete(`/admissions-list/${id}`);
 export const createAdmissionsLists = (payload) => axios.post('/admissions-list/store', payload);
 export const updateAdmissionsLists = (payload) => axios.patch('/admissions-list/update', payload);
+export const createAdmissionListAndRequest = (payload) => axios.post('/admissions-lists/create-admission-list-and-request', payload);
 
 // Audits
 export const fetchAudit = () => axios.get('/audits');

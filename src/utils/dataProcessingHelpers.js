@@ -10,7 +10,6 @@ const admissionsStore = useAdmissionsStore();
 const medicalRecordsStore = useMedicalRecordsStore();
 const invoicesStore = useInvoicesStore();
 const authStore = useAuthStore();
-const user = authStore.getUser;
 export const classifyData = (dataSet) => {
     const seenRecords = new Map();
     const seenInsurers = new Map();
@@ -117,6 +116,8 @@ export const classifyDataSettlements = async (dataSet) => {
 };
 
 export const classifyAdmissionsLists = async (dataSet) => {
+    let user = authStore.getUser;
+    console.log('user', user);
     const seenMedicalRecordsRequests = new Map();
     dataSet.forEach(({ biller, period, admission_number, medical_record_number, start_date, end_date }) => {
         // Registrar solicitud de historias

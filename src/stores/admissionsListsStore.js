@@ -1,4 +1,4 @@
-import { createAdmissionsList, createAdmissionsLists, deleteAdmissionsList, fetchAdmissionsLists, updateAdmissionsList, updateAdmissionsLists } from '@/api';
+import { createAdmissionListAndRequest, createAdmissionsList, createAdmissionsLists, deleteAdmissionsList, fetchAdmissionsLists, updateAdmissionsList, updateAdmissionsLists } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -91,6 +91,16 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
                 this.message = { type: 'success', text: 'Lista de admisiones actualizadas correctamente...' };
             }
             return { status: this.success, success: data.success, error: data.errors };
+        },
+        async createAdmissionListAndRequest(payload) {
+            this.loading = true;
+            const { data } = await handleResponseStore(createAdmissionListAndRequest(payload), this);
+            if (this.success) {
+                this.admissionsLists.push(data);
+                await indexedDB.setItem('admissionsLists', this.admissionsLists);
+                this.message = 'Lista de admisiones creada y solicitud realizada correctamente...';
+                return { success: this.success, data: this.admissionsLists };
+            }
         }
     }
 });

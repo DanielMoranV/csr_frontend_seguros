@@ -1,4 +1,5 @@
 <script setup>
+import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
@@ -11,6 +12,7 @@ import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsStore = useAdmissionsStore();
+const admissionsListStore = useAdmissionsListsStore();
 const devolutionsStore = useDevolutionsStore();
 const settlementsStore = useSettlementsStore();
 const insurersStore = useInsurersStore();
@@ -210,8 +212,15 @@ const onUploadSettlements = async (event) => {
                 return;
             }
 
-            let responseAdmisionsLists = await classifyAdmissionsLists(dataSet);
-            console.log(responseAdmisionsLists);
+            let { seenMedicalRecordsRequests } = await classifyAdmissionsLists(dataSet);
+            console.log(seenMedicalRecordsRequests);
+            let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
+            console.log(data);
+            if (!success) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
+            } else {
+                toast.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo cargado correctamente', life: 3000 });
+            }
         } catch (error) {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
         }
