@@ -1,4 +1,5 @@
 import { useAdmissionsStore } from '@/stores/admissionsStore';
+import { useAuthStore } from '@/stores/authStore';
 import { useInsurersStore } from '@/stores/insurersStore';
 import { useInvoicesStore } from '@/stores/invoicesStore';
 import { useMedicalRecordsStore } from '@/stores/medicalRecordsStore';
@@ -8,7 +9,8 @@ const insurersStore = useInsurersStore();
 const admissionsStore = useAdmissionsStore();
 const medicalRecordsStore = useMedicalRecordsStore();
 const invoicesStore = useInvoicesStore();
-
+const authStore = useAuthStore();
+const user = authStore.getUser;
 export const classifyData = (dataSet) => {
     const seenRecords = new Map();
     const seenInsurers = new Map();
@@ -115,16 +117,30 @@ export const classifyDataSettlements = async (dataSet) => {
 };
 
 export const classifyAdmissionsLists = async (dataSet) => {
-    const admissionsLists = new Map();
-    const medialRecordsRequests = new Map();
-    dataSet.forEach(({ biller, period, admission_number }) => {
-        let admission = admissions.find((admission) => admission.number === admission_number);
-        if (!seenSettlements.has(admission_number)) {
-            seenSettlements.set(admission_number, { biller, period, admission_number, admission_id: admission?.id });
+    const seenMedicalRecordsRequests = new Map();
+    dataSet.forEach(({ biller, period, admission_number, medical_record_number, start_date, end_date }) => {
+        // Registrar solicitud de historias
+        if (!seenMedicalRecordsRequests.has(admission_number)) {
+            seenMedicalRecordsRequests.set(admission_number, {
+                admission_number,
+                requester_nick: user?.nick ?? 'USER',
+                medical_record_number: medical_record_number ?? null,
+                request_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                remarks: 'Lista Admisiones periodo : ' + period,
+                admissionList: {
+                    admission_number,
+                    period,
+                    start_date,
+                    end_date,
+                    biller
+                }
+            });
         }
     });
 
-    return { seenSettlements: Array.from(seenSettlements.values()) };
+    return {
+        seenMedicalRecordsRequests: Array.from(seenMedicalRecordsRequests.values())
+    };
 };
 
 export const importSettlements = async (seenSettlements, settlementsStore, toast) => {

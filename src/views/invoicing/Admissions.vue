@@ -3,7 +3,7 @@ import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
 import { useSettlementsStore } from '@/stores/settlementsStore';
-import { classifyDataSettlements, importSettlements } from '@/utils/dataProcessingHelpers';
+import { classifyAdmissionsLists } from '@/utils/dataProcessingHelpers';
 import { dformat, getDaysPassed } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseSettlements, validateData, validateHeaders } from '@/utils/excelUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -18,6 +18,7 @@ const insurersStore = useInsurersStore();
 // Headers
 const headerSettlements = [
     'Admisión', // Número de documento
+    'Historia', // Número de historia clinica
     'Fecha', // Fecha del documento
     'Días', // Número de historia del paciente
     'Médico', // Nombre del paciente
@@ -76,7 +77,8 @@ function initFilters() {
         invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
-        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        medical_record_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
 }
 
@@ -148,6 +150,7 @@ const exportExcelDevolutions = async () => {
 const exportExcelPending = async () => {
     const columns = [
         { header: 'Admisión', key: 'admission', width: 15 },
+        { header: 'Historia', key: 'medical_record_number', with: 15 },
         { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Días', key: 'daysPassed', width: 5 },
         { header: 'Paciente', key: 'patient', width: 30 },
@@ -172,6 +175,7 @@ const exportExcelPending = async () => {
 
     const data = admissionsPending.map((admission) => ({
         admission: admission.number,
+        medical_record_number: admission.medical_record_number,
         attendance_date: admission.attendance_date,
         daysPassed: admission.daysPassed,
         patient: admission.patient,
@@ -206,9 +210,8 @@ const onUploadSettlements = async (event) => {
                 return;
             }
 
-            const { seenSettlements } = await classifyDataSettlements(dataSet);
-
-            await importSettlements(seenSettlements, settlementsStore, toast);
+            let responseAdmisionsLists = await classifyAdmissionsLists(dataSet);
+            console.log(responseAdmisionsLists);
         } catch (error) {
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
         }
@@ -374,7 +377,7 @@ const searchAdmissions = async () => {
                 stripedRows
                 size="small"
                 filterDisplay="menu"
-                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'status']"
+                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'status', 'medical_record_number']"
                 :loading="admissionsStore.loading"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
@@ -398,7 +401,8 @@ const searchAdmissions = async () => {
 
                 <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
 
-                <Column field="number" header="Número" sortable style="min-width: 5rem"></Column>
+                <Column field="number" header="Admisión" sortable style="min-width: 5rem"></Column>
+                <Column field="medical_record_number" header="Historia" sortable style="min-width: 5rem"></Column>
                 <Column field="attendance_date" header="Fecha" sortable style="min-width: 5rem">
                     <template #body="slotProps">
                         {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
