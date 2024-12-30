@@ -213,7 +213,7 @@ const onUploadSettlements = async (event) => {
             }
 
             let { seenMedicalRecordsRequests } = await classifyAdmissionsLists(dataSet);
-            console.log(seenMedicalRecordsRequests);
+
             let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
             console.log(data);
             if (!success) {
@@ -349,7 +349,7 @@ const searchAdmissions = async () => {
             <div class="flex justify-start">
                 <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" :loading="devolutionsStore.loading" />
                 <Button label="Exp.Pendientes" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelPending" />
-                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Liquidación" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
+                <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Listas" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
             </div>
             <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
                 <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />

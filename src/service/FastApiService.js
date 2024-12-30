@@ -92,6 +92,36 @@ export default {
             return handleError(error);
         }
     },
+    async admisionsByNumbers(numbers) {
+        let endpoint = '/execute_query';
+        const queries = numbers.map(
+            (number) => `
+            SELECT ${ADMISIONES}.num_doc as number, ${ADMISIONES}.fec_doc as attendance_date, ${ADMISIONES}.nom_pac as patient,
+                   ${ADMISIONES}.hi_doc as attendance_hour, ${ADMISIONES}.ta_doc as type, ${ADMISIONES}.tot_doc as amount,
+                   ${EMPRESAS}.nom_emp as company, ${SERVICIOS}.nom_ser as doctor, ${PACIENTES}.nh_pac as medical_record_number,
+                   ${ADMISIONES}.clos_doc as is_closed, ${FACTURAS}.num_fac as invoice_number, ${FACTURAS}.fec_fac as invoice_date,
+                   ${FACTURAS}.uc_sis as biller, ${DEVOLUCIONES}.fh_dev as devolution_date, ${ASEGURADORAS}.nom_cia as insurer_name,
+                   ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
+            FROM ${ADMISIONES}
+            LEFT JOIN ${SERVICIOS} ON ${ADMISIONES}.cod_ser = ${SERVICIOS}.cod_ser
+            LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
+            LEFT JOIN ${EMPRESAS} ON ${ADMISIONES}.cod_emp = ${EMPRESAS}.cod_emp
+            LEFT JOIN ${PACIENTES} ON ${ADMISIONES}.cod_pac = ${PACIENTES}.cod_pac
+            LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
+            LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
+            LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
+            WHERE ${ADMISIONES}.num_doc = '${number}'
+            ORDER BY ${ADMISIONES}.num_doc DESC;
+        `
+        );
+
+        try {
+            const responses = await Promise.all(queries.map((query) => apiClient.post(endpoint, { query })));
+            return responses.flatMap((response) => handleResponse(response).data);
+        } catch (error) {
+            return handleError(error);
+        }
+    },
 
     async get(endpoint) {
         try {

@@ -98,7 +98,6 @@ export const processDataDatabaseDevolutions = (rows) => {
 
 // Procesar Meta Liquidación
 export const processDataDatabaseSettlements = (rows) => {
-    console.log('rows', rows);
     const dataSetSettlements = rows
         .slice(2) // Omite las dos primeras filas
         .filter((row) => row[1] != '')
@@ -141,23 +140,16 @@ export const processDataDatabase = (rows) => {
         }));
     return dataSet;
 };
-export const validateDate = (date) => {
-    const parsedDate = new Date(date);
-    if (!isNaN(parsedDate.getTime())) {
-        const year = parsedDate.getFullYear();
-        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
-        const day = String(parsedDate.getDate()).padStart(2, '0');
+export const validateDate = (excelDate) => {
+    if (excelDate instanceof Date && !isNaN(excelDate.getTime())) {
+        // Obtener los valores de año, mes y día en UTC
+        const year = excelDate.getUTCFullYear();
+        const month = String(excelDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(excelDate.getUTCDate()).padStart(2, '0');
 
-        // Verificar si la fecha contiene hora
-        const hours = String(parsedDate.getHours()).padStart(2, '0');
-        const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
-
-        // Si la hora es 00:00, devolver solo la fecha
-        if (hours === '00' && minutes === '00') {
-            return `${year}-${month}-${day}`;
-        }
-        // Devolver fecha con hora
-        return `${year}-${month}-${day} ${hours}:${minutes}:00`;
+        // Formatear la fecha sin hora
+        const formattedDate = `${year}-${month}-${day}`;
+        return formattedDate;
     }
     return null;
 };

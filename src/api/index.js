@@ -66,13 +66,15 @@ export const createSettlements = (payload) => axios.post('/settlements/store', p
 export const updateSettlements = (payload) => axios.patch('/settlements/update', payload);
 
 // Admissions Lists
-export const fetchAdmissionsLists = () => axios.get('/admissions-list');
-export const createAdmissionsList = (payload) => axios.post('/admissions-list', payload);
-export const updateAdmissionsList = (payload, id) => axios.put(`/admissions-list/${id}`, payload);
-export const deleteAdmissionsList = (id) => axios.delete(`/admissions-list/${id}`);
-export const createAdmissionsLists = (payload) => axios.post('/admissions-list/store', payload);
-export const updateAdmissionsLists = (payload) => axios.patch('/admissions-list/update', payload);
+export const fetchAdmissionsLists = () => axios.get('/admissions-lists');
+export const fetchAdmissionsListsPeriods = () => axios.get('/admissions-lists/periods');
+export const createAdmissionsList = (payload) => axios.post('/admissions-lists', payload);
+export const updateAdmissionsList = (payload, id) => axios.put(`/admissions-lists/${id}`, payload);
+export const deleteAdmissionsList = (id) => axios.delete(`/admissions-lists/${id}`);
+export const createAdmissionsLists = (payload) => axios.post('/admissions-lists/store', payload);
+export const updateAdmissionsLists = (payload) => axios.patch('/admissions-lists/update', payload);
 export const createAdmissionListAndRequest = (payload) => axios.post('/admissions-lists/create-admission-list-and-request', payload);
+export const fetchAdmissionsListsByPeriod = (period) => axios.get(`/admissions-lists/by-period/${period}`);
 
 // Audits
 export const fetchAudit = () => axios.get('/audits');

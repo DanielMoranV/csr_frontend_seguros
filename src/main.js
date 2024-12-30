@@ -7,6 +7,7 @@ import indexedDB from './utils/indexedDB';
 import Aura from '@primevue/themes/aura';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
+import KeyFilter from 'primevue/keyfilter';
 import ToastService from 'primevue/toastservice';
 
 import '@/assets/styles.scss';
@@ -25,6 +26,8 @@ import '@/assets/tailwind.css';
 
     app.use(router);
     app.use(pinia);
+
+    app.directive('keyfilter', KeyFilter);
     app.use(PrimeVue, {
         theme: {
             preset: {
