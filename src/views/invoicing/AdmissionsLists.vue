@@ -45,7 +45,7 @@ onBeforeMount(() => {
 
 onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
-    formatAdmissionsLists(data);
+    admissionsLists.value = formatAdmissionsLists(data);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -88,8 +88,7 @@ const formatAdmissionsLists = (data) => {
         }
     });
 
-    admissionsLists.value = uniqueAdmissions;
-    console.log(admissionsLists.value);
+    return uniqueAdmissions;
 };
 
 const searchPeriod = async () => {
