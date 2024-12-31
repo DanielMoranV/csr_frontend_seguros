@@ -75,9 +75,10 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
                 // obtener una lista de admisiones admission_number a partir de admissionsLists
                 const admissionNumbers = data.map((admissionsList) => admissionsList.admission_number);
                 this.loading = true;
-                let responseAdmissions = await FastApiService.admisionsByNumbers(admissionNumbers);
+                let { results, errors } = await FastApiService.admisionsByNumbers(admissionNumbers);
                 // Combinar los arrays
-                const combinedArray = responseAdmissions.map((admission) => {
+                console.log('errors', errors);
+                const combinedArray = results.map((admission) => {
                     // Buscar la coincidencia en admissionsLists
                     const match = this.admissionsLists.find((list) => list.admission_number === admission.number);
 

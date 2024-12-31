@@ -38,12 +38,11 @@ onMounted(async () => {
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     insurers.value = await insurersStore.initializeStore();
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRangeApi(payload);
 
-    if (!success) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
-    }
-    formatAdmissions(data);
+    let response = await admissionsStore.initializeStoreAdmissionsDateRangeApi(payload);
+    console.log(response);
+
+    formatAdmissions(response);
 });
 
 const toast = useToast();

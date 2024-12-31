@@ -115,12 +115,19 @@ export default {
         `
         );
 
-        try {
-            const responses = await Promise.all(queries.map((query) => apiClient.post(endpoint, { query })));
-            return responses.flatMap((response) => handleResponse(response).data);
-        } catch (error) {
-            return handleError(error);
+        const results = [];
+        const errors = [];
+
+        for (const query of queries) {
+            try {
+                const response = await apiClient.post(endpoint, { query });
+                results.push(...handleResponse(response).data);
+            } catch (error) {
+                errors.push(error);
+            }
         }
+
+        return { results, errors };
     },
 
     async get(endpoint) {

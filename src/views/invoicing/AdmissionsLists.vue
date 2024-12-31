@@ -3,10 +3,11 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { dformat } from '@/utils/day';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
+import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
-
+const toast = useToast();
 const admissionsLists = ref([]);
 const periods = ref([]);
 const filters = ref(null);
@@ -33,7 +34,8 @@ function initFilters() {
         medical_record_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         start_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        end_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] }
+        end_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
 }
 
@@ -42,9 +44,53 @@ onBeforeMount(() => {
 });
 
 onMounted(async () => {
-    admissionsLists.value = await admissionsListStore.initializeStoreByPeriod(period.value);
-    console.log(admissionsLists.value);
+    let data = await admissionsListStore.initializeStoreByPeriod(period.value);
+    formatAdmissionsLists(data);
 });
+
+const formatAdmissionsLists = (data) => {
+    if (data.length === 0) {
+        admissionsLists.value = [];
+        toast.add({
+            severity: 'info',
+            summary: 'No hay datos',
+            detail: 'No se encontraron admisiones para el periodo seleccionado.',
+            life: 5000
+        });
+        return;
+    }
+    // Agrupar por número de admisión
+    const groupedAdmissions = data.reduce((acc, admission) => {
+        if (!acc[admission.number]) {
+            acc[admission.number] = [];
+        }
+        acc[admission.number].push(admission);
+        return acc;
+    }, {});
+
+    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
+    const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
+        return group.reduce((latest, current) => {
+            return new Date(latest.invoice_date) > new Date(current.invoice_date) ? latest : current;
+        });
+    });
+
+    uniqueAdmissions.forEach((admission) => {
+        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
+            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
+        }
+        // end_date es la fecha limite que se permite facturar comprarla con invoice_date para determinar si esta a tiempo o no, si end_date es mayor a invoice_date esta a tiempo
+        admission.isLate = new Date(admission.end_date) >= new Date(admission.invoice_date);
+        if (admission.isLate) {
+            admission.status = 'A tiempo';
+        } else {
+            admission.status = 'Fuera de tiempo';
+        }
+    });
+
+    admissionsLists.value = uniqueAdmissions;
+    console.log(admissionsLists.value);
+};
 
 const searchPeriod = async () => {
     let response = await admissionsListStore.fetchAdmissionsListsByPeriod(period.value);
@@ -81,7 +127,7 @@ const searchPeriod = async () => {
             size="small"
             filterDisplay="menu"
             :loading="admissionsListStore.loading"
-            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number']"
+            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status']"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
@@ -231,6 +277,7 @@ const searchPeriod = async () => {
                     </span>
                 </template>
             </Column>
+            <Column field="status" header="Estado" sortable></Column>
         </DataTable>
     </div>
 </template>

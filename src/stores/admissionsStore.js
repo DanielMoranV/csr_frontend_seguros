@@ -32,6 +32,17 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             this.loading = false;
             return this.admissions;
         },
+        async initializeStoreAdmissionsDateRangeApi(payload) {
+            // Carga inicial desde IndexedDB
+            this.loading = true;
+            const admissionsFromCache = await indexedDB.getItem('admissions');
+            this.admissions = admissionsFromCache || [];
+            if (this.admissions.length === 0) {
+                await this.fetchAdmissionsDateRangeApi(payload);
+            }
+            this.loading = false;
+            return this.admissions;
+        },
 
         async fetchAdmissionsDateRange(payload) {
             this.loading = true;
