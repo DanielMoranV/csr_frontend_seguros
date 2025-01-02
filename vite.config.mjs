@@ -18,6 +18,10 @@ export default defineConfig({
             resolvers: [PrimeVueResolver()]
         })
     ],
+    server: {
+        host: '0.0.0.0', // Acepta conexiones desde cualquier IP
+        port: 3000 // Cambia el puerto si es necesario
+    },
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))

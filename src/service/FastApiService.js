@@ -83,7 +83,7 @@ export default {
             LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
             LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
             LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
-            WHERE ${ADMISIONES}.num_doc LIKE '${number}'
+            WHERE ${ADMISIONES}.num_doc LIKE '%${number}%'
             ORDER BY ${ADMISIONES}.num_doc DESC; `;
         try {
             const response = await apiClient.post(endpoint, { query });
@@ -110,7 +110,7 @@ export default {
             LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
             LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
             LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
-            WHERE ${ADMISIONES}.num_doc = '${number}'
+            WHERE ${ADMISIONES}.num_doc = '%${number}%'
             ORDER BY ${ADMISIONES}.num_doc DESC;
         `
         );
