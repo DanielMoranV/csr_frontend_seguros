@@ -173,7 +173,7 @@ watch(() => user.value.phone, validatePhoneField);
         <Avatar :image="user.url_photo_profile" size="xlarge" shape="circle" class="mr-3" />
         <div>
             <h2>{{ user.name }}</h2>
-            <p>{{ user.role.name.toUpperCase() }} | {{ user.position.toUpperCase() }}</p>
+            <p>{{ user.position.toUpperCase() }}</p>
         </div>
     </div>
     <div class="card">

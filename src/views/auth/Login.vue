@@ -35,7 +35,7 @@ const login = async () => {
     const success = await authStore.login(dataUser);
     handleResponseToast(success, authStore.auth.message, authStore.auth.status, toast);
     if (success) {
-        setTimeout(() => router.push('/dashboard'), 2000);
+        setTimeout(() => router.push('/profile'), 2000);
     }
 };
 </script>

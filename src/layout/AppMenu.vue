@@ -1,58 +1,102 @@
 <script setup>
-import { ref } from 'vue';
-
+import { useAuthStore } from '@/stores/authStore'; // Importa el store de autenticación
+import { computed, ref } from 'vue';
 import AppMenuItem from './AppMenuItem.vue';
 
+// Datos del menú con restricción por posición
 const model = ref([
     {
         label: 'Home',
         items: [
-            { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' },
-            { label: 'Perfil', icon: 'pi pi-fw pi-user', to: '/profile' }
+            { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard', positions: ['ADMINISTRACION', 'manager', 'biller'] },
+            { label: 'Perfil', icon: 'pi pi-fw pi-user', to: '/profile', public: true } // Elemento público
         ]
     },
     {
         label: 'Administrador',
         items: [
-            { label: 'Usuarios', icon: 'pi pi-fw pi-users', to: '/users' },
+            { label: 'Usuarios', icon: 'pi pi-fw pi-users', to: '/users', positions: ['admin'] },
             {
                 label: 'Permisos',
                 icon: 'pi pi-fw pi-lock',
                 items: [
-                    { label: 'Roles', icon: 'pi pi-fw pi-verified', to: '/roles' },
-                    { label: 'Asignar Rol', icon: 'pi pi-fw pi-user-plus', to: '/assign-role' }
-                ]
+                    { label: 'Roles', icon: 'pi pi-fw pi-verified', to: '/roles', positions: ['admin'] },
+                    { label: 'Asignar Rol', icon: 'pi pi-fw pi-user-plus', to: '/assign-role', positions: ['admin'] }
+                ],
+                positions: ['admin']
             }
-        ]
+        ],
+        positions: ['admin']
     },
     {
         label: 'Facturación',
         items: [
-            { label: 'Admisiones', icon: 'pi pi-fw pi-ticket', to: '/admissions' },
-            { label: 'Listas', icon: 'pi pi-fw pi-list', to: '/admissions-lists' },
-            { label: 'Devoluciones', icon: 'pi pi-fw pi-ban', to: '/returns' },
-            { label: 'Notas de Crédito', icon: 'pi pi-fw pi-dollar', to: '/credit-notes' },
-            { label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/send-invoices' }
-        ]
+            { label: 'Admisiones', icon: 'pi pi-fw pi-ticket', to: '/admissions', positions: ['ADMINISTRACION', 'AUDITOR MEDICO'] },
+            { label: 'Listas', icon: 'pi pi-fw pi-list', to: '/admissions-lists', positions: ['ADMINISTRACION', 'AUDITOR MEDICO'] },
+            { label: 'Lista Facturador', icon: 'pi pi-fw pi-file', to: '/admissions-list-biller', positions: ['FACTURACION'] },
+            { label: 'Devoluciones', icon: 'pi pi-fw pi-ban', to: '/returns', positions: ['FACTURACION', 'AUDITOR MEDICO'] },
+            { label: 'Notas de Crédito', icon: 'pi pi-fw pi-dollar', to: '/credit-notes', positions: ['admin'] },
+            { label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/send-invoices', positions: ['admin'] }
+        ],
+        positions: ['FACTURACION', 'ADMINISTRACION', 'AUDITOR MEDICO']
+    },
+    {
+        label: 'Auditoría',
+        items: [
+            { label: 'Listas Auditor', icon: 'pi pi-fw pi-eye', to: '/audits', positions: ['AUDITOR MEDICO', 'ADMINISTRACION'] },
+            { label: 'Auditoría', icon: 'pi pi-fw pi-eye', to: '/audits-by-biller', positions: ['FACTURACION'] }
+        ],
+        positions: ['AUDITOR MEDICO', 'FACTURACION', 'ADMINISTRACION']
     },
     {
         label: 'Gestión de Expedientes',
         items: [
-            { label: 'Historia Clínicas', icon: 'pi pi-fw pi-book', to: '/medical-records' },
-            { label: 'Seguimiento Seguros', icon: 'pi pi-fw pi-plus', to: '/insurers-tracking' },
-            { label: 'Solicitudes Expedientes', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking' }
-        ]
+            { label: 'Historia Clínicas', icon: 'pi pi-fw pi-book', to: '/medical-records', positions: ['admin'] },
+            { label: 'Seguimiento Seguros', icon: 'pi pi-fw pi-plus', to: '/insurers-tracking', positions: ['ADMINISTRACION'] },
+            { label: 'Expedientes Seguros', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['FACTURACION'] },
+            { label: 'Solicitudes Expedientes', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['ADMINISTRACION', 'FACTURACION'] }
+        ],
+        positions: ['FACTURACION', 'ADMINISTRACION']
     },
     {
         label: 'Sistemas',
-        items: [{ label: 'Base de datos', icon: 'pi pi-fw pi-database', to: '/databases' }]
+        items: [{ label: 'Base de datos', icon: 'pi pi-fw pi-database', to: '/databases', positions: ['SISTEMAS'] }],
+        positions: ['SISTEMAS']
     }
 ]);
+
+const authStore = useAuthStore();
+const currentPosition = computed(() => authStore.getUser?.position || '');
+
+// Filtrar elementos según la posición del usuario
+const filteredModel = computed(() => {
+    const globalAccessRoles = ['SISTEMAS']; // Roles con acceso a todo
+
+    const hasAccess = (positions) => {
+        if (!positions) return true; // Elementos sin restricción son accesibles
+        return positions.includes(currentPosition.value) || globalAccessRoles.includes(currentPosition.value);
+    };
+
+    const filterItems = (items) =>
+        items
+            .filter((item) => hasAccess(item.positions))
+            .map((item) => ({
+                ...item,
+                items: item.items ? filterItems(item.items) : undefined
+            }));
+
+    return model.value
+        .filter((section) => hasAccess(section.positions))
+        .map((section) => ({
+            ...section,
+            items: filterItems(section.items)
+        }));
+});
 </script>
 
 <template>
     <ul class="layout-menu">
-        <template v-for="(item, i) in model" :key="item">
+        <template v-for="(item, i) in filteredModel" :key="item.label">
             <app-menu-item v-if="!item.separator" :item="item" :index="i"></app-menu-item>
             <li v-if="item.separator" class="menu-separator"></li>
         </template>

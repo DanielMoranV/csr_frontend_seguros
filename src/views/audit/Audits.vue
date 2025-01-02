@@ -9,6 +9,8 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 const admissionsListStore = useAdmissionsListsStore();
 const toast = useToast();
 const admissionsLists = ref([]);
+const admission = ref(null);
+const displayDialog = ref(false);
 const resumenAdmissions = ref([]);
 const periods = ref([]);
 const filters = ref(null);
@@ -19,6 +21,11 @@ const getCurrentPeriod = () => {
     const month = date.getMonth() + 1; // getMonth() returns 0-11
     return `${year}${month.toString().padStart(2, '0')}`;
 };
+const statuses = ref([
+    { label: 'Aprobado', value: 'Aprobado' },
+    { label: 'Con Observaciones', value: 'Con Observaciones' },
+    { label: 'Rechazado', value: 'Rechazado' }
+]);
 period.value = getCurrentPeriod();
 
 function initFilters() {
@@ -56,7 +63,6 @@ onMounted(async () => {
     admissionsLists.value = formatAdmissionsLists(data);
 
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-    console.log(resumenAdmissions.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -102,7 +108,6 @@ const formatAdmissionsLists = (data) => {
 };
 
 const resumenAdmissionsList = (data) => {
-    console.log(data);
     const groupedData = data.reduce((acc, item) => {
         // Inicializar el objeto para el biller si no existe
 
@@ -139,6 +144,11 @@ const searchPeriod = async () => {
     admissionsLists.value = formatAdmissionsLists(response.data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
 };
+
+const addAudit = (data) => {
+    admission.value = data;
+    displayDialog.value = true;
+};
 </script>
 <template>
     <div class="card">
@@ -152,8 +162,7 @@ const searchPeriod = async () => {
                             {{ formatCurrency(slotProps.data.totalAmount) }}
                         </template>
                     </Column>
-                    <Column field="medical_record_request" header="Entreg."></Column>
-                    <Column field="closedTrue" header="Liquid."></Column>
+
                     <Column field="auditNotNull" header="Audit."></Column>
                     <Column field="invoiceNotNull" header="Factur."></Column>
                     <Column field="paidNotNull" header="Pagad."></Column>
@@ -212,16 +221,6 @@ const searchPeriod = async () => {
             </Column>
             <Column field="admission_number" sortable header="Admisión" frozen></Column>
             <Column field="period" sortable header="Periodo"></Column>
-            <Column field="start_date" sortable header="Inicio">
-                <template #body="slotProps">
-                    {{ slotProps.data.start_date ? dformat(slotProps.data.start_date, 'DD/MM/YYYY') : '-' }}
-                </template>
-            </Column>
-            <Column field="end_date" sortable header="Final">
-                <template #body="slotProps">
-                    {{ slotProps.data.end_date ? dformat(slotProps.data.end_date, 'DD/MM/YYYY') : '-' }}
-                </template>
-            </Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
@@ -262,31 +261,15 @@ const searchPeriod = async () => {
                     {{ slotProps.data.observations || '-' }}
                 </template>
             </Column>
+            <Column field="audit.auditor" header="Auditor" style="width: 8rem"> </Column>
+            <Column field="audit.description" header="Descripción Auditoría" style="width: 15rem"> </Column>
+            <Column field="audit.created_at" header="Fecha Auditoría" style="width: 8rem">
+                <template #body="slotProps">
+                    {{ slotProps.data.audit ? dformat(slotProps.data.audit.created_at, 'DD/MM/YYYY') : '-' }}
+                </template>
+            </Column>
 
-            <Column field="medical_record_request.status" header="Entr." sortable="">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.medical_record_request">
-                        <i
-                            :class="{
-                                'pi pi-check-circle text-green-500': slotProps.data.medical_record_request.status === 'Atendido',
-                                'pi pi-clock text-yellow-500': slotProps.data.medical_record_request.status === 'Pendiente',
-                                'pi pi-times-circle text-red-500': slotProps.data.medical_record_request.status === 'Rechazado'
-                            }"
-                        ></i>
-                    </span>
-                </template>
-            </Column>
-            <Column field="is_closed" header="Liquid." sortable="">
-                <template #body="slotProps">
-                    <i
-                        :class="{
-                            'pi pi-check-circle text-green-500': slotProps.data.is_closed,
-                            'pi pi-times-circle text-red-500': !slotProps.data.is_closed
-                        }"
-                    ></i>
-                </template>
-            </Column>
-            <Column field="audit.status" header="Audit" sortable="">
+            <Column field="audit.status" header="Estado Audit." sortable="">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit">
                         <i
@@ -303,40 +286,33 @@ const searchPeriod = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="invoice_number" header="Factura" sortable style="min-width: 5rem">
+
+            <Column field="" header="Acciones" style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.invoice_number">
-                        {{ slotProps.data.invoice_number }}
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
+                    <Button v-if="!slotProps.data.audit" icon="pi pi-plus" class="p-button-rounded p-button-primary" @click="addAudit(slotProps.data)" />
+                    <Button v-else icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editAudit(slotProps.data)" />
                 </template>
             </Column>
-            <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Envío">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
-                        <span class="text-green-500">{{ dformat(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
-                </template>
-            </Column>
-            <Column field="paid_invoice_number" sortable header="Pago">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.paid_invoice_number">
-                        <i class="pi pi-check-circle text-green-500"></i>
-                    </span>
-                    <span v-else-if="slotProps.data.devolution_date">
-                        <i class="pi pi-times-circle text-red-500"></i>
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
-                </template>
-            </Column>
-            <Column field="status" header="Estado" sortable></Column>
         </DataTable>
     </div>
+    <Dialog v-model:visible="displayDialog" header="Auditoría" :modal="true" :style="{ width: '450px' }">
+        <div class="flex flex-col gap-6">
+            <div>
+                <label for="admision_number" class="block font-bold mb-3">Admisión</label>
+                <InputText id="admision_number" v-model="admission.admission_number" required="true" disabled fluid />
+            </div>
+            <div>
+                <label for="description" class="block font-bold mb-3">Descripción</label>
+                <Textarea id="description" v-model="admission.description" required="true" rows="3" cols="20" autofocus fluid />
+            </div>
+            <div>
+                <label for="status" class="block font-bold mb-3">Estado Auditoría</label>
+                <Select id="status" v-model="admission.status" :options="statuses" optionLabel="label" placeholder="Seleccionar Estado" fluid required></Select>
+            </div>
+        </div>
+        <template #footer>
+            <Button label="Cancel" icon="pi pi-times" text @click="hideDialog" />
+            <Button label="Save" icon="pi pi-check" @click="saveProduct" />
+        </template>
+    </Dialog>
 </template>

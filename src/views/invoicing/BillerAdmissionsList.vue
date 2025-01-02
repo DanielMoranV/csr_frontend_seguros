@@ -1,18 +1,24 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
+import { useAuthStore } from '@/stores/authStore';
 import { dformat } from '@/utils/day';
+import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
+const authStore = useAuthStore();
 const toast = useToast();
 const admissionsLists = ref([]);
 const resumenAdmissions = ref([]);
 const periods = ref([]);
 const filters = ref(null);
+const nickName = ref();
 const period = ref(null);
+const startDate = ref(new Date());
+const endDate = ref(new Date());
 const getCurrentPeriod = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -36,7 +42,8 @@ function initFilters() {
         period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         start_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
         end_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        observations: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
 }
 
@@ -52,11 +59,18 @@ function clearFilter() {
 }
 
 onMounted(async () => {
+    nickName.value = authStore.getNickName;
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
+    data = data.filter((admission) => admission.biller === nickName.value);
     admissionsLists.value = formatAdmissionsLists(data);
-
+    if (admissionsLists.value.length > 0) {
+        startDate.value = data[0].start_date;
+        endDate.value = data[0].end_date;
+        period.value = data[0].period;
+    }
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
     console.log(resumenAdmissions.value);
+    console.log(admissionsLists.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -88,9 +102,10 @@ const formatAdmissionsLists = (data) => {
 
     uniqueAdmissions.forEach((admission) => {
         if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
-            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
+            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? null : admission.invoice_number;
+            admission.invoice_date = new Date();
         }
-        // end_date es la fecha limite que se permite facturar comprarla con invoice_date para determinar si esta a tiempo o no, si end_date es mayor a invoice_date esta a tiempo
+
         admission.isLate = new Date(admission.end_date) >= new Date(admission.invoice_date);
         if (admission.isLate) {
             admission.status = 'A tiempo';
@@ -102,7 +117,6 @@ const formatAdmissionsLists = (data) => {
 };
 
 const resumenAdmissionsList = (data) => {
-    console.log(data);
     const groupedData = data.reduce((acc, item) => {
         // Inicializar el objeto para el biller si no existe
 
@@ -136,8 +150,30 @@ const resumenAdmissionsList = (data) => {
 
 const searchPeriod = async () => {
     let response = await admissionsListStore.fetchAdmissionsListsByPeriod(period.value);
+    response.data = response.data.filter((admission) => admission.biller === nickName.value);
     admissionsLists.value = formatAdmissionsLists(response.data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+    if (admissionsLists.value.length > 0) {
+        startDate.value = response.data[0].start_date;
+        endDate.value = response.data[0].end_date;
+        period.value = response.data[0].period;
+    }
+};
+const editObservation = async (admission) => {
+    console.log(admission);
+    let payload = {
+        id: admission.id,
+        observations: admission.observations
+    };
+    admissionsListStore.updateAdmissionsList(payload);
+
+    // modificar el registro de  admissionsLists segun admision.admision_number
+    const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+    if (index !== -1) {
+        admissionsLists.value[index].observations = admission.observations;
+        // modificar en indexedDB
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+    }
 };
 </script>
 <template>
@@ -185,14 +221,15 @@ const searchPeriod = async () => {
             size="small"
             filterDisplay="menu"
             :loading="admissionsListStore.loading"
-            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status']"
+            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status', 'observations']"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
+            editMode="cell"
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
+                    <h1 class="m-0">Gestión admisiones de seguro CSR {{ period }} Fecha Facturación {{ dformat(startDate, 'DD/MM/YYYY') }} al {{ dformat(endDate, 'DD/MM/YYYY') }}</h1>
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <IconField>
@@ -211,17 +248,7 @@ const searchPeriod = async () => {
                 </template>
             </Column>
             <Column field="admission_number" sortable header="Admisión" frozen></Column>
-            <Column field="period" sortable header="Periodo"></Column>
-            <Column field="start_date" sortable header="Inicio">
-                <template #body="slotProps">
-                    {{ slotProps.data.start_date ? dformat(slotProps.data.start_date, 'DD/MM/YYYY') : '-' }}
-                </template>
-            </Column>
-            <Column field="end_date" sortable header="Final">
-                <template #body="slotProps">
-                    {{ slotProps.data.end_date ? dformat(slotProps.data.end_date, 'DD/MM/YYYY') : '-' }}
-                </template>
-            </Column>
+            <Column field="medical_record_number" header="Historia" sortable style="min-width: 5rem"></Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
@@ -240,6 +267,9 @@ const searchPeriod = async () => {
                 <template #body="slotProps">
                     {{ slotProps.data.insurer_name || '-' }}
                 </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
+                </template>
             </Column>
             <Column field="amount" header="Monto" sortable style="min-width: 5rem">
                 <template #body="slotProps">
@@ -249,17 +279,12 @@ const searchPeriod = async () => {
                     <InputNumber v-model="filterModel.value" mode="currency" currency="PEN" locale="es-PE" />
                 </template>
             </Column>
-            <Column field="biller" header="Facturador" sortable style="min-width: 7rem">
-                <template #body="{ data }">
-                    {{ data.biller }}
-                </template>
-                <template #filter="{ filterModel }">
-                    <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
-                </template>
-            </Column>
             <Column field="observations" header="Observación" sortable style="min-width: 10rem">
                 <template #body="slotProps">
                     {{ slotProps.data.observations || '-' }}
+                </template>
+                <template #editor="slotProps">
+                    <InputText v-model="slotProps.data.observations" @blur="editObservation(slotProps.data)" />
                 </template>
             </Column>
 

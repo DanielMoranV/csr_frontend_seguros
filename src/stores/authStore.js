@@ -38,6 +38,9 @@ export const useAuthStore = defineStore('authStore', {
         getUser(state) {
             return state.user;
         },
+        getNickName(state) {
+            return state.user.nick;
+        },
         getLoading(state) {
             return state.loading;
         }

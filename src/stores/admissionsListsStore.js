@@ -109,11 +109,12 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
         },
         async updateAdmissionsList(payload) {
             this.loading = true;
-            const { data } = await handleResponseStore(updateAdmissionsList(payload), this);
+            const { data } = await handleResponseStore(updateAdmissionsList(payload, payload.id), this);
             if (this.success) {
-                const index = this.admissionsLists.findIndex((admissionsList) => admissionsList.id === data.id);
-                this.admissionsLists[index] = data;
-                await indexedDB.setItem('admissionsLists', this.admissionsLists);
+                // const index = this.admissionsLists.findIndex((admissionsList) => admissionsList.id === data.id);
+                // this.admissionsLists[index] = data;
+                // await indexedDB.setItem('admissionsLists', this.admissionsLists);
+                this.message = 'Lista de admisiones Actualizada';
             }
             return { success: this.success, data: this.admissionsLists };
         },

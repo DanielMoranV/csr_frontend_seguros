@@ -465,11 +465,11 @@ const searchAdmissions = async () => {
                 </Column> -->
                 <!-- suma de totales -->
 
-                <template #footer>
+                <!-- <template #footer>
                     <div class="flex justify-end items-center gap-2">
-                        <span>Total Monto:</span>
+                        <span>Total Monto: </span>
                     </div>
-                </template>
+                </template> -->
             </DataTable>
         </div>
     </div>

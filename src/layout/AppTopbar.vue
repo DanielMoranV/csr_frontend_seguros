@@ -91,10 +91,10 @@ onMounted(async () => {
                         <i class="pi pi-refresh"></i>
                         <span>Actualizar</span>
                     </button>
-                    <button @click="goToConfig()" type="button" class="layout-topbar-action">
+                    <!-- <button @click="goToConfig()" type="button" class="layout-topbar-action">
                         <i class="pi pi-cog"></i>
                         <span>Configuración</span>
-                    </button>
+                    </button> -->
                     <button @click="goToProfile()" type="button" class="layout-topbar-action">
                         <i class="pi pi-user"></i>
                         <span>Perfil</span>
