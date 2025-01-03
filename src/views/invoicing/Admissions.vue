@@ -7,6 +7,7 @@ import { useSettlementsStore } from '@/stores/settlementsStore';
 import { classifyAdmissionsLists } from '@/utils/dataProcessingHelpers';
 import { dformat, getDaysPassed } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseSettlements, validateData, validateHeaders } from '@/utils/excelUtils';
+import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
@@ -60,11 +61,6 @@ const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
 const submitted = ref(false);
-
-function formatCurrency(value) {
-    if (value) return value.toLocaleString('es-PE', { style: 'currency', currency: 'PEN' });
-    return;
-}
 
 function initFilters() {
     filters.value = {
@@ -374,6 +370,7 @@ const searchAdmissions = async () => {
             </Toolbar>
 
             <DataTable
+                :style="{ fontSize: '11px', fontFamily: 'Arial, sans-serif' }"
                 ref="dt"
                 v-model:selection="selectedAdmissions"
                 :value="admissions"
@@ -406,9 +403,6 @@ const searchAdmissions = async () => {
                 </template>
                 <template #empty> No hay datos. </template>
                 <template #loading> Cargando datos. Por favor, espere. </template>
-
-                <Column selectionMode="multiple" style="width: 3rem" :exportable="false"></Column>
-
                 <Column field="number" header="Admisión" sortable style="min-width: 5rem"></Column>
                 <Column field="medical_record_number" header="Historia" sortable style="min-width: 5rem"></Column>
                 <Column field="attendance_date" header="Fecha" sortable style="min-width: 5rem">

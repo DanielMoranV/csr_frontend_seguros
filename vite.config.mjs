@@ -20,7 +20,7 @@ export default defineConfig({
     ],
     server: {
         host: '0.0.0.0', // Acepta conexiones desde cualquier IP
-        port: 3000 // Cambia el puerto si es necesario
+        port: 5173 // Cambia el puerto si es necesario
     },
     resolve: {
         alias: {

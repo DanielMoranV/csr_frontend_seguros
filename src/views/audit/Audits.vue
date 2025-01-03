@@ -10,6 +10,7 @@ const admissionsListStore = useAdmissionsListsStore();
 const toast = useToast();
 const admissionsLists = ref([]);
 const admission = ref(null);
+const audit = ref(null);
 const displayDialog = ref(false);
 const resumenAdmissions = ref([]);
 const periods = ref([]);
@@ -43,7 +44,8 @@ function initFilters() {
         period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         start_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
         end_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        audit_requested_at: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] }
     };
 }
 
@@ -145,9 +147,24 @@ const searchPeriod = async () => {
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
 };
 
+const hideDialog = () => {
+    displayDialog.value = false;
+    admission.value = null;
+};
 const addAudit = (data) => {
     admission.value = data;
     displayDialog.value = true;
+    audit.value = {
+        admission_number: data.admission_number,
+        description: '',
+        status: ''
+    };
+
+    console.log(data);
+};
+
+const saveAudit = async (data) => {
+    console.log(data);
 };
 </script>
 <template>
@@ -194,7 +211,7 @@ const addAudit = (data) => {
             size="small"
             filterDisplay="menu"
             :loading="admissionsListStore.loading"
-            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status']"
+            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status', 'audit_requested_at']"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
@@ -303,16 +320,16 @@ const addAudit = (data) => {
             </div>
             <div>
                 <label for="description" class="block font-bold mb-3">Descripción</label>
-                <Textarea id="description" v-model="admission.description" required="true" rows="3" cols="20" autofocus fluid />
+                <Textarea id="description" v-model="audit.description" required="true" rows="3" cols="20" autofocus fluid />
             </div>
             <div>
                 <label for="status" class="block font-bold mb-3">Estado Auditoría</label>
-                <Select id="status" v-model="admission.status" :options="statuses" optionLabel="label" placeholder="Seleccionar Estado" fluid required></Select>
+                <Select id="status" v-model="audit.status" :options="statuses" optionLabel="label" optionValue="value" placeholder="Seleccionar Estado" fluid required></Select>
             </div>
         </div>
         <template #footer>
-            <Button label="Cancel" icon="pi pi-times" text @click="hideDialog" />
-            <Button label="Save" icon="pi pi-check" @click="saveProduct" />
+            <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
+            <Button label="Guardar" icon="pi pi-check" @click="saveAudit(audit)" />
         </template>
     </Dialog>
 </template>

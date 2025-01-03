@@ -175,6 +175,30 @@ const editObservation = async (admission) => {
         await indexedDB.setItem('admissionsLists', admissionsLists.value);
     }
 };
+
+const editAuditRequestedAt = async (admission) => {
+    console.log(admission.audit_requested_at);
+    if ((admission.audit_requested_at = true)) {
+        // asignar fecha actual en formato para mysql
+        const currentDate = new Date();
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+        admission.audit_requested_at = formattedDate;
+    }
+    let payload = {
+        id: admission.id,
+        audit_requested_at: admission.audit_requested_at
+    };
+    console.log(payload);
+    admissionsListStore.updateAdmissionsList(payload);
+
+    // modificar el registro de  admissionsLists segun admision.admision_number
+    const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+    if (index !== -1) {
+        admissionsLists.value[index].audit_requested_at = admission.audit_requested_at;
+        // modificar en indexedDB
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -301,7 +325,7 @@ const editObservation = async (admission) => {
                     </span>
                 </template>
             </Column>
-            <Column field="is_closed" header="Liquid." sortable="">
+            <Column field="is_closed" header="Liquid." sortable>
                 <template #body="slotProps">
                     <i
                         :class="{
@@ -309,6 +333,21 @@ const editObservation = async (admission) => {
                             'pi pi-times-circle text-red-500': !slotProps.data.is_closed
                         }"
                     ></i>
+                </template>
+            </Column>
+            <Column field="audit_requested_at" header="Entr. Audit." sorteable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.audit_requested_at">
+                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+                <template #editor="slotProps">
+                    <span v-if="!slotProps.data.audit_requested_at">
+                        <Checkbox v-model="slotProps.data.audit_requested_at" binary @blur="editAuditRequestedAt(slotProps.data)" />
+                    </span>
                 </template>
             </Column>
             <Column field="audit.status" header="Audit" sortable="">
