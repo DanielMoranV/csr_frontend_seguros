@@ -57,6 +57,8 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         },
         async fetchAdmissionsDateRangeApi(payload) {
             this.loading = true;
+            // let responde = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
+            // console.log('responseeeee', responde);
             const { data } = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
             if (this.success) {
                 this.admissions = data;

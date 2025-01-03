@@ -1,4 +1,5 @@
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const ADMISIONES = 'SC0011';
 const SERVICIOS = 'SC0006';
@@ -28,6 +29,12 @@ const handleResponse = (response) => {
 
 const handleError = (error) => {
     console.error('API call error:', error);
+    Swal.fire({
+        title: 'Error',
+        text: 'Error al procesar la solicitud: ' + error.message || 'Ocurrió un error inesperado',
+        icon: 'error',
+        confirmButtonText: 'Aceptar'
+    });
     throw error;
 };
 
@@ -123,7 +130,23 @@ export default {
                 const response = await apiClient.post(endpoint, { query });
                 results.push(...handleResponse(response).data);
             } catch (error) {
+                console.error('Error al procesar la solicitud:', error); // Log para debugging
+
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Error al procesar la solicitud: ' + error.message || 'Ocurrió un error inesperado',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+
+                // Agregar el error a la lista
                 errors.push(error);
+
+                // Detener el bucle si el código del error es "ERR_NETWORK"
+                if (error.code === 'ERR_NETWORK') {
+                    console.error('Error de red detectado. Deteniendo el bucle.');
+                    break;
+                }
             }
         }
 

@@ -278,6 +278,16 @@ const saveAudit = async (data) => {
                     {{ slotProps.data.observations || '-' }}
                 </template>
             </Column>
+            <Column field="audit_requested_at" header="Entr. Audit." sorteable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.audit_requested_at">
+                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="audit.auditor" header="Auditor" style="width: 8rem"> </Column>
             <Column field="audit.description" header="Descripción Auditoría" style="width: 15rem"> </Column>
             <Column field="audit.created_at" header="Fecha Auditoría" style="width: 8rem">
