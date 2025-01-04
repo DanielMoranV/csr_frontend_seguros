@@ -3,6 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { dformat } from '@/utils/day';
+import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -165,10 +166,22 @@ const addAudit = (data) => {
         description: '',
         status: ''
     };
-
-    console.log(data);
 };
 
+const editAudit = (data) => {
+    let nickName = authStore.getNickName;
+    admission.value = data;
+    displayDialog.value = true;
+    audit.value = {
+        id: data.audit.id,
+        auditor: nickName,
+        admission_number: data.admission_number,
+        description: data.audit.description,
+        status: data.audit.status
+    };
+
+    console.log(audit.value);
+};
 const saveAudit = async (data) => {
     console.log(data);
     if (data.status === '') {
@@ -180,16 +193,32 @@ const saveAudit = async (data) => {
         });
         return;
     }
+    let responseAudit = {};
+    if (!data.id) {
+        responseAudit = await auditsStore.createAudit(data);
+    } else {
+        responseAudit = await auditsStore.updateAudit(data);
+    }
 
-    let response = await auditsStore.createAudit(data);
-    console.log(response.data);
-    if (response.success) {
+    if (responseAudit.success) {
         let payload = {
             id: admission.value.id,
-            audit_id: response.data[0].id
+            audit_id: responseAudit.data.id
         };
-        console.log(payload);
         await admissionsListStore.updateAdmissionsList(payload);
+
+        let index = admissionsLists.value.findIndex((item) => item.id === admission.value.id);
+        if (index !== -1) {
+            admissionsLists.value[index].audit_id = payload.audit_id;
+            admissionsLists.value[index].audit = responseAudit.data;
+
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+        }
+
+        resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+
+        audit.value = null;
+        admission.value = null;
 
         toast.add({
             severity: 'success',
@@ -314,7 +343,7 @@ const saveAudit = async (data) => {
                     <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
                 </template>
             </Column>
-            <Column field="observations" header="Observación" sortable style="min-width: 10rem">
+            <Column field="observations" header="Obs." sortable>
                 <template #body="slotProps">
                     {{ slotProps.data.observations || '-' }}
                 </template>
@@ -355,10 +384,10 @@ const saveAudit = async (data) => {
                 </template>
             </Column>
 
-            <Column field="" header="Acciones" style="min-width: 5rem">
+            <Column field="" header="Acciones" style="min-width: 8rem">
                 <template #body="slotProps">
-                    <Button v-if="!slotProps.data.audit" icon="pi pi-plus" class="p-button-rounded p-button-primary" @click="addAudit(slotProps.data)" />
-                    <Button v-else icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editAudit(slotProps.data)" />
+                    <Button icon="pi pi-plus" class="p-button-rounded p-button-primary mr-2" @click="addAudit(slotProps.data)" />
+                    <Button v-if="slotProps.data.audit" icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editAudit(slotProps.data)" />
                 </template>
             </Column>
         </DataTable>
@@ -380,7 +409,7 @@ const saveAudit = async (data) => {
         </div>
         <template #footer>
             <Button label="Cancelar" icon="pi pi-times" text @click="hideDialog" />
-            <Button label="Guardar" icon="pi pi-check" @click="saveAudit(audit)" />
+            <Button label="Guardar" icon="pi pi-check" @click="saveAudit(audit)" :loading="admissionsListStore.loading" />
         </template>
     </Dialog>
 </template>

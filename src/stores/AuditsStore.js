@@ -49,18 +49,19 @@ export const useAuditsStore = defineStore('auditsStore', {
                 this.audits.push(data);
                 await indexedDB.setItem('audits', this.audits);
             }
-            return { success: this.success, data: this.audits };
+            return { success: this.success, data };
         },
         async updateAudit(payload) {
             this.loading = true;
-            const { data } = await handleResponseStore(updateAudit(payload), this);
+            console.log(payload);
+            const { data } = await handleResponseStore(updateAudit(payload, payload.id), this);
 
             if (this.success) {
                 const index = this.audits.findIndex((audit) => audit.id === data.id);
                 this.audits[index] = data;
                 await indexedDB.setItem('audits', this.audits);
             }
-            return { success: this.success, data: this.audits };
+            return { success: this.success, data };
         },
         async deleteAudit(id) {
             this.loading = true;
