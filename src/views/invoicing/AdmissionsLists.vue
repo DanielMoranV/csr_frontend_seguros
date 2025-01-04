@@ -286,6 +286,16 @@ const searchPeriod = async () => {
                     ></i>
                 </template>
             </Column>
+            <Column field="audit_requested_at" header="Entr. Audit." sorteable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.audit_requested_at">
+                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="audit.status" header="Audit" sortable="">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit">

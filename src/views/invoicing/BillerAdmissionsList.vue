@@ -189,7 +189,7 @@ const editAuditRequestedAt = async (admission) => {
         audit_requested_at: admission.audit_requested_at
     };
     console.log(payload);
-    admissionsListStore.updateAdmissionsList(payload);
+    await admissionsListStore.updateAdmissionsList(payload);
 
     // modificar el registro de  admissionsLists segun admision.admision_number
     const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);

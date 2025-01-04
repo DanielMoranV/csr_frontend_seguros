@@ -1,5 +1,7 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
+import { useAuditsStore } from '@/stores/AuditsStore';
+import { useAuthStore } from '@/stores/authStore';
 import { dformat } from '@/utils/day';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -7,6 +9,8 @@ import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
+const authStore = useAuthStore();
+const auditsStore = useAuditsStore();
 const toast = useToast();
 const admissionsLists = ref([]);
 const admission = ref(null);
@@ -152,9 +156,11 @@ const hideDialog = () => {
     admission.value = null;
 };
 const addAudit = (data) => {
+    let nickName = authStore.getNickName;
     admission.value = data;
     displayDialog.value = true;
     audit.value = {
+        auditor: nickName,
         admission_number: data.admission_number,
         description: '',
         status: ''
@@ -165,6 +171,41 @@ const addAudit = (data) => {
 
 const saveAudit = async (data) => {
     console.log(data);
+    if (data.status === '') {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Debe seleccionar un estado para la auditoría.',
+            life: 5000
+        });
+        return;
+    }
+
+    let response = await auditsStore.createAudit(data);
+    console.log(response.data);
+    if (response.success) {
+        let payload = {
+            id: admission.value.id,
+            audit_id: response.data[0].id
+        };
+        console.log(payload);
+        await admissionsListStore.updateAdmissionsList(payload);
+
+        toast.add({
+            severity: 'success',
+            summary: 'Éxito',
+            detail: 'Auditoría guardada correctamente.',
+            life: 5000
+        });
+        hideDialog();
+    } else {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Ocurrió un error al guardar la auditoría.',
+            life: 5000
+        });
+    }
 };
 </script>
 <template>
