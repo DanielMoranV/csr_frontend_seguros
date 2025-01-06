@@ -69,7 +69,7 @@ onMounted(async () => {
         period.value = data[0].period;
     }
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-    console.log(resumenAdmissions.value);
+
     console.log(admissionsLists.value);
 });
 
@@ -199,9 +199,37 @@ const editAuditRequestedAt = async (admission) => {
         await indexedDB.setItem('admissionsLists', admissionsLists.value);
     }
 };
+
+const exportAdmissions = async () => {
+    console.log(admissionsLists.value);
+
+    const columns = [
+        { header: 'Admisión', key: 'admission_number', width: 15 },
+        { header: 'Historia', key: 'medical_record_number', with: 15 },
+        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Periodo', key: 'period', width: 15 },
+        { header: 'Fecha Inicio', key: 'start_date', width: 13 },
+        { header: 'Fecha Final', key: 'end_date', width: 13 },
+        { header: 'Observacion Facturación', key: 'observations', width: 15 },
+        { header: 'Entrega Historia', key: 'medical_record_request.status', width: 15 },
+        { header: 'Liquidado', key: 'is_closed', width: 15 },
+        { header: 'Entrega  Auditoria', key: 'audit_requested_at', width: 15 },
+        { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
+        { header: 'Estado Audit', key: 'audit.status', width: 15 },
+        { header: 'Factura', key: 'invoice_number', width: 15 },
+        { header: 'Fecha Envío', key: 'shipment.verified_shipment_date', width: 15 },
+        { header: 'Pago', key: 'paid_invoice_number', width: 15 }
+    ];
+};
 </script>
 <template>
     <div class="card">
+        <h1 class="mb-2 font-semibold">Gestión admisiones de seguro CSR {{ period }} Fecha Facturación {{ dformat(startDate, 'DD/MM/YYYY') }} al {{ dformat(endDate, 'DD/MM/YYYY') }}</h1>
         <Toolbar class="mb-6">
             <template #start>
                 <DataTable :value="resumenAdmissions" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
@@ -253,9 +281,9 @@ const editAuditRequestedAt = async (admission) => {
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h1 class="m-0">Gestión admisiones de seguro CSR {{ period }} Fecha Facturación {{ dformat(startDate, 'DD/MM/YYYY') }} al {{ dformat(endDate, 'DD/MM/YYYY') }}</h1>
-
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
+                    <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAdmissions()" />
+                    <Button type="button" icon="pi pi-plus" label="Admisión" outlined />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />

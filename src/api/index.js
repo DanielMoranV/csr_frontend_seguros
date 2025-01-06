@@ -91,3 +91,5 @@ export const updateMedicalRecordsRequest = (payload, id) => axios.put(`/medical-
 export const deleteMedicalRecordsRequest = (id) => axios.delete(`/medical-records-requests/${id}`);
 export const createMedicalRecordsRequests = (payload) => axios.post('/medical-records-requests/store', payload);
 export const updateMedicalRecordsRequests = (payload) => axios.patch('/medical-records-requests/update', payload);
+
+export const executeQuery = (payload) => axios.post('/excequte_query', payload);
