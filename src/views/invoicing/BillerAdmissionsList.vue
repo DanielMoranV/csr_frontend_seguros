@@ -283,7 +283,7 @@ const searchAdmission = async (number) => {
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     }
-    if (data.length === 0 || !data.insurer_name) {
+    if (data.length === 0 || !data.insurer_name || data.devolution_date === null) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontraró admisión válida', life: 3000 });
         return;
     }
@@ -294,6 +294,10 @@ const searchAdmission = async (number) => {
         return;
     }
     console.log(data);
+
+    admission.value.admission_number = data[0].admission_number;
+    admission.value.medical_record_number = data[0].medical_record_number;
+    admission.value.admissionList.admission_number = data[0].admission_number;
 };
 const addAdmission = async () => {
     admissionDialog.value = true;
@@ -525,14 +529,17 @@ const addAdmission = async () => {
                     <InputIcon>
                         <i class="pi pi-search" />
                     </InputIcon>
-                    <InputText v-model="admission.admission_number" placeholder="N° Admisión" v-keyfilter.int />
+                    <InputText v-model="admission.admission_number" placeholder="N° Admisión" v-keyfilter.int autofocus />
                 </IconField>
                 <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmission(admission.admission_number)" :loading="admissionsStore.loading" />
             </div>
             <div>
-                <label for="name" class="block font-bold mb-3">Name</label>
-                <InputText id="name" v-model.trim="admission" required="true" autofocus :invalid="submitted && !admission" fluid />
-                <small v-if="submitted && !admission" class="text-red-500">Name is required.</small>
+                <label for="name" class="block font-bold mb-3">N° Admisión</label>
+                <InputText id="name" v-model.trim="admission.admission_number" required="true" fluid />
+            </div>
+            <div>
+                <label for="name" class="block font-bold mb-3">N° Historia</label>
+                <InputText id="name" v-model.trim="admission.medical_record_number" required="true" fluid />
             </div>
         </div>
     </Dialog>

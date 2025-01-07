@@ -1,6 +1,7 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { dformat } from '@/utils/day';
+import { exportToExcel } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -139,6 +140,59 @@ const searchPeriod = async () => {
     admissionsLists.value = formatAdmissionsLists(response.data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
 };
+
+const exportAdmissions = async () => {
+    console.log(admissionsLists.value);
+
+    const columns = [
+        { header: 'Admisión', key: 'admission_number', width: 15 },
+        { header: 'Historia', key: 'medical_record_number', with: 15 },
+        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Periodo', key: 'period', width: 15 },
+        { header: 'Fecha Inicio', key: 'start_date', width: 13 },
+        { header: 'Fecha Final', key: 'end_date', width: 13 },
+        { header: 'Observacion Facturación', key: 'observations', width: 15 },
+        { header: 'Entrega Historia', key: 'medical_record_request.status', width: 15 },
+        { header: 'Liquidado', key: 'is_closed', width: 15 },
+        { header: 'Entrega  Auditoria', key: 'audit_requested_at', width: 15 },
+        { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
+        { header: 'Estado Audit', key: 'audit.status', width: 15 },
+        { header: 'Factura', key: 'invoice_number', width: 15 },
+        { header: 'Fecha Envío', key: 'shipment.verified_shipment_date', width: 15 },
+        { header: 'Pago', key: 'paid_invoice_number', width: 15 }
+    ];
+
+    const data = admissionsLists.value.map((admission) => {
+        return {
+            admission_number: admission.admission_number,
+            medical_record_number: admission.medical_record_number,
+            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            patient: admission.patient,
+            doctor: admission.doctor,
+            insurer_name: admission.insurer_name,
+            amount: admission.amount,
+            biller: admission.biller,
+            period: admission.period,
+            start_date: admission.start_date ? dformat(admission.start_date, 'DD/MM/YYYY') : '-',
+            end_date: admission.end_date ? dformat(admission.end_date, 'DD/MM/YYYY') : '-',
+            observations: admission.observations,
+            'medical_record_request.status': admission.medical_record_request ? admission.medical_record_request.status : '-',
+            is_closed: admission.is_closed ? 'Si' : 'No',
+            audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
+            'audit.description': admission.audit ? admission.audit.description : '-',
+            'audit.status': admission.audit ? admission.audit.status : '-',
+            invoice_number: admission.invoice_number ? admission.invoice_number : '-',
+            'shipment.verified_shipment_date': admission.shipment ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
+            paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No'
+        };
+    });
+    await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
+};
 </script>
 <template>
     <div class="card">
@@ -195,6 +249,7 @@ const searchPeriod = async () => {
                     <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
+                    <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAdmissions()" />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />

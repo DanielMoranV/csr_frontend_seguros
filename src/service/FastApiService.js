@@ -99,60 +99,59 @@ export default {
             return handleError(error);
         }
     },
+
     async admisionsByNumbers(numbers) {
-        let endpoint = '/execute_query';
-        const queries = numbers.map(
-            (number) => `
-            SELECT ${ADMISIONES}.num_doc as number, ${ADMISIONES}.fec_doc as attendance_date, ${ADMISIONES}.nom_pac as patient,
-                   ${ADMISIONES}.hi_doc as attendance_hour, ${ADMISIONES}.ta_doc as type, ${ADMISIONES}.tot_doc as amount,
-                   ${EMPRESAS}.nom_emp as company, ${SERVICIOS}.nom_ser as doctor, ${PACIENTES}.nh_pac as medical_record_number,
-                   ${ADMISIONES}.clos_doc as is_closed, ${FACTURAS}.num_fac as invoice_number, ${FACTURAS}.fec_fac as invoice_date,
-                   ${FACTURAS}.uc_sis as biller, ${DEVOLUCIONES}.fh_dev as devolution_date, ${ASEGURADORAS}.nom_cia as insurer_name,
-                   ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
-            FROM ${ADMISIONES}
-            LEFT JOIN ${SERVICIOS} ON ${ADMISIONES}.cod_ser = ${SERVICIOS}.cod_ser
-            LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
-            LEFT JOIN ${EMPRESAS} ON ${ADMISIONES}.cod_emp = ${EMPRESAS}.cod_emp
-            LEFT JOIN ${PACIENTES} ON ${ADMISIONES}.cod_pac = ${PACIENTES}.cod_pac
-            LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
-            LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
-            LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
-            WHERE ${ADMISIONES}.num_doc = '${number}'
-            ORDER BY ${ADMISIONES}.num_doc DESC;
-        `
+        const endpoint = '/execute_query';
+
+        // Construcción de consultas SQL
+        const buildQuery = (number) => `
+        SELECT ${ADMISIONES}.num_doc as number, ${ADMISIONES}.fec_doc as attendance_date, ${ADMISIONES}.nom_pac as patient,
+               ${ADMISIONES}.hi_doc as attendance_hour, ${ADMISIONES}.ta_doc as type, ${ADMISIONES}.tot_doc as amount,
+               ${EMPRESAS}.nom_emp as company, ${SERVICIOS}.nom_ser as doctor, ${PACIENTES}.nh_pac as medical_record_number,
+               ${ADMISIONES}.clos_doc as is_closed, ${FACTURAS}.num_fac as invoice_number, ${FACTURAS}.fec_fac as invoice_date,
+               ${FACTURAS}.uc_sis as biller, ${DEVOLUCIONES}.fh_dev as devolution_date, ${ASEGURADORAS}.nom_cia as insurer_name,
+               ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
+        FROM ${ADMISIONES}
+        LEFT JOIN ${SERVICIOS} ON ${ADMISIONES}.cod_ser = ${SERVICIOS}.cod_ser
+        LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
+        LEFT JOIN ${EMPRESAS} ON ${ADMISIONES}.cod_emp = ${EMPRESAS}.cod_emp
+        LEFT JOIN ${PACIENTES} ON ${ADMISIONES}.cod_pac = ${PACIENTES}.cod_pac
+        LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
+        LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
+        LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
+        WHERE ${ADMISIONES}.num_doc = '${number}'
+        ORDER BY ${ADMISIONES}.num_doc DESC;
+    `;
+
+        // Generar las promesas
+        const promises = numbers.map((number) =>
+            apiClient
+                .post(endpoint, { query: buildQuery(number) })
+                .then((response) => handleResponse(response).data)
+                .catch((error) => ({ error, number }))
         );
 
-        const results = [];
-        const errors = [];
+        // Ejecutar todas las solicitudes en paralelo
+        const results = await Promise.allSettled(promises);
 
-        for (const query of queries) {
-            try {
-                const response = await apiClient.post(endpoint, { query });
-                results.push(...handleResponse(response).data);
-            } catch (error) {
-                console.error('Error al procesar la solicitud:', error); // Log para debugging
+        // Procesar los resultados
+        const successfulResults = results.filter((result) => result.status === 'fulfilled' && !result.value.error).map((result) => result.value);
 
-                Swal.fire({
-                    title: 'Error',
-                    text: 'Error al procesar la solicitud: ' + error.message || 'Ocurrió un error inesperado',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar'
-                });
+        const errors = results.filter((result) => result.status === 'rejected' || result.value.error).map((result) => result.value.error || result.reason);
 
-                // Agregar el error a la lista
-                errors.push(error);
-
-                // Detener el bucle si el código del error es "ERR_NETWORK"
-                if (error.code === 'ERR_NETWORK') {
-                    console.error('Error de red detectado. Deteniendo el bucle.');
-                    break;
-                }
-            }
+        // Mostrar alertas si hay errores
+        if (errors.length > 0) {
+            console.error('Errores detectados:', errors);
+            Swal.fire({
+                title: 'Errores detectados',
+                text: `Se encontraron ${errors.length} errores. Revise la consola para más detalles.`,
+                icon: 'error',
+                confirmButtonText: 'Aceptar'
+            });
         }
 
-        return { results, errors };
+        return { results: successfulResults.flat(), errors };
     },
-
     async get(endpoint) {
         try {
             const response = await apiClient.get(endpoint);
