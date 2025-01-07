@@ -1,7 +1,9 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
+import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { dformat } from '@/utils/day';
+import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -9,9 +11,12 @@ import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
+const admissionsStore = useAdmissionsStore();
 const authStore = useAuthStore();
 const toast = useToast();
 const admissionsLists = ref([]);
+const admission = ref([]);
+const submitted = ref(false);
 const resumenAdmissions = ref([]);
 const periods = ref([]);
 const filters = ref(null);
@@ -19,6 +24,7 @@ const nickName = ref();
 const period = ref(null);
 const startDate = ref(new Date());
 const endDate = ref(new Date());
+const admissionDialog = ref(false);
 const getCurrentPeriod = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -225,6 +231,87 @@ const exportAdmissions = async () => {
         { header: 'Fecha Envío', key: 'shipment.verified_shipment_date', width: 15 },
         { header: 'Pago', key: 'paid_invoice_number', width: 15 }
     ];
+
+    const data = admissionsLists.value.map((admission) => {
+        return {
+            admission_number: admission.admission_number,
+            medical_record_number: admission.medical_record_number,
+            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            patient: admission.patient,
+            doctor: admission.doctor,
+            insurer_name: admission.insurer_name,
+            amount: admission.amount,
+            biller: admission.biller,
+            period: admission.period,
+            start_date: admission.start_date ? dformat(admission.start_date, 'DD/MM/YYYY') : '-',
+            end_date: admission.end_date ? dformat(admission.end_date, 'DD/MM/YYYY') : '-',
+            observations: admission.observations,
+            'medical_record_request.status': admission.medical_record_request ? admission.medical_record_request.status : '-',
+            is_closed: admission.is_closed ? 'Si' : 'No',
+            audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
+            'audit.description': admission.audit ? admission.audit.description : '-',
+            'audit.status': admission.audit ? admission.audit.status : '-',
+            invoice_number: admission.invoice_number ? admission.invoice_number : '-',
+            'shipment.verified_shipment_date': admission.shipment ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
+            paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No'
+        };
+    });
+    await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
+};
+const searchAdmission = async (number) => {
+    console.log(number);
+
+    const response = await admissionsListStore.fetchAdmissionsLists();
+    if (!response.success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
+        return;
+    }
+
+    // comprobar si la admision ya esta en la lista
+    const admissionExist = response.data.find((admission) => admission.admission_number === number);
+
+    if (admissionExist) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'La admisión ya se encuentra asignada a una lista ', life: 3000 });
+        return;
+    }
+    // Validacion de numero de admision
+    if (number === '' || number === null || number.length <= 5) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Ingrese un número de admisión', life: 3000 });
+        return;
+    }
+    const { success, data } = await admissionsStore.fetchAdmissionByNumberApi(number);
+    if (!success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
+    }
+    if (data.length === 0 || !data.insurer_name) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontraró admisión válida', life: 3000 });
+        return;
+    }
+    // data[0].insurer_name quitar espacion antes de comparar
+
+    if (data[0].insurer_name.trim() == 'PARTICULAR') {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Admisión Particular', life: 3000 });
+        return;
+    }
+    console.log(data);
+};
+const addAdmission = async () => {
+    admissionDialog.value = true;
+
+    admission.value = {
+        admission_number: '',
+        requester_nick: nickName.value,
+        medical_record_number: '',
+        request_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        remarks: 'Adicional Lista Admisiones periodo : ' + period,
+        admissionList: {
+            admission_number: '',
+            period,
+            start_date: startDate.value,
+            end_date: endDate.value,
+            biller: nickName.value
+        }
+    };
 };
 </script>
 <template>
@@ -283,7 +370,7 @@ const exportAdmissions = async () => {
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAdmissions()" />
-                    <Button type="button" icon="pi pi-plus" label="Admisión" outlined />
+                    <Button type="button" icon="pi pi-plus" label="Admisión" outlined @click="addAdmission()" />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
@@ -431,4 +518,22 @@ const exportAdmissions = async () => {
             <Column field="status" header="Estado" sortable></Column>
         </DataTable>
     </div>
+    <Dialog v-model:visible="admissionDialog" :style="{ width: '40vw' }" header="Añadir Admisión a Lista" :modal="true" :closable="true">
+        <div class="flex flex-col gap-6">
+            <div style="display: flex; align-items: center; gap: 0.5rem">
+                <IconField>
+                    <InputIcon>
+                        <i class="pi pi-search" />
+                    </InputIcon>
+                    <InputText v-model="admission.admission_number" placeholder="N° Admisión" v-keyfilter.int />
+                </IconField>
+                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmission(admission.admission_number)" :loading="admissionsStore.loading" />
+            </div>
+            <div>
+                <label for="name" class="block font-bold mb-3">Name</label>
+                <InputText id="name" v-model.trim="admission" required="true" autofocus :invalid="submitted && !admission" fluid />
+                <small v-if="submitted && !admission" class="text-red-500">Name is required.</small>
+            </div>
+        </div>
+    </Dialog>
 </template>

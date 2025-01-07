@@ -49,12 +49,11 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
             this.loading = true;
             const { data } = await handleResponseStore(fetchAdmissionsLists(), this);
             if (this.success) {
-                this.admissionsLists = data;
-                await indexedDB.setItem('admissionsLists', this.admissionsLists);
+                this.message = 'Lista de admisiones cargada correctamente...';
             } else {
                 this.admissionsLists = [];
             }
-            return { success: this.success, data: this.admissionsLists };
+            return { success: this.success, data };
         },
         async fetchAdmissionsListsPeriods() {
             this.loading = true;
