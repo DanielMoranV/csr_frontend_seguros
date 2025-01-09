@@ -58,6 +58,12 @@ const router = createRouter({
                     name: 'audits',
                     component: () => import('@/views/audit/Audits.vue'),
                     meta: { positions: ['auditor', 'ADMINISTRACION', 'AUDITOR MEDICO'] }
+                },
+                {
+                    path: '/devolutions',
+                    name: 'devolutions',
+                    component: () => import('@/views/invoicing/Devolutions.vue'),
+                    meta: { positions: ['ADMINISTRACION', 'AUDITOR MEDICO', 'FACTURACION'] }
                 }
             ]
         },

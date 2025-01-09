@@ -136,8 +136,6 @@ const exportExcelDevolutions = async () => {
         { header: 'Monto', key: 'invoice_amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Estado', key: 'status', width: 15 }
     ];
-
-    console.log(devolutions.value);
     await exportToExcel(columnsDevolutions, devolutions.value, 'devoluciones', 'devoluciones');
 };
 
@@ -168,6 +166,17 @@ const exportExcelPending = async () => {
         admission.amount = Number(admission.amount);
     });
 
+    let admisionsList = await admissionsListStore.fetchAdmissionsLists();
+
+    // modifica admission los campos de period y biller cuando admisionsList.admission_number y admission.number sean iguales
+    admissionsPending.forEach((admission) => {
+        const matchingAdmission = admisionsList.data.find((item) => item.admission_number === admission.number);
+        if (matchingAdmission) {
+            admission.period = matchingAdmission.period;
+            admission.biller = matchingAdmission.biller;
+        }
+    });
+
     const data = admissionsPending.map((admission) => ({
         admission: admission.number,
         medical_record_number: admission.medical_record_number,
@@ -177,7 +186,7 @@ const exportExcelPending = async () => {
         doctor: admission.doctor,
         insurer: admission.insurer_name,
         biller: admission.biller,
-        period: admission.last_settlement_period,
+        period: admission.period,
         amount: admission.amount
     }));
 
@@ -208,7 +217,6 @@ const onUploadSettlements = async (event) => {
             let { seenMedicalRecordsRequests } = await classifyAdmissionsLists(dataSet);
 
             let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
-            console.log(data);
             if (!success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
             } else {
@@ -322,7 +330,6 @@ const searchAdmissionsByDate = async () => {
 };
 
 const searchAdmissions = async () => {
-    console.log(searchAdmission.value);
     // Validacion de numero de admision
     if (searchAdmission.value === '' || searchAdmission.value === null || searchAdmission.value.length <= 5) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Ingrese un número de admisión', life: 3000 });

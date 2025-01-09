@@ -64,8 +64,7 @@ function clearFilter() {
     initFilters();
 }
 
-onMounted(async () => {
-    nickName.value = authStore.getNickName;
+async function initialDataLoading() {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     data = data.filter((admission) => admission.biller === nickName.value);
     admissionsLists.value = formatAdmissionsLists(data);
@@ -77,6 +76,11 @@ onMounted(async () => {
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
 
     console.log(admissionsLists.value);
+}
+
+onMounted(async () => {
+    nickName.value = authStore.getNickName;
+    await initialDataLoading();
 });
 
 const formatAdmissionsLists = (data) => {
@@ -283,7 +287,10 @@ const searchAdmission = async (number) => {
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     }
-    if (data.length === 0 || !data.insurer_name || data.devolution_date === null) {
+    if (data.length === 0 || !data[0].insurer_name || data[0].devolution_date !== null) {
+        console.log(data.length);
+        console.log(data[0].insurer_name);
+        console.log(data[0].devolution_date);
         toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontraró admisión válida', life: 3000 });
         return;
     }
@@ -295,9 +302,11 @@ const searchAdmission = async (number) => {
     }
     console.log(data);
 
-    admission.value.admission_number = data[0].admission_number;
+    admission.value.admission_number = data[0].number;
     admission.value.medical_record_number = data[0].medical_record_number;
-    admission.value.admissionList.admission_number = data[0].admission_number;
+    admission.value.admissionList.admission_number = data[0].number;
+    admission.value.patient = data[0].patient;
+    admission.value.amount = data[0].amount;
 };
 const addAdmission = async () => {
     admissionDialog.value = true;
@@ -316,6 +325,22 @@ const addAdmission = async () => {
             biller: nickName.value
         }
     };
+};
+
+const saveAdmissionList = async () => {
+    let payload = [];
+    payload[0] = admission.value;
+
+    let { success, data } = await admissionsListStore.createAdmissionListAndRequest(payload);
+    if (!success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
+    } else {
+        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo cargado correctamente', life: 3000 });
+    }
+
+    await admissionsListStore.fetchAdmissionsListsByPeriod(period);
+    await initialDataLoading();
+    admissionDialog.value = false;
 };
 </script>
 <template>
@@ -534,13 +559,25 @@ const addAdmission = async () => {
                 <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmission(admission.admission_number)" :loading="admissionsStore.loading" />
             </div>
             <div>
-                <label for="name" class="block font-bold mb-3">N° Admisión</label>
-                <InputText id="name" v-model.trim="admission.admission_number" required="true" fluid />
+                <label for="admission_number" class="block font-bold mb-3">N° Admisión</label>
+                <InputText id="admission_number" v-model.trim="admission.admission_number" required="true" fluid disabled />
             </div>
             <div>
-                <label for="name" class="block font-bold mb-3">N° Historia</label>
-                <InputText id="name" v-model.trim="admission.medical_record_number" required="true" fluid />
+                <label for="medical_record_number" class="block font-bold mb-3">N° Historia</label>
+                <InputText id="medical_record_number" v-model.trim="admission.medical_record_number" required="true" fluid disabled />
+            </div>
+            <div>
+                <label for="patient" class="block font-bold mb-3">Paciente</label>
+                <InputText id="patient" v-model.trim="admission.patient" required="true" fluid disabled />
+            </div>
+            <div>
+                <label for="amount" class="block font-bold mb-3">Monto</label>
+                <InputNumber mode="currency" currency="PEN" locale="es-PE" id="amount" v-model.trim="admission.amount" required="true" fluid disabled />
             </div>
         </div>
+        <template #footer>
+            <Button label="Cancel" icon="pi pi-times" text @click="admissionDialog = false" />
+            <Button label="Save" icon="pi pi-check" @click="saveAdmissionList" />
+        </template>
     </Dialog>
 </template>
