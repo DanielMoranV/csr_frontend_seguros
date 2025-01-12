@@ -88,7 +88,9 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
                 this.admissions = data;
                 await indexedDB.setItem('admissions', this.admissions);
             } else {
-                this.admissions = [];
+                console.log('aqui toy');
+                let response = await handleResponseStore(FastApiService.admisionsByNumberMySql(number), this);
+                this.admissions = response.data;
             }
             return { success: this.success, data: this.admissions };
         },

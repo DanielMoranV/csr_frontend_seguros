@@ -66,13 +66,22 @@ export async function handleResponseStore(promise, store) {
     } catch (error) {
         if (import.meta.env.VITE_DEBUG) {
             console.info('----MODO DEBUG----');
-            console.log('error', error);
-            Swal.fire({
-                title: 'Error',
-                text: error.message || 'Ocurrió un error inesperado',
-                icon: 'error',
-                confirmButtonText: 'Aceptar'
-            });
+            console.log('error', error.code);
+            if (error.code === 'ERR_NETWORK') {
+                Swal.fire({
+                    title: 'Sin Conexión a red SISCLIN',
+                    text: 'La consulta se ejecutará al respaldo en la nube',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            } else {
+                Swal.fire({
+                    title: 'Error',
+                    text: error.message || 'Ocurrió un error inesperado',
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            }
         }
         store.loading = false;
         store.message = error.message || 'Error desconocido';

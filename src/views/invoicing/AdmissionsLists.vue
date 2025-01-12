@@ -57,7 +57,6 @@ onMounted(async () => {
     admissionsLists.value = formatAdmissionsLists(data);
 
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-    console.log(resumenAdmissions.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -103,7 +102,6 @@ const formatAdmissionsLists = (data) => {
 };
 
 const resumenAdmissionsList = (data) => {
-    console.log(data);
     const groupedData = data.reduce((acc, item) => {
         // Inicializar el objeto para el biller si no existe
 
@@ -142,8 +140,6 @@ const searchPeriod = async () => {
 };
 
 const exportAdmissions = async () => {
-    console.log(admissionsLists.value);
-
     const columns = [
         { header: 'Admisión', key: 'admission_number', width: 15 },
         { header: 'Historia', key: 'medical_record_number', with: 15 },
