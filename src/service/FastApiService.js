@@ -56,28 +56,33 @@ function formatToMySQLDate(dateStr) {
 export default {
     async devolutionsByRange(payload) {
         let { start_date, end_date } = payload;
-        let endpoint = '/execute_query';
+        const mysqlStartDate = formatToMySQLDate(start_date);
+        const mysqlEndDate = formatToMySQLDate(end_date);
         const query = `
-          SELECT ${ADMISIONES}.num_doc as number, ${ADMISIONES}.fec_doc as attendance_date, ${ADMISIONES}.nom_pac as patient,
-                   ${ADMISIONES}.hi_doc as attendance_hour, ${ADMISIONES}.ta_doc as type, ${ADMISIONES}.tot_doc as amount,
-                   ${EMPRESAS}.nom_emp as company, ${SERVICIOS}.nom_ser as doctor, ${PACIENTES}.nh_pac as medical_record_number,
-                   ${ADMISIONES}.clos_doc as is_closed, ${FACTURAS}.num_fac as invoice_number, ${FACTURAS}.fec_fac as invoice_date,
-                   ${FACTURAS}.uc_sis as biller, ${DEVOLUCIONES}.fh_dev as devolution_date, ${ASEGURADORAS}.nom_cia as insurer_name,
-                   ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
-            FROM ${DEVOLUCIONES}
-            INNER JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
-            LEFT JOIN ${SERVICIOS} ON ${ADMISIONES}.cod_ser = ${SERVICIOS}.cod_ser
-            LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
-            LEFT JOIN ${EMPRESAS} ON ${ADMISIONES}.cod_emp = ${EMPRESAS}.cod_emp
-            LEFT JOIN ${PACIENTES} ON ${ADMISIONES}.cod_pac = ${PACIENTES}.cod_pac
-            LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
-            LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
-            WHERE ${ADMISIONES}.fec_doc BETWEEN ctod('${start_date}') AND ctod('${end_date}')
-            ORDER BY ${ADMISIONES}.num_doc DESC;
-        `;
+                SELECT
+                ${DEVOLUCIONES}.num_doc as number,
+                ${DEVOLUCIONES}.id_dev as id,
+                ${DEVOLUCIONES}.fh_dev as date_dev,
+                ${DEVOLUCIONES}.per_dev as period_dev,
+                ${DEVOLUCIONES}.num_fac as invoice_number,
+                ${DEVOLUCIONES}.fec_fac as invoice_date,
+                ${DEVOLUCIONES}.tot_fac as invoice_amount,
+                ${DEVOLUCIONES}.nom_cia as insurer_name,
+                ${DEVOLUCIONES}.fec_doc as attendance_date,
+                ${DEVOLUCIONES}.nom_pac as nom_pac,
+                ${DEVOLUCIONES}.nom_ser as doctor,
+                ${DEVOLUCIONES}.tip_dev as type,
+                ${DEVOLUCIONES}.usu_dev as biller,
+                ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
+                FROM ${DEVOLUCIONES}
+                LEFT JOIN ${FACTURAS_PAGADAS} ON ${DEVOLUCIONES}.num_fac = REPLACE(${FACTURAS_PAGADAS}.num_fac, 'F', '')
+                WHERE
+                ${DEVOLUCIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
+                ORDER BY ${DEVOLUCIONES}.num_doc DESC;
+                `;
         try {
-            const response = await apiClient.post(endpoint, { query });
-            return handleResponse(response);
+            const response = await executeQuery({ query });
+            return handleResponseMysql(response);
         } catch (error) {
             return handleError(error);
         }

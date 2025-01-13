@@ -1,4 +1,5 @@
-import { createDevolution, createDevolutions, deleteDevolution, fetchDevolutions, fetchDevolutionsDateRange, updateDevolution, updateDevolutions } from '@/api';
+import { createDevolution, createDevolutions, deleteDevolution, fetchDevolutions, updateDevolution, updateDevolutions } from '@/api';
+import FastApiService from '@/service/FastApiService';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -29,13 +30,26 @@ export const useDevolutionsStore = defineStore('devolutionsStore', {
             }
             return this.devolutions;
         },
+        async initializeStoreDevolutionsDataRange(payload) {
+            this.loading = true;
+            // Carga inicial desde IndexedDB
+            const devolutionsFromCache = await indexedDB.getItem('devolutions');
+            this.devolutions = devolutionsFromCache || [];
+            if (this.devolutions.length === 0) {
+                await this.fetchDevolutionsDateRange(payload);
+            }
+            this.loading = false;
+            return this.devolutions;
+        },
 
         async fetchDevolutionsDateRange(payload) {
             this.loading = true;
-            const { data } = await handleResponseStore(fetchDevolutionsDateRange(payload), this);
+            const { data } = await handleResponseStore(FastApiService.devolutionsByRange(payload), this);
             if (this.success) {
                 this.devolutions = data;
                 await indexedDB.setItem('devolutions', this.devolutions);
+            } else {
+                this.devolutions = [];
             }
             return { success: this.success, data };
         },
