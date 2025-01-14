@@ -88,10 +88,17 @@ export default {
         }
     },
     async admisionsByRange(payload) {
-        let { start_date, end_date } = payload;
+        let { start_date, end_date } = payload; // Valores por defecto
+        let page = 1;
+        let limit = 1000;
         const mysqlStartDate = formatToMySQLDate(start_date);
         const mysqlEndDate = formatToMySQLDate(end_date);
-        const query = `
+
+        const allResults = []; // Aquí vamos a almacenar todos los resultados
+        let offset = 0; // Comenzamos desde el inicio
+
+        while (true) {
+            const query = `
             SELECT
                 ${ADMISIONES}.num_doc AS number,
                 ${ADMISIONES}.fec_doc AS attendance_date,
@@ -126,18 +133,32 @@ export default {
                 AND ${ASEGURADORAS}.nom_cia <> 'PARTICULAR'
                 AND ${ASEGURADORAS}.nom_cia <> 'PACIENTES PARTICULARES'
             ORDER BY
-                ${ADMISIONES}.num_doc DESC;
+                ${ADMISIONES}.num_doc DESC
+            LIMIT ${limit} OFFSET ${offset};
         `;
 
-        try {
-            // const response = await apiClient.post(endpoint, { query });
-            const response = await executeQuery({ query });
-            //return handleResponse(response);
-            return handleResponseMysql(response);
-        } catch (error) {
-            return handleError(error);
+            try {
+                const response = await executeQuery({ query });
+
+                // Si no se obtiene ningún resultado, significa que hemos llegado al final de los registros
+                if (response.length === 0) {
+                    break;
+                }
+
+                // Agregar los resultados de la consulta al array principal
+                allResults.push(...response);
+
+                // Aumentar el offset para la siguiente consulta
+                offset += limit;
+            } catch (error) {
+                return handleError(error);
+            }
         }
+
+        // Devolver todos los resultados combinados
+        return handleResponseMysql(allResults);
     },
+
     async admisionsByNumberMySql(number) {
         const query = `
             SELECT ${ADMISIONES}.num_doc as number, ${ADMISIONES}.fec_doc as attendance_date, ${ADMISIONES}.nom_pac as patient,
