@@ -1,4 +1,4 @@
-import { executeQuery } from '@/api';
+import { executeQuery, getAdmissionsByDateRange } from '@/api';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
@@ -72,6 +72,7 @@ export default {
                 ${DEVOLUCIONES}.nom_pac as nom_pac,
                 ${DEVOLUCIONES}.nom_ser as doctor,
                 ${DEVOLUCIONES}.tip_dev as type,
+                ${DEVOLUCIONES}.mot_dev as reason,
                 ${DEVOLUCIONES}.usu_dev as biller,
                 ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
                 FROM ${DEVOLUCIONES}
@@ -88,77 +89,58 @@ export default {
         }
     },
     async admisionsByRange(payload) {
-        let { start_date, end_date } = payload; // Valores por defecto
-        let page = 1;
-        let limit = 1000;
+        let { start_date, end_date } = payload;
         const mysqlStartDate = formatToMySQLDate(start_date);
         const mysqlEndDate = formatToMySQLDate(end_date);
+        // const query = `
+        //     SELECT
+        //         ${ADMISIONES}.num_doc AS number,
+        //         ${ADMISIONES}.fec_doc AS attendance_date,
+        //         ${ADMISIONES}.nom_pac AS patient,
+        //         ${ADMISIONES}.hi_doc AS attendance_hour,
+        //         ${ADMISIONES}.ta_doc AS type,
+        //         ${ADMISIONES}.tot_doc AS amount,
+        //         ${EMPRESAS}.nom_emp AS company,
+        //         ${SERVICIOS}.nom_ser AS doctor,
+        //         ${PACIENTES}.nh_pac AS medical_record_number,
+        //         ${ADMISIONES}.clos_doc AS is_closed,
+        //         ${FACTURAS}.num_fac AS invoice_number,
+        //         ${FACTURAS}.fec_fac AS invoice_date,
+        //         ${FACTURAS}.uc_sis AS biller,
+        //         ${DEVOLUCIONES}.fh_dev AS devolution_date,
+        //         ${ASEGURADORAS}.nom_cia AS insurer_name,
+        //         ${FACTURAS_PAGADAS}.num_fac AS paid_invoice_number
+        //     FROM
+        //         ${ADMISIONES}
+        //     LEFT JOIN ${SERVICIOS} ON ${ADMISIONES}.cod_ser = ${SERVICIOS}.cod_ser
+        //     LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
+        //     LEFT JOIN ${EMPRESAS} ON ${ADMISIONES}.cod_emp = ${EMPRESAS}.cod_emp
+        //     LEFT JOIN ${PACIENTES} ON ${ADMISIONES}.cod_pac = ${PACIENTES}.cod_pac
+        //     LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
+        //     LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
+        //     LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
+        //     WHERE
+        //         ${ADMISIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
+        //         AND ${ADMISIONES}.tot_doc >= 0
+        //         AND ${ADMISIONES}.nom_pac <> ''
+        //         AND ${ADMISIONES}.nom_pac <> 'No existe...'
+        //         AND ${ASEGURADORAS}.nom_cia <> 'PARTICULAR'
+        //         AND ${ASEGURADORAS}.nom_cia <> 'PACIENTES PARTICULARES'
+        //     ORDER BY
+        //         ${ADMISIONES}.num_doc DESC;
+        // `;
 
-        const allResults = []; // Aquí vamos a almacenar todos los resultados
-        let offset = 0; // Comenzamos desde el inicio
-
-        while (true) {
-            const query = `
-            SELECT
-                ${ADMISIONES}.num_doc AS number,
-                ${ADMISIONES}.fec_doc AS attendance_date,
-                ${ADMISIONES}.nom_pac AS patient,
-                ${ADMISIONES}.hi_doc AS attendance_hour,
-                ${ADMISIONES}.ta_doc AS type,
-                ${ADMISIONES}.tot_doc AS amount,
-                ${EMPRESAS}.nom_emp AS company,
-                ${SERVICIOS}.nom_ser AS doctor,
-                ${PACIENTES}.nh_pac AS medical_record_number,
-                ${ADMISIONES}.clos_doc AS is_closed,
-                ${FACTURAS}.num_fac AS invoice_number,
-                ${FACTURAS}.fec_fac AS invoice_date,
-                ${FACTURAS}.uc_sis AS biller,
-                ${DEVOLUCIONES}.fh_dev AS devolution_date,
-                ${ASEGURADORAS}.nom_cia AS insurer_name,
-                ${FACTURAS_PAGADAS}.num_fac AS paid_invoice_number
-            FROM
-                ${ADMISIONES}
-            LEFT JOIN ${SERVICIOS} ON ${ADMISIONES}.cod_ser = ${SERVICIOS}.cod_ser
-            LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
-            LEFT JOIN ${EMPRESAS} ON ${ADMISIONES}.cod_emp = ${EMPRESAS}.cod_emp
-            LEFT JOIN ${PACIENTES} ON ${ADMISIONES}.cod_pac = ${PACIENTES}.cod_pac
-            LEFT JOIN ${DEVOLUCIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
-            LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
-            LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
-            WHERE
-                ${ADMISIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
-                AND ${ADMISIONES}.tot_doc >= 0
-                AND ${ADMISIONES}.nom_pac <> ''
-                AND ${ADMISIONES}.nom_pac <> 'No existe...'
-                AND ${ASEGURADORAS}.nom_cia <> 'PARTICULAR'
-                AND ${ASEGURADORAS}.nom_cia <> 'PACIENTES PARTICULARES'
-            ORDER BY
-                ${ADMISIONES}.num_doc DESC
-            LIMIT ${limit} OFFSET ${offset};
-        `;
-
-            try {
-                const response = await executeQuery({ query });
-
-                // Si no se obtiene ningún resultado, significa que hemos llegado al final de los registros
-                if (response.length === 0) {
-                    break;
-                }
-
-                // Agregar los resultados de la consulta al array principal
-                allResults.push(...response);
-
-                // Aumentar el offset para la siguiente consulta
-                offset += limit;
-            } catch (error) {
-                return handleError(error);
-            }
+        try {
+            //console.log('query', query);
+            // const response = await apiClient.post(endpoint, { query });
+            //const response = await executeQuery({ query });
+            const response = await getAdmissionsByDateRange({ start_date: mysqlStartDate, end_date: mysqlEndDate });
+            //return handleResponse(response);
+            return handleResponseMysql(response);
+        } catch (error) {
+            return handleError(error);
         }
-
-        // Devolver todos los resultados combinados
-        return handleResponseMysql(allResults);
     },
-
     async admisionsByNumberMySql(number) {
         const query = `
             SELECT ${ADMISIONES}.num_doc as number, ${ADMISIONES}.fec_doc as attendance_date, ${ADMISIONES}.nom_pac as patient,

@@ -93,3 +93,4 @@ export const createMedicalRecordsRequests = (payload) => axios.post('/medical-re
 export const updateMedicalRecordsRequests = (payload) => axios.patch('/medical-records-requests/update', payload);
 
 export const executeQuery = (payload) => axios.post('/excequte_query', payload);
+export const getAdmissionsByDateRange = (payload) => axios.post('admissions_by_date_range', payload);

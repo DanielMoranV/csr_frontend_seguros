@@ -5,7 +5,7 @@ const api_url = import.meta.env.VITE_API_URL;
 
 const instance = axios.create({
     baseURL: api_url,
-    timeout: import.meta.env.VITE_TIMEOUT
+    timeout: 20000000
 });
 
 instance.interceptors.request.use(
@@ -63,6 +63,7 @@ instance.interceptors.response.use(
                     break;
             }
         } else if (error.code === 'ECONNABORTED') {
+            console.log('error', error);
             errData.message = 'La solicitud ha tardado demasiado tiempo. Intente nuevamente.';
         } else {
             errData.message = 'Error de conexión. Verifique su red.';
