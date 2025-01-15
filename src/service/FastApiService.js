@@ -1,4 +1,4 @@
-import { executeQuery } from '@/api';
+import { executeQuery, getAdmissionsByDateRange } from '@/api';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
