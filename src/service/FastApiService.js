@@ -1,4 +1,4 @@
-import { executeQuery, getAdmissionsByDateRange } from '@/api';
+import { executeQuery } from '@/api';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
@@ -13,7 +13,7 @@ const LIQUIDACIONES = 'SC0012';
 const FACTURAS_PAGADAS = 'SC0022';
 
 const apiClient = axios.create({
-    baseURL: 'http://localhost:8080', // Cambia esta URL por la URL de tu API de FastAPI
+    baseURL: 'http://10.253.2.30:8080', // Cambia esta URL por la URL de tu API de FastAPI
     headers: {
         'Content-Type': 'application/json'
     },
@@ -132,7 +132,7 @@ export default {
 
         try {
             //console.log('query', query);
-            // const response = await apiClient.post(endpoint, { query });
+            //const response = await apiClient.post(endpoint, { query });
             //const response = await executeQuery({ query });
             const response = await getAdmissionsByDateRange({ start_date: mysqlStartDate, end_date: mysqlEndDate });
             //return handleResponse(response);
