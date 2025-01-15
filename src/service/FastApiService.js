@@ -82,6 +82,7 @@ export default {
                 ORDER BY ${DEVOLUCIONES}.num_doc DESC;
                 `;
         try {
+            console.log(query);
             const response = await executeQuery({ query });
             return handleResponseMysql(response);
         } catch (error) {
