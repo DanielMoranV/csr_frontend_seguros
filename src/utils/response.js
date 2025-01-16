@@ -66,7 +66,7 @@ export async function handleResponseStore(promise, store) {
     } catch (error) {
         if (import.meta.env.VITE_DEBUG) {
             console.info('----MODO DEBUG----');
-            console.log('error', error.code);
+            console.log('error', error);
             if (error.code === 'ERR_NETWORK') {
                 Swal.fire({
                     title: 'Sin Conexión a red SISCLIN',

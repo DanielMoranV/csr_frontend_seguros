@@ -106,10 +106,10 @@ export const processDataDatabaseSettlements = (rows) => {
         .map((row) => ({
             admission_number: row[1],
             medical_record_number: row[2],
-            biller: row[9],
-            period: row[10],
-            start_date: row[11] ? validateDate(row[11]) : null,
-            end_date: row[12] ? validateDate(row[12]) : null
+            biller: row[10],
+            period: row[11],
+            start_date: row[12] ? validateDate(row[12]) : null,
+            end_date: row[13] ? validateDate(row[13]) : null
         }));
     return dataSetSettlements;
 };

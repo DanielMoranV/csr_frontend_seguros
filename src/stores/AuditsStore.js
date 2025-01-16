@@ -1,4 +1,4 @@
-import { createAudit, updateAudit } from '@/api';
+import { createAudit, fetchAuditsByAdmissions, updateAudit } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -32,6 +32,19 @@ export const useAuditsStore = defineStore('auditsStore', {
         async fetchAudits() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchAudits(), this);
+
+            if (this.success) {
+                this.audits = data;
+                await indexedDB.setItem('audits', this.audits);
+            } else {
+                this.audits = [];
+            }
+            return { success: this.success, data: this.audits };
+        },
+        async getAuditsByAdmissions(admisionsNumbers) {
+            this.loading = true;
+            console.log(admisionsNumbers);
+            const { data } = await handleResponseStore(fetchAuditsByAdmissions({ admissions: admisionsNumbers }), this);
 
             if (this.success) {
                 this.audits = data;

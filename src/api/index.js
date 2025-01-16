@@ -83,6 +83,7 @@ export const updateAudit = (payload, id) => axios.put(`/audits/${id}`, payload);
 export const deleteAudit = (id) => axios.delete(`/audits/${id}`);
 export const createAudits = (payload) => axios.post('/audits/store', payload);
 export const updateAudits = (payload) => axios.patch('/audits/update', payload);
+export const fetchAuditsByAdmissions = (admissionsNumbers) => axios.post('/audits/by-admissions', admissionsNumbers);
 
 // Medical Records Requests
 export const fetchMedicalRecordsRequests = () => axios.get('/medical-records-requests');

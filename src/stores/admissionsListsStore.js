@@ -149,6 +149,7 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
         },
         async createAdmissionListAndRequest(payload) {
             this.loading = true;
+            console.log(payload);
             const { data } = await handleResponseStore(createAdmissionListAndRequest(payload), this);
             if (this.success) {
                 this.message = 'Lista de admisiones creada y solicitud realizada correctamente...';

@@ -146,7 +146,10 @@ const resumenAdmissionsList = (data) => {
 
         // Actualizar los contadores
         acc[item.biller].total++;
-        acc[item.biller].totalAmount += parseFloat(item.amount);
+        let amount = parseFloat(item.amount);
+        if (amount > 0) {
+            acc[item.biller].totalAmount += amount;
+        }
         if (item.is_closed === true) acc[item.biller].closedTrue++;
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;
@@ -300,7 +303,6 @@ const searchAdmission = async (number) => {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Admisión Particular', life: 3000 });
         return;
     }
-    console.log(data);
 
     admission.value.admission_number = data[0].number;
     admission.value.medical_record_number = data[0].medical_record_number;
@@ -488,11 +490,11 @@ const saveAdmissionList = async () => {
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
-                <template #editor="slotProps">
+                <!-- <template #editor="slotProps">
                     <span v-if="!slotProps.data.audit_requested_at">
                         <Checkbox v-model="slotProps.data.audit_requested_at" binary @blur="editAuditRequestedAt(slotProps.data)" />
                     </span>
-                </template>
+                </template> -->
             </Column>
             <Column field="audit.status" header="Audit" sortable="">
                 <template #body="slotProps">
@@ -545,6 +547,13 @@ const saveAdmissionList = async () => {
                 </template>
             </Column>
             <Column field="status" header="Estado" sortable></Column>
+            <Column field="actions" header="Env. Audit" style="width: 5rem">
+                <template #body="slotProps">
+                    <span v-if="!slotProps.data.audit_requested_at">
+                        <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="editAuditRequestedAt(slotProps.data)" />
+                    </span>
+                </template>
+            </Column>
         </DataTable>
     </div>
     <Dialog v-model:visible="admissionDialog" :style="{ width: '40vw' }" header="Añadir Admisión a Lista" :modal="true" :closable="true">
@@ -576,8 +585,8 @@ const saveAdmissionList = async () => {
             </div>
         </div>
         <template #footer>
-            <Button label="Cancel" icon="pi pi-times" text @click="admissionDialog = false" />
-            <Button label="Save" icon="pi pi-check" @click="saveAdmissionList" />
+            <Button label="Cancelar" icon="pi pi-times" text @click="admissionDialog = false" />
+            <Button label="Guardar" icon="pi pi-check" @click="saveAdmissionList" />
         </template>
     </Dialog>
 </template>

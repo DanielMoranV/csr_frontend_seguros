@@ -1,13 +1,20 @@
 <script setup>
+import { useAuditsStore } from '@/stores/AuditsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { dformat } from '@/utils/day';
+import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const devolutionsStore = useDevolutionsStore();
+const auditsStore = useAuditsStore();
+
 const toast = useToast();
 const devolutions = ref([]);
+const devolution = ref(null);
+const auditDialog = ref(false);
+const audits = ref([]);
 const filters = ref(null);
 const starDate = '01-01-2023';
 const endDate = ref(new Date());
@@ -15,19 +22,19 @@ const endDate = ref(new Date());
 function initFilters() {
     filters.value = {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-        admission_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         attendance_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
         patient: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         doctor: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         insurer_name: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+        invoice_amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
         medical_record_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-        start_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        end_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
+        period_dev: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        reason: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        type: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
 }
 onBeforeMount(() => {
@@ -47,11 +54,12 @@ onMounted(async () => {
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     devolutions.value = await devolutionsStore.initializeStoreDevolutionsDataRange(payload);
-    console.log(devolutions.value);
     formatDevolitions(devolutions.value);
+
+    console.log('devolutions', devolutions.value);
 });
 
-const formatDevolitions = (data) => {
+const formatDevolitions = async (data) => {
     if (data.length === 0) {
         devolutions.value = [];
         toast.add({
@@ -62,17 +70,61 @@ const formatDevolitions = (data) => {
         });
         return [];
     }
+    let admisionsNumbers = data.map((devolution) => devolution.number);
+    let response = await auditsStore.getAuditsByAdmissions(admisionsNumbers);
+    audits.value = response.data;
+    console.log('audits', audits.value);
 
     data.forEach((devolution) => {
+        let audit = null;
+        if (audits.value && audits.value.length > 0) {
+            audit = audits.value.find((audit) => audit.admission_number === devolution.number);
+        }
+        devolution.audit = audit;
+        devolution.status = 'Pendiente';
         if (devolution.invoice_date < devolution.date_last_invoice) {
             devolution.status = 'Facturado';
-        } else {
-            devolution.status = 'Pendiente';
         }
-        if (devolution.paid_invoice_number) {
+        if (devolution.paid_admission === 1) {
             devolution.status = 'Pagado';
         }
     });
+};
+
+const confirmSendAudit = (data) => {
+    auditDialog.value = true;
+    devolution.value = data;
+};
+
+const sendAudit = async () => {
+    console.log('devolution', devolution.value);
+    let payload = {
+        auditor: 'SIN ASIGNAR',
+        admission_number: devolution.value.number,
+        status: 'Pendiente',
+        invoice_number: devolution.value.invoice_number
+    };
+    let responseAudit = {};
+    responseAudit = await auditsStore.createAudit(payload);
+
+    if (responseAudit.success) {
+        let index = devolutions.value.findIndex((dev) => dev.number === devolution.value.number);
+        devolutions.value[index].audit = responseAudit.data;
+        toast.add({
+            severity: 'success',
+            summary: 'Auditoría enviada',
+            detail: 'La auditoría fue enviada correctamente.',
+            life: 3000
+        });
+        auditDialog.value = false;
+    } else {
+        toast.add({
+            severity: 'error',
+            summary: 'Error al enviar auditoría',
+            detail: 'Ocurrió un error al enviar la auditoría.',
+            life: 3000
+        });
+    }
 };
 </script>
 <template>
@@ -90,23 +142,94 @@ const formatDevolitions = (data) => {
             size="small"
             filterDisplay="menu"
             :loading="devolutionsStore.loading"
-            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status']"
+            :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'invoice_amount', 'patient', 'period_dev', 'medical_record_number', 'reason', 'type', 'status']"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} Devoluciones"
         >
+            <template #header>
+                <div class="flex flex-wrap gap-2 items-center justify-between">
+                    <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
+
+                    <!-- <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" /> -->
+                    <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportDevolutions()" />
+                    <IconField>
+                        <InputIcon>
+                            <i class="pi pi-search" />
+                        </InputIcon>
+                        <InputText v-model="filters['global'].value" placeholder="Buscar..." />
+                    </IconField>
+                </div>
+            </template>
             <Column field="number" header="Nro. Admisión" sortable></Column>
             <Column field="attendance_date" header="Fecha Atención" sortable></Column>
-            <Column field="doctor" header="Médico" sortable></Column>
-            <Column field="insurer_name" header="Aseguradora" sortable></Column>
-            <Column field="invoice_number" header="Nro. Factura" sortable></Column>
-            <Column field="biller" header="Facturador" sortable></Column>
-            <Column field="invoice_amount" header="Monto" sortable></Column>
             <Column field="medical_record_number" header="Nro. Historia" sortable></Column>
             <Column field="patient" header="Paciente" sortable></Column>
+            <Column field="doctor" header="Médico" sortable></Column>
+            <Column field="insurer_name" header="Aseguradora" sortable></Column>
+            <Column field="biller" header="Facturador" sortable></Column>
+            <Column field="invoice_number" header="Nro. Factura" sortable></Column>
+            <Column field="invoice_amount" header="Monto" sortable>
+                <template #body="slotProps">
+                    {{ formatCurrency(slotProps.data.invoice_amount) }}
+                </template>
+            </Column>
             <Column field="period_dev" header="Periodo" sortable></Column>
+            <Column field="type" header="Tipo" sortable></Column>
             <Column field="reason" header="Motivo" sorteable></Column>
-            <Column field="status" header="Estado" sortable></Column>
+            <Column field="status" header="Estado" sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.status">
+                        <span
+                            :class="{
+                                'bg-green-100 text-green-800 px-2 py-1 rounded': slotProps.data.status === 'Pagado',
+                                'bg-yellow-100 text-yellow-800 px-2 py-1 rounded': slotProps.data.status === 'Facturado',
+                                'bg-red-100 text-red-800 px-2 py-1 rounded': slotProps.data.status === 'Pendiente'
+                            }"
+                        >
+                            {{ slotProps.data.status }}
+                        </span>
+                    </span>
+                </template>
+            </Column>
+            <Column field="audit.status" header="Est Audit" sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.audit">
+                        <span
+                            :class="{
+                                'bg-blue-100 text-blue-800 px-2 py-1 rounded': slotProps.data.audit.status === 'Con Observaciones',
+                                'bg-green-100 text-green-800 px-2 py-1 rounded': slotProps.data.audit.status === 'Aprobado',
+                                'bg-yellow-100 text-yellow-800 px-2 py-1 rounded': slotProps.data.audit.status === 'Pendiente',
+                                'bg-red-100 text-red-800 px-2 py-1 rounded': slotProps.data.audit.status === 'Rechazado'
+                            }"
+                        >
+                            {{ slotProps.data.audit.status }}
+                        </span>
+                    </span>
+                </template>
+            </Column>
+            <Column field="actions" header="Env. Audit" bodyStyle="width: 4rem">
+                <template #body="slotProps">
+                    <Button
+                        type="button"
+                        icon="pi pi-send"
+                        class="p-button-rounded p-button-outlined p-button-sm"
+                        :class="{ 'p-button-success': slotProps.data.audit === undefined, 'p-button-secondary': slotProps.data.audit !== undefined }"
+                        :disabled="slotProps.data.audit !== undefined"
+                        @click="confirmSendAudit(slotProps.data)"
+                    />
+                </template>
+            </Column>
         </DataTable>
     </div>
+    <Dialog v-model:visible="auditDialog" :style="{ width: '450px' }" header="Confirmar Envío" :modal="true">
+        <div class="flex items-center gap-4">
+            <i class="pi pi-exclamation-triangle !text-3xl" />
+            <span>Enviar devolución para su auditoría ?</span>
+        </div>
+        <template #footer>
+            <Button label="No" icon="pi pi-times" text @click="auditDialog = false" />
+            <Button label="Sí" :loading="auditsStore.loading" icon="pi pi-check" text @click="sendAudit" />
+        </template>
+    </Dialog>
 </template>

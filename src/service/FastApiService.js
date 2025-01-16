@@ -77,11 +77,17 @@ export default {
                 ${DEVOLUCIONES}.tip_dev as type,
                 ${DEVOLUCIONES}.mot_dev as reason,
                 ${DEVOLUCIONES}.usu_dev as biller,
-                ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number,
                 last_invoice_data.date_last_invoice,
-                last_invoice_data.last_invoice
+                last_invoice_data.last_invoice,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM ${FACTURAS_PAGADAS} AS check_admission
+                        WHERE check_admission.num_doc = ${DEVOLUCIONES}.num_doc
+                    ) THEN TRUE
+                    ELSE FALSE
+                END AS paid_admission
                 FROM ${DEVOLUCIONES}
-                LEFT JOIN ${FACTURAS_PAGADAS} ON ${DEVOLUCIONES}.num_fac = REPLACE(${FACTURAS_PAGADAS}.num_fac, 'F', '')
                 LEFT JOIN (
                     SELECT
                     ${FACTURAS}.num_doc,
@@ -96,7 +102,6 @@ export default {
                 ORDER BY ${DEVOLUCIONES}.num_doc DESC;
                 `;
         try {
-            console.log(query);
             const response = await executeQuery({ query });
             return handleResponseMysql(response);
         } catch (error) {
@@ -146,7 +151,6 @@ export default {
         `;
 
         try {
-            console.log('query', query);
             //const response = await apiClient.post(endpoint, { query });
             const response = await executeQuery({ query });
             //const response = await getAdmissionsByDateRange({ start_date: mysqlStartDate, end_date: mysqlEndDate });

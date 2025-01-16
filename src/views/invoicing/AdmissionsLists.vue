@@ -121,7 +121,10 @@ const resumenAdmissionsList = (data) => {
 
         // Actualizar los contadores
         acc[item.biller].total++;
-        acc[item.biller].totalAmount += parseFloat(item.amount);
+        let amount = parseFloat(item.amount);
+        if (amount > 0) {
+            acc[item.biller].totalAmount += amount;
+        }
         if (item.is_closed === true) acc[item.biller].closedTrue++;
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;

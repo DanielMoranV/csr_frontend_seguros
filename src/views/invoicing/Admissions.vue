@@ -28,6 +28,7 @@ const headerSettlements = [
     'Aseguradora', // Nombre del empleado
     'Facturador', // Nombre de la compañía
     'Periodo', // Periodo de lista
+    'Tipo', // Tipo de documento
     'Monto', // Monto
     'Fecha Inicio', // Fecha Inicio
     'Fecha Final' // Fecha Final
@@ -41,6 +42,7 @@ onMounted(async () => {
     insurers.value = await insurersStore.initializeStore();
 
     let response = await admissionsStore.initializeStoreAdmissionsDateRangeApi(payload);
+    console.log(response);
     formatAdmissions(response);
 });
 
@@ -72,6 +74,7 @@ function initFilters() {
         invoice_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         biller: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         amount: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
+        type: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         medical_record_number: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
@@ -149,6 +152,7 @@ const exportExcelPending = async () => {
         { header: 'Paciente', key: 'patient', width: 30 },
         { header: 'Médico', key: 'doctor', width: 30 },
         { header: 'Aseguradora', key: 'insurer', width: 15 },
+        { header: 'Tipo', key: 'type', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Periodo', key: 'period', width: 15 },
@@ -187,6 +191,7 @@ const exportExcelPending = async () => {
         insurer: admission.insurer_name,
         biller: admission.biller,
         period: admission.period,
+        type: admission.type,
         amount: admission.amount
     }));
 
@@ -443,6 +448,7 @@ const searchAdmissions = async () => {
                         <InputText v-model="filterModel.value" type="text" placeholder="Buscar por nombre" />
                     </template>
                 </Column>
+                <Column field="type" header="Tipo"></Column>
                 <Column field="amount" header="Monto" sortable style="min-width: 5rem">
                     <template #body="slotProps">
                         {{ formatCurrency(slotProps.data.amount) }}
