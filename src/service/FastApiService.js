@@ -64,6 +64,8 @@ export default {
                 ${DEVOLUCIONES}.num_doc as number,
                 ${DEVOLUCIONES}.id_dev as id,
                 ${DEVOLUCIONES}.fh_dev as date_dev,
+                ${PACIENTES}.nh_pac AS medical_record_number,
+                ${DEVOLUCIONES}.nom_pac AS patient,
                 ${DEVOLUCIONES}.per_dev as period_dev,
                 ${DEVOLUCIONES}.num_fac as invoice_number,
                 ${DEVOLUCIONES}.fec_fac as invoice_date,
@@ -75,9 +77,20 @@ export default {
                 ${DEVOLUCIONES}.tip_dev as type,
                 ${DEVOLUCIONES}.mot_dev as reason,
                 ${DEVOLUCIONES}.usu_dev as biller,
-                ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number
+                ${FACTURAS_PAGADAS}.num_fac as paid_invoice_number,
+                last_invoice_data.date_last_invoice,
+                last_invoice_data.last_invoice
                 FROM ${DEVOLUCIONES}
                 LEFT JOIN ${FACTURAS_PAGADAS} ON ${DEVOLUCIONES}.num_fac = REPLACE(${FACTURAS_PAGADAS}.num_fac, 'F', '')
+                LEFT JOIN (
+                    SELECT
+                    ${FACTURAS}.num_doc,
+                    MAX(${FACTURAS}.fec_fac) AS date_last_invoice,
+                    SUBSTRING_INDEX(GROUP_CONCAT(${FACTURAS}.num_fac ORDER BY ${FACTURAS}.fec_fac DESC), ',', 1) AS last_invoice
+                    FROM ${FACTURAS}
+                    GROUP BY ${FACTURAS}.num_doc
+                ) AS last_invoice_data ON ${DEVOLUCIONES}.num_doc = last_invoice_data.num_doc
+                INNER JOIN ${PACIENTES} ON ${DEVOLUCIONES}.cod_pac = ${PACIENTES}.cod_pac
                 WHERE
                 ${DEVOLUCIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
                 ORDER BY ${DEVOLUCIONES}.num_doc DESC;
