@@ -42,7 +42,6 @@ onMounted(async () => {
     insurers.value = await insurersStore.initializeStore();
 
     let response = await admissionsStore.initializeStoreAdmissionsDateRangeApi(payload);
-    console.log(response);
     formatAdmissions(response);
 });
 

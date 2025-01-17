@@ -237,7 +237,7 @@ export default {
 
         try {
             // Dividir números en bloques pequeños si son demasiados
-            const chunkSize = 700; // Puedes ajustar este valor según el límite de tu configuración
+            const chunkSize = 1000; // Puedes ajustar este valor según el límite de tu configuración
             const chunks = [];
             for (let i = 0; i < numbers.length; i += chunkSize) {
                 chunks.push(numbers.slice(i, i + chunkSize));

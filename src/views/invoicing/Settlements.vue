@@ -22,8 +22,6 @@ onMounted(async () => {
     if (biller.value) {
         settlements.value = settlements.value.filter((settlement) => settlement.biller == biller.value);
     }
-
-    console.log(settlements.value);
     chartData.value = setChartData();
     chartOptions.value = setChartOptions();
 

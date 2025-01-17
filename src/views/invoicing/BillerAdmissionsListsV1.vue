@@ -43,7 +43,6 @@ onBeforeMount(() => {
 
 onMounted(async () => {
     admissionsLists.value = await admissionsListStore.initializeStoreByPeriod(period.value);
-    console.log(admissionsLists.value);
 });
 
 const searchPeriod = async () => {

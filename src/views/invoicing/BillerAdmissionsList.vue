@@ -74,8 +74,6 @@ async function initialDataLoading() {
         period.value = data[0].period;
     }
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-
-    console.log(admissionsLists.value);
 }
 
 onMounted(async () => {
@@ -173,7 +171,6 @@ const searchPeriod = async () => {
     }
 };
 const editObservation = async (admission) => {
-    console.log(admission);
     let payload = {
         id: admission.id,
         observations: admission.observations
@@ -190,7 +187,6 @@ const editObservation = async (admission) => {
 };
 
 const editAuditRequestedAt = async (admission) => {
-    console.log(admission.audit_requested_at);
     if ((admission.audit_requested_at = true)) {
         // asignar fecha actual en formato para mysql
         const currentDate = new Date();
@@ -201,7 +197,6 @@ const editAuditRequestedAt = async (admission) => {
         id: admission.id,
         audit_requested_at: admission.audit_requested_at
     };
-    console.log(payload);
     await admissionsListStore.updateAdmissionsList(payload);
 
     // modificar el registro de  admissionsLists segun admision.admision_number
@@ -214,8 +209,6 @@ const editAuditRequestedAt = async (admission) => {
 };
 
 const exportAdmissions = async () => {
-    console.log(admissionsLists.value);
-
     const columns = [
         { header: 'Admisión', key: 'admission_number', width: 15 },
         { header: 'Historia', key: 'medical_record_number', with: 15 },
@@ -266,8 +259,6 @@ const exportAdmissions = async () => {
     await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
 };
 const searchAdmission = async (number) => {
-    console.log(number);
-
     const response = await admissionsListStore.fetchAdmissionsLists();
     if (!response.success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
@@ -291,9 +282,6 @@ const searchAdmission = async (number) => {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     }
     if (data.length === 0 || !data[0].insurer_name || data[0].devolution_date !== null) {
-        console.log(data.length);
-        console.log(data[0].insurer_name);
-        console.log(data[0].devolution_date);
         toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontraró admisión válida', life: 3000 });
         return;
     }

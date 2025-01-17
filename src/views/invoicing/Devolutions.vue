@@ -2,6 +2,7 @@
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { dformat } from '@/utils/day';
+import { exportToExcel } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -55,8 +56,6 @@ onMounted(async () => {
     };
     devolutions.value = await devolutionsStore.initializeStoreDevolutionsDataRange(payload);
     formatDevolitions(devolutions.value);
-
-    console.log('devolutions', devolutions.value);
 });
 
 const formatDevolitions = async (data) => {
@@ -73,7 +72,6 @@ const formatDevolitions = async (data) => {
     let admisionsNumbers = data.map((devolution) => devolution.number);
     let response = await auditsStore.getAuditsByAdmissions(admisionsNumbers);
     audits.value = response.data;
-    console.log('audits', audits.value);
 
     data.forEach((devolution) => {
         let audit = null;
@@ -97,12 +95,12 @@ const confirmSendAudit = (data) => {
 };
 
 const sendAudit = async () => {
-    console.log('devolution', devolution.value);
     let payload = {
         auditor: 'SIN ASIGNAR',
         admission_number: devolution.value.number,
         status: 'Pendiente',
-        invoice_number: devolution.value.invoice_number
+        invoice_number: devolution.value.invoice_number,
+        type: 'Devolucion'
     };
     let responseAudit = {};
     responseAudit = await auditsStore.createAudit(payload);
@@ -125,6 +123,46 @@ const sendAudit = async () => {
             life: 3000
         });
     }
+};
+
+const exportDevolutions = async () => {
+    const colums = [
+        { header: 'Nro. Admisión', key: 'number', width: 15 },
+        { header: 'Fecha Atención', key: 'attendance_date', width: 15 },
+        { header: 'Nro. Historia', key: 'medical_record_number', width: 15 },
+        { header: 'Paciente', key: 'patient', width: 15 },
+        { header: 'Médico', key: 'doctor', width: 15 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Nro. Factura', key: 'invoice_number', width: 15 },
+        { header: 'Monto', key: 'invoice_amount', width: 15 },
+        { header: 'Periodo', key: 'period_dev', width: 15 },
+        { header: 'Tipo', key: 'type', width: 15 },
+        { header: 'Motivo', key: 'reason', width: 15 },
+        { header: 'Estado', key: 'status', width: 15 },
+        { header: 'Estado Auditoría', key: 'auditStatus', width: 15 }
+    ];
+
+    let data = devolutions.value.map((devolution) => {
+        return {
+            number: devolution.number,
+            attendance_date: devolution.attendance_date,
+            medical_record_number: devolution.medical_record_number,
+            patient: devolution.patient,
+            doctor: devolution.doctor,
+            insurer_name: devolution.insurer_name,
+            biller: devolution.biller,
+            invoice_number: devolution.invoice_number,
+            invoice_amount: formatCurrency(devolution.invoice_amount),
+            period_dev: devolution.period_dev,
+            type: devolution.type,
+            reason: devolution.reason,
+            status: devolution.status,
+            auditStatus: devolution.audit ? devolution.audit.status : 'Sin auditoría'
+        };
+    });
+
+    await exportToExcel(colums, data, 'Devoluciones', 'Devoluciones');
 };
 </script>
 <template>

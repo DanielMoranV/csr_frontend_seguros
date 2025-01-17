@@ -55,7 +55,6 @@ export const updateDevolution = (payload, id) => axios.put(`/devolutions/${id}`,
 export const deleteDevolution = (id) => axios.delete(`/devolutions/${id}`);
 export const createDevolutions = (payload) => axios.post('/devolutions/store', payload);
 export const updateDevolutions = (payload) => axios.patch('/devolutions/update', payload);
-export const fetchDevolutionsDateRange = (payload) => axios.post('/devolutions/date-range', payload);
 
 // Settlements
 export const fetchSettlements = () => axios.get('/settlements');
@@ -77,13 +76,14 @@ export const createAdmissionListAndRequest = (payload) => axios.post('/admission
 export const fetchAdmissionsListsByPeriod = (period) => axios.get(`/admissions-lists/by-period/${period}`);
 
 // Audits
-export const fetchAudit = () => axios.get('/audits');
+export const fetchAudits = () => axios.get('/audits');
 export const createAudit = (payload) => axios.post('/audits', payload);
 export const updateAudit = (payload, id) => axios.put(`/audits/${id}`, payload);
 export const deleteAudit = (id) => axios.delete(`/audits/${id}`);
 export const createAudits = (payload) => axios.post('/audits/store', payload);
 export const updateAudits = (payload) => axios.patch('/audits/update', payload);
 export const fetchAuditsByAdmissions = (admissionsNumbers) => axios.post('/audits/by-admissions', admissionsNumbers);
+export const fetchAuditsDateRange = (payload) => axios.post('/audits/by-date-range', payload);
 
 // Medical Records Requests
 export const fetchMedicalRecordsRequests = () => axios.get('/medical-records-requests');

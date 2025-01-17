@@ -58,7 +58,6 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         async fetchAdmissionsDateRangeApi(payload) {
             this.loading = true;
             // let responde = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
-            // console.log('responseeeee', responde);
             const { data } = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
             if (this.success) {
                 this.admissions = data;
@@ -83,14 +82,12 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
 
         async fetchAdmissionByNumberApi(number) {
             this.loading = true;
-            const { data } = await handleResponseStore(FastApiService.admisionsByNumber(number), this);
+            const { data } = await handleResponseStore(FastApiService.admisionsByNumberMySql(number), this);
             if (this.success) {
                 this.admissions = data;
                 await indexedDB.setItem('admissions', this.admissions);
             } else {
-                console.log('aqui toy');
-                let response = await handleResponseStore(FastApiService.admisionsByNumberMySql(number), this);
-                this.admissions = response.data;
+                this.admissions = await indexedDB.getItem('admissions');
             }
             return { success: this.success, data: this.admissions };
         },

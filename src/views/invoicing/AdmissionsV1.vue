@@ -26,8 +26,6 @@ const headerSettlements = [
 ];
 
 onMounted(async () => {
-    // contar segundos desde aqui
-    const start = performance.now();
     admissions.value = await admissionsStore.initializeStore();
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
@@ -43,10 +41,6 @@ onMounted(async () => {
             admission.status = 'Devolución';
         }
     });
-    const end = performance.now();
-    //console.log(`Tiempo de ejecución: ${end - start} milisegundos`);
-    // tiempo en segundos
-    //console.log(`Tiempo de ejecución: ${((end - start) / 1000).toFixed(2)} segundos`);
 });
 
 const toast = useToast();

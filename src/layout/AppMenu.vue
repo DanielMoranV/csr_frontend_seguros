@@ -44,7 +44,7 @@ const model = ref([
         label: 'Auditoría',
         items: [
             { label: 'Listas Auditor', icon: 'pi pi-fw pi-eye', to: '/audits', positions: ['AUDITOR MEDICO', 'ADMINISTRACION'] },
-            { label: 'Auditoría', icon: 'pi pi-fw pi-eye', to: '/audits-by-biller', positions: ['FACTURACION'] }
+            { label: 'Resultados Auditorías', icon: 'pi pi-fw pi-list', to: '/audits-results', positions: ['FACTURACION', 'MEDICO AUDITOR', 'ADMINISTRACION'] }
         ],
         positions: ['AUDITOR MEDICO', 'FACTURACION', 'ADMINISTRACION']
     },

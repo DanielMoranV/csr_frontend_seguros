@@ -55,7 +55,6 @@ function clearFilter() {
 onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     admissionsLists.value = formatAdmissionsLists(data);
-
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
 });
 
@@ -150,6 +149,7 @@ const exportAdmissions = async () => {
         { header: 'Paciente', key: 'patient', width: 30 },
         { header: 'Médico', key: 'doctor', width: 30 },
         { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Tipo', key: 'type', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Periodo', key: 'period', width: 15 },
@@ -174,7 +174,8 @@ const exportAdmissions = async () => {
             patient: admission.patient,
             doctor: admission.doctor,
             insurer_name: admission.insurer_name,
-            amount: admission.amount,
+            amount: Number(admission.amount),
+            type: admission.type,
             biller: admission.biller,
             period: admission.period,
             start_date: admission.start_date ? dformat(admission.start_date, 'DD/MM/YYYY') : '-',

@@ -159,9 +159,6 @@ export const importSettlements = async (seenSettlements, settlementsStore, toast
             newSettlements.push(settlement);
         }
     });
-
-    console.log('existingSettlements', existingSettlements);
-
     const responseUpdate = await updateExistingRecords(existingSettlements, settlementsStore, toast);
     const responseNew = await createNewRecords(newSettlements, settlementsStore, toast);
 

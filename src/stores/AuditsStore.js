@@ -1,4 +1,4 @@
-import { createAudit, fetchAuditsByAdmissions, updateAudit } from '@/api';
+import { createAudit, fetchAudits, fetchAuditsByAdmissions, fetchAuditsDateRange, updateAudit } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -28,6 +28,29 @@ export const useAuditsStore = defineStore('auditsStore', {
             if (this.audits.length === 0) {
                 await this.fetchAudits();
             }
+            return this.audits;
+        },
+        async initializeStoreAuditsDatanRange(payload) {
+            // Carga inicial desde IndexedDB
+            this.loading = true;
+            const auditsFromCache = await indexedDB.getItem('audits');
+            this.audits = auditsFromCache || [];
+            if (this.audits.length === 0) {
+                await this.fetchAuditsDateRange(payload);
+            }
+            this.loading = false;
+            return this.audits;
+        },
+        async fetchAuditsDateRange(payload) {
+            this.loading = true;
+            const { data } = await handleResponseStore(fetchAuditsDateRange(payload), this);
+            if (this.success) {
+                this.audits = data;
+                await indexedDB.setItem('audits', this.audits);
+            } else {
+                this.audits = [];
+            }
+            return { success: this.success, data: this.audits };
         },
         async fetchAudits() {
             this.loading = true;
@@ -43,7 +66,6 @@ export const useAuditsStore = defineStore('auditsStore', {
         },
         async getAuditsByAdmissions(admisionsNumbers) {
             this.loading = true;
-            console.log(admisionsNumbers);
             const { data } = await handleResponseStore(fetchAuditsByAdmissions({ admissions: admisionsNumbers }), this);
 
             if (this.success) {
@@ -66,7 +88,7 @@ export const useAuditsStore = defineStore('auditsStore', {
         },
         async updateAudit(payload) {
             this.loading = true;
-            console.log(payload);
+
             const { data } = await handleResponseStore(updateAudit(payload, payload.id), this);
 
             if (this.success) {

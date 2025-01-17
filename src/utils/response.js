@@ -1,5 +1,3 @@
-import Swal from 'sweetalert2';
-
 export const handleResponseToast = (success, message, status, toast) => {
     if (success) {
         toast.add({ severity: 'success', summary: 'Éxito', detail: message, life: 3000 });
@@ -67,21 +65,6 @@ export async function handleResponseStore(promise, store) {
         if (import.meta.env.VITE_DEBUG) {
             console.info('----MODO DEBUG----');
             console.log('error', error);
-            if (error.code === 'ERR_NETWORK') {
-                Swal.fire({
-                    title: 'Sin Conexión a red SISCLIN',
-                    text: 'La consulta se ejecutará al respaldo en la nube',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar'
-                });
-            } else {
-                Swal.fire({
-                    title: 'Error',
-                    text: error.message || 'Ocurrió un error inesperado',
-                    icon: 'error',
-                    confirmButtonText: 'Aceptar'
-                });
-            }
         }
         store.loading = false;
         store.message = error.message || 'Error desconocido';

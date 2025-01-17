@@ -17,7 +17,6 @@ import '@/assets/tailwind.css';
 (async () => {
     try {
         await indexedDB.initialize(); // Asegúrate de que esta función exista en tu módulo indexedDB
-        console.log('IndexedDB inicializado correctamente');
     } catch (error) {
         console.error('Error al inicializar IndexedDB:', error);
     }

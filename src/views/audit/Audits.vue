@@ -182,11 +182,8 @@ const editAudit = (data) => {
         description: data.audit.description,
         status: data.audit.status
     };
-
-    console.log(audit.value);
 };
 const saveAudit = async (data) => {
-    console.log(data);
     if (data.status === '') {
         toast.add({
             severity: 'error',
@@ -214,7 +211,6 @@ const saveAudit = async (data) => {
         if (index !== -1) {
             admissionsLists.value[index].audit_id = payload.audit_id;
             admissionsLists.value[index].audit = responseAudit.data;
-
             await indexedDB.setItem('admissionsLists', admissionsLists.value);
         }
 
