@@ -214,8 +214,8 @@ const sendAudit = async () => {
                         type="button"
                         icon="pi pi-send"
                         class="p-button-rounded p-button-outlined p-button-sm"
-                        :class="{ 'p-button-success': slotProps.data.audit === undefined, 'p-button-secondary': slotProps.data.audit !== undefined }"
-                        :disabled="slotProps.data.audit !== undefined"
+                        :class="{ 'p-button-success': !slotProps.data.audit, 'p-button-secondary': slotProps.data.audit }"
+                        :disabled="slotProps.data.audit"
                         @click="confirmSendAudit(slotProps.data)"
                     />
                 </template>
