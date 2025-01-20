@@ -37,7 +37,7 @@ onBeforeMount(() => {
 onMounted(async () => {
     let payload = {
         from: dformat(starDate.value, 'YYYY-MM-DD'),
-        to: dformat(endDate.value, 'YYYY-MM-DD')
+        to: dformat(new Date(endDate.value.setHours(23, 0, 0, 0)), 'YYYY-MM-DD HH:mm:ss')
     };
 
     try {
@@ -115,7 +115,6 @@ const exportAudits = async () => {
             :value="audits"
             :paginator="true"
             :rows="10"
-            selectionMode="single"
             :rowsPerPageOptions="[5, 10, 20]"
             stripedRows
             scrollable
@@ -149,7 +148,23 @@ const exportAudits = async () => {
             <Column field="auditor" header="Auditor" sortable />
             <Column field="description" header="Descripción" sortable />
             <Column field="invoice_number" header="N° Factura" sortable />
-            <Column field="status" header="Estado" sortable />
+            <Column field="status" header="Estado" sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.status">
+                        <i
+                            :class="{
+                                'pi pi-check-circle text-green-500': slotProps.data.status === 'Aprobado',
+                                'pi pi-exclamation-circle text-yellow-500': slotProps.data.status === 'Con Observaciones',
+                                'pi pi-times-circle text-red-500': slotProps.data.status === 'Rechazado',
+                                'pi pi-clock text-blue-500': slotProps.data.status === 'Pendiente'
+                            }"
+                        ></i>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-blue-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="type" header="Tipo">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.type">

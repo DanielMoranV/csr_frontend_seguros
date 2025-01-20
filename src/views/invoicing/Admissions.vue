@@ -387,7 +387,6 @@ const searchAdmissions = async () => {
                 :paginator="true"
                 :rows="10"
                 v-model:filters="filters"
-                selectionMode="single"
                 stripedRows
                 size="small"
                 filterDisplay="menu"

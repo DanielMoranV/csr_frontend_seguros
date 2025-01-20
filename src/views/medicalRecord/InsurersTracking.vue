@@ -1,18 +1,26 @@
 <script setup>
 import { fetchAdmissionsListsByPeriod } from '@/api';
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { dformat } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
+import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
+import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
+const medicalRecordStore = useMedicalRecordsRequestsStore();
+const confirm = useConfirm();
 const toast = useToast();
 const admissionsLists = ref([]);
+const authStore = useAuthStore();
 const resumenAdmissions = ref([]);
 const periods = ref([]);
+const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
 const getCurrentPeriod = () => {
@@ -54,6 +62,7 @@ function clearFilter() {
 }
 
 onMounted(async () => {
+    nickName.value = authStore.getNickName;
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     admissionsLists.value = formatAdmissionsLists(data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
@@ -109,12 +118,7 @@ const resumenAdmissionsList = (data) => {
             acc[item.biller] = {
                 biller: item.biller,
                 total: 0,
-                closedTrue: 0,
-                paidNotNull: 0,
-                invoiceNotNull: 0,
-                auditNotNull: 0,
                 medical_record_request: 0,
-                devolutionNotNull: 0,
                 totalAmount: 0 // como añado el monto total de amount por biller
             };
         }
@@ -125,12 +129,8 @@ const resumenAdmissionsList = (data) => {
         if (amount > 0) {
             acc[item.biller].totalAmount += amount;
         }
-        if (item.is_closed === true) acc[item.biller].closedTrue++;
-        if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
-        if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;
-        if (item.audit_id !== null) acc[item.biller].auditNotNull++;
         if (item.medical_record_request.status == 'Atendido') acc[item.biller].medical_record_request++;
-        if (item.devolution_date !== null) acc[item.biller].devolutionNotNull++;
+
         return acc;
     }, {});
     return groupedData;
@@ -184,7 +184,7 @@ const exportAdmissions = async () => {
             end_date: admission.end_date ? dformat(admission.end_date, 'DD/MM/YYYY') : '-',
             observations: admission.observations,
             medicalRecordRequestStatus: admission.medical_record_request ? admission.medical_record_request.status : '-',
-            medicalRecordRequestResponseDate: admission.medical_record_request ? dformat(admission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
+            medicalRecordRequestResponseDate: admission.medical_record_request && admission.medical_record_request.response_date ? dformat(admission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
             is_closed: admission.is_closed ? 'Si' : 'No',
             audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
             auditDescription: admission.audit ? admission.audit.description : '-',
@@ -227,12 +227,109 @@ const exportAdmissions = async () => {
     });
     await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
 };
+const editObservation = async (admission) => {
+    let payload = {
+        id: admission.id,
+        observations: admission.observations
+    };
+    await admissionsListStore.updateAdmissionsList(payload);
+
+    // modificar el registro de  admissionsLists segun admision.admision_number
+    const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+    if (index !== -1) {
+        admissionsLists.value[index].observations = admission.observations;
+        // modificar en indexedDB
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+    }
+};
+
+const sendMedicalRecord = async (medicalRecord) => {
+    console.log(medicalRecord.medical_record_request);
+    let medicalRecordRequest = medicalRecord.medical_record_request;
+    let payload = {
+        ...medicalRecordRequest,
+        status: 'Atendido',
+        requested_nick: nickName.value,
+        response_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    };
+    let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
+
+    if (responseMedicalRecord.success) {
+        const index = admissionsLists.value.findIndex((item) => item.admission_number === medicalRecord.admission_number);
+        toast.add({ severity: 'info', summary: 'Confirmación', detail: 'Entrega de historia confirmado', life: 3000 });
+        if (index !== -1) {
+            admissionsLists.value[index].medical_record_request = responseMedicalRecord.data;
+            // modificar en indexedDB
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+        } else {
+            toast.add({ severity: 'error', summary: 'Cancelar', detail: 'Has cancelado la operación', life: 3000 });
+        }
+    }
+};
+
+const confirmRejectMedicalRecord = (data) => {
+    console.log(data);
+    if (!data.observations) {
+        toast.add({ severity: 'error', summary: 'Rejected', detail: 'Detallar el motivo del rechazo en el campo OBSERVACIÓN', life: 3000 });
+        return;
+    }
+
+    confirm.require({
+        message: 'Motivo: ' + data.observations,
+        header: 'Rechazar Envío Historia',
+        icon: 'pi pi-info-circle',
+        rejectLabel: 'Cancelar',
+        rejectProps: {
+            label: 'Cancelar',
+            severity: 'secondary',
+            outlined: true
+        },
+        acceptProps: {
+            label: 'Rechazar',
+            severity: 'danger'
+        },
+        accept: async () => {
+            let medicalRecordRequest = data.medical_record_request;
+            let payload = {
+                ...medicalRecordRequest,
+                status: 'Rechazado',
+                remarks: data.observations,
+                requested_nick: nickName.value,
+                response_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
+            };
+
+            console.log(payload);
+            let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
+            console.log(responseMedicalRecord);
+            if (responseMedicalRecord.success) {
+                const index = admissionsLists.value.findIndex((item) => item.admission_number === data.admission_number);
+                if (index !== -1) {
+                    console.log('responseMedicalRecord.data:', responseMedicalRecord.data); // Agregar este log para depuración
+                    admissionsLists.value[index].medical_record_request = {
+                        ...responseMedicalRecord.data
+                    };
+
+                    console.log(admissionsLists.value[index]);
+                    // modificar en indexedDB
+                    await indexedDB.setItem('admissionsLists', admissionsLists.value);
+                } else {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró la admisión', life: 3000 });
+                }
+            }
+
+            toast.add({ severity: 'info', summary: 'Confirmación', detail: 'Entrega de historia rechazado', life: 3000 });
+        },
+        reject: () => {
+            toast.add({ severity: 'error', summary: 'Rejected', detail: 'You have rejected', life: 3000 });
+        }
+    });
+};
 </script>
 <template>
     <div class="card">
         <Toolbar class="mb-6">
             <template #start>
-                <DataTable :value="resumenAdmissions" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
+                <DataTable :value="resumenAdmissions" tableStyle="min-width: 30rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
                     <Column field="biller" header="Facturador"></Column>
                     <Column field="total" header="Total"></Column>
                     <Column field="totalAmount" header="Monto">
@@ -241,11 +338,6 @@ const exportAdmissions = async () => {
                         </template>
                     </Column>
                     <Column field="medical_record_request" header="Entreg."></Column>
-                    <Column field="closedTrue" header="Liquid."></Column>
-                    <Column field="auditNotNull" header="Audit."></Column>
-                    <Column field="invoiceNotNull" header="Factur."></Column>
-                    <Column field="paidNotNull" header="Pagad."></Column>
-                    <Column field="devolutionNotNull" header="Devol."></Column>
                 </DataTable>
             </template>
 
@@ -261,6 +353,7 @@ const exportAdmissions = async () => {
         </Toolbar>
     </div>
     <div class="card">
+        <ConfirmDialog></ConfirmDialog>
         <DataTable
             :style="{ fontSize: '11px', fontFamily: 'Arial, sans-serif' }"
             :value="admissionsLists"
@@ -276,6 +369,7 @@ const exportAdmissions = async () => {
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
+            editMode="cell"
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -299,17 +393,6 @@ const exportAdmissions = async () => {
                 </template>
             </Column>
             <Column field="admission_number" sortable header="Admisión" frozen></Column>
-            <Column field="period" sortable header="Periodo"></Column>
-            <Column field="start_date" sortable header="Inicio">
-                <template #body="slotProps">
-                    {{ slotProps.data.start_date ? dformat(slotProps.data.start_date, 'DD/MM/YYYY') : '-' }}
-                </template>
-            </Column>
-            <Column field="end_date" sortable header="Final">
-                <template #body="slotProps">
-                    {{ slotProps.data.end_date ? dformat(slotProps.data.end_date, 'DD/MM/YYYY') : '-' }}
-                </template>
-            </Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
@@ -349,6 +432,9 @@ const exportAdmissions = async () => {
                 <template #body="slotProps">
                     {{ slotProps.data.observations || '-' }}
                 </template>
+                <template #editor="slotProps">
+                    <InputText v-model="slotProps.data.observations" @blur="editObservation(slotProps.data)" />
+                </template>
             </Column>
 
             <Column field="medical_record_request.status" header="Entr." sortable="">
@@ -364,43 +450,6 @@ const exportAdmissions = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="is_closed" header="Liquid." sortable="">
-                <template #body="slotProps">
-                    <i
-                        :class="{
-                            'pi pi-check-circle text-green-500': slotProps.data.is_closed,
-                            'pi pi-times-circle text-red-500': !slotProps.data.is_closed
-                        }"
-                    ></i>
-                </template>
-            </Column>
-            <Column field="audit_requested_at" header="Entr. Audit." sorteable>
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.audit_requested_at">
-                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
-                </template>
-            </Column>
-            <Column field="audit.status" header="Audit" sortable="">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.audit">
-                        <i
-                            :class="{
-                                'pi pi-check-circle text-green-500': slotProps.data.audit.status === 'Aprobado',
-                                'pi pi-exclamation-circle text-yellow-500': slotProps.data.audit.status === 'Con Observaciones',
-                                'pi pi-times-circle text-red-500': slotProps.data.audit.status === 'Rechazado',
-                                'pi pi-clock text-blue-500': slotProps.data.audit.status === 'Pendiente'
-                            }"
-                        ></i>
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-blue-500"></i>
-                    </span>
-                </template>
-            </Column>
             <Column field="invoice_number" header="Factura" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.invoice_number">
@@ -411,30 +460,15 @@ const exportAdmissions = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Envío">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
-                        <span class="text-green-500">{{ dformat(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
-                </template>
-            </Column>
-            <Column field="paid_invoice_number" sortable header="Pago">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.paid_invoice_number">
-                        <i class="pi pi-check-circle text-green-500"></i>
-                    </span>
-                    <span v-else-if="slotProps.data.devolution_date">
-                        <i class="pi pi-times-circle text-red-500"></i>
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
-                </template>
-            </Column>
             <Column field="status" header="Estado" sortable></Column>
+            <Column field="actions" header="Envío Fact" style="width: 8rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request.status == 'Pendiente'" class="flex gap-2">
+                        <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="sendMedicalRecord(slotProps.data)" />
+                        <Button type="button" icon="pi pi-times" class="p-button-rounded p-button-danger p-button-outlined p-button-sm" @click="confirmRejectMedicalRecord(slotProps.data)" />
+                    </span>
+                </template>
+            </Column>
         </DataTable>
     </div>
 </template>

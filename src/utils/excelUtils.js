@@ -105,7 +105,7 @@ export const processDataDatabaseSettlements = (rows) => {
         .filter((row) => row[7])
         .map((row) => ({
             admission_number: row[1],
-            medical_record_number: row[2],
+            medical_record_number: row[2] ? parseInt(row[2], 10) : null,
             biller: row[10],
             period: row[11],
             start_date: row[12] ? validateDate(row[12]) : null,

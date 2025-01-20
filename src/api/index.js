@@ -92,6 +92,8 @@ export const updateMedicalRecordsRequest = (payload, id) => axios.put(`/medical-
 export const deleteMedicalRecordsRequest = (id) => axios.delete(`/medical-records-requests/${id}`);
 export const createMedicalRecordsRequests = (payload) => axios.post('/medical-records-requests/store', payload);
 export const updateMedicalRecordsRequests = (payload) => axios.patch('/medical-records-requests/update', payload);
+export const fetchMedicalRecordsRequestsByDateRange = (payload) => axios.post('/medical-records-requests/by-date-range', payload);
+export const fetchMedicalRecordsRequestsByNumber = (number) => axios.get(`/medical-records-requests/by-medical-record-number/${number}`);
 
 export const executeQuery = (payload) => axios.post('/excequte_query', payload);
 export const getAdmissionsByDateRange = (payload) => axios.post('admissions_by_date_range', payload);

@@ -165,6 +165,7 @@ const addAudit = (data) => {
     displayDialog.value = true;
     audit.value = {
         auditor: nickName,
+        type: 'Regular',
         admission_number: data.admission_number,
         description: '',
         status: ''
@@ -273,7 +274,6 @@ const saveAudit = async (data) => {
             :value="admissionsLists"
             :paginator="true"
             :rows="10"
-            selectionMode="single"
             v-model:filters="filters"
             stripedRows
             scrollable
@@ -347,7 +347,7 @@ const saveAudit = async (data) => {
                     {{ slotProps.data.observations || '-' }}
                 </template>
             </Column>
-            <Column field="audit_requested_at" header="Entr. Audit." sorteable>
+            <Column field="audit_requested_at" header="Entr. Audit." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit_requested_at">
                         <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>

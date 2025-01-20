@@ -70,6 +70,18 @@ const router = createRouter({
                     name: 'devolutions',
                     component: () => import('@/views/invoicing/Devolutions.vue'),
                     meta: { positions: ['ADMINISTRACION', 'AUDITOR MEDICO', 'FACTURACION'] }
+                },
+                {
+                    path: '/insurers-tracking',
+                    name: 'insurers-tracking',
+                    component: () => import('@/views/medicalRecord/InsurersTracking.vue'),
+                    meta: { positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] }
+                },
+                {
+                    path: '/medical-records-tracking',
+                    name: 'medical-records-tracking',
+                    component: () => import('@/views/medicalRecord/MedicalRecordsTracking.vue'),
+                    meta: { positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] }
                 }
             ]
         },

@@ -172,7 +172,6 @@ const exportDevolutions = async () => {
             :value="devolutions"
             :paginator="true"
             :rows="10"
-            selectionMode="single"
             v-model:filters="filters"
             :id="devolutions.id"
             stripedRows

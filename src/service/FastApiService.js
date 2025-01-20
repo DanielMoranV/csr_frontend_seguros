@@ -279,6 +279,62 @@ export default {
             return { results: [], errors: [error] };
         }
     },
+    async patientsByNumbers(numbers) {
+        // Construcción de la consulta SQL con IN
+        const buildQuery = (numbers) => `
+                SELECT
+                    ${PACIENTES}.nh_pac as medical_record_number,
+                    ${PACIENTES}.nom_pac as patient,
+                    ${ASEGURADORAS}.nom_cia as insurer_name
+                FROM ${PACIENTES}
+                LEFT JOIN ${ASEGURADORAS} ON ${PACIENTES}.id_cia = ${ASEGURADORAS}.id_cia
+                WHERE ${PACIENTES}.nh_pac IN (${numbers.map((num) => `'${num}'`).join(', ')})
+                ORDER BY ${PACIENTES}.nh_pac DESC;
+            `;
+        try {
+            // Dividir números en bloques pequeños si son demasiados
+            const chunkSize = 1000; // Puedes ajustar este valor según el límite de tu configuración
+            const chunks = [];
+            for (let i = 0; i < numbers.length; i += chunkSize) {
+                chunks.push(numbers.slice(i, i + chunkSize));
+            }
+
+            // Ejecutar las consultas en paralelo por bloques
+            const results = await Promise.allSettled(
+                chunks.map((chunk) =>
+                    executeQuery({ query: buildQuery(chunk) })
+                        .then((response) => handleResponse(response))
+                        .catch((error) => ({ error, chunk }))
+                )
+            );
+            // Procesar los resultados
+            const successfulResults = results.filter((result) => result.status === 'fulfilled' && !result.value.error).map((result) => result.value);
+
+            const errors = results.filter((result) => result.status === 'rejected' || result.value.error).map((result) => result.value.error || result.reason);
+
+            // Mostrar alertas si hay errores
+            if (errors.length > 0) {
+                console.error('Errores detectados:', errors);
+                Swal.fire({
+                    title: 'Errores detectados',
+                    text: `Se encontraron ${errors.length} errores. Revise la consola para más detalles.`,
+                    icon: 'error',
+                    confirmButtonText: 'Aceptar'
+                });
+            }
+
+            return { results: successfulResults.flat(), errors };
+        } catch (error) {
+            console.error('Error en la consulta:', error);
+            Swal.fire({
+                title: 'Error crítico',
+                text: 'Ocurrió un error inesperado. Por favor, intenta nuevamente.',
+                icon: 'error',
+                confirmButtonText: 'Aceptar'
+            });
+            return { results: [], errors: [error] };
+        }
+    },
     async get(endpoint) {
         try {
             const response = await apiClient.get(endpoint);

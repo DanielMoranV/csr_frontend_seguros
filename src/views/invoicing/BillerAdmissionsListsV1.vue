@@ -74,7 +74,6 @@ const searchPeriod = async () => {
             :value="admissionsLists"
             :paginator="true"
             :rows="10"
-            selectionMode="single"
             v-model:filters="filters"
             stripedRows
             size="small"

@@ -126,7 +126,7 @@ export const classifyAdmissionsLists = async (dataSet) => {
                 requester_nick: user?.nick ?? 'USER',
                 medical_record_number: medical_record_number ?? null,
                 request_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-                remarks: 'Lista Admisiones periodo : ' + period,
+                remarks: 'Lista periodo : ' + period,
                 admissionList: {
                     admission_number,
                     period,

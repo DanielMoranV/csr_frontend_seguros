@@ -8,10 +8,11 @@ import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
-import { onBeforeMount, onMounted, ref } from 'vue';
+import { nextTick, onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
 const admissionsStore = useAdmissionsStore();
+const op = ref();
 const authStore = useAuthStore();
 const toast = useToast();
 const admissionsLists = ref([]);
@@ -32,6 +33,20 @@ const getCurrentPeriod = () => {
     return `${year}${month.toString().padStart(2, '0')}`;
 };
 period.value = getCurrentPeriod();
+const viewAuditDescription = (event, audit) => {
+    op.value.hide();
+    if (admission.value?.admission_number === audit.admission_number) {
+        admission.value = null;
+    } else {
+        admission.value = audit;
+        nextTick(() => {
+            op.value.show(event);
+        });
+    }
+};
+const hidePopover = () => {
+    op.value.hide();
+};
 
 function initFilters() {
     filters.value = {
@@ -306,7 +321,7 @@ const addAdmission = async () => {
         requester_nick: nickName.value,
         medical_record_number: '',
         request_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        remarks: 'Adicional Lista Admisiones periodo : ' + period,
+        remarks: 'Adicional Lista Periodo : ' + period.value,
         admissionList: {
             admission_number: '',
             period,
@@ -372,7 +387,6 @@ const saveAdmissionList = async () => {
             :value="admissionsLists"
             :paginator="true"
             :rows="10"
-            selectionMode="single"
             v-model:filters="filters"
             stripedRows
             scrollable
@@ -469,7 +483,7 @@ const saveAdmissionList = async () => {
                     ></i>
                 </template>
             </Column>
-            <Column field="audit_requested_at" header="Entr. Audit." sorteable>
+            <Column field="audit_requested_at" header="Entr. Audit." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit_requested_at">
                         <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
@@ -540,6 +554,9 @@ const saveAdmissionList = async () => {
                     <span v-if="!slotProps.data.audit_requested_at">
                         <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="editAuditRequestedAt(slotProps.data)" />
                     </span>
+                    <span v-else>
+                        <Button type="button" icon="pi pi-search" class="p-button-rounded p-button-outlined p-button-sm p-button-success" @click="viewAuditDescription($event, slotProps.data)" />
+                    </span>
                 </template>
             </Column>
         </DataTable>
@@ -577,4 +594,16 @@ const saveAdmissionList = async () => {
             <Button label="Guardar" icon="pi pi-check" @click="saveAdmissionList" />
         </template>
     </Dialog>
+
+    <Popover ref="op">
+        <div class="p-4">
+            <div class="flex justify-between items-center">
+                <h5 class="text-lg font-semibold">Descripción de Auditoría</h5>
+                <Button icon="pi pi-times" class="p-button-text" @click="hidePopover" />
+            </div>
+            <div class="mt-4">
+                <p>{{ admission.audit.description ? admission.audit.description : 'Sin Observaciones' }}</p>
+            </div>
+        </div>
+    </Popover>
 </template>
