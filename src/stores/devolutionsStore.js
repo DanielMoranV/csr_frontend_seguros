@@ -53,6 +53,16 @@ export const useDevolutionsStore = defineStore('devolutionsStore', {
             }
             return { success: this.success, data };
         },
+        async fetchDevolutionsByInvoices(invoiceNumbers) {
+            this.loading = true;
+            const { data } = await handleResponseStore(FastApiService.devolutionsByInvoiceNumbers(invoiceNumbers), this);
+            if (this.success) {
+                this.devolutions = data;
+                await indexedDB.setItem('devolutions', this.devolutions);
+            } else {
+                this.devolutions = [];
+            }
+        },
         async fetchDevolutions() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchDevolutions(), this);

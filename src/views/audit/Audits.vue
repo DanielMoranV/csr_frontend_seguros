@@ -73,6 +73,7 @@ onMounted(async () => {
 });
 
 const formatAdmissionsLists = (data) => {
+    console.log(data);
     if (data.length === 0) {
         admissionsLists.value = [];
         toast.add({
@@ -91,6 +92,13 @@ const formatAdmissionsLists = (data) => {
         acc[admission.number].push(admission);
         return acc;
     }, {});
+
+    // // En caso audit sea diferente que null y tenga registros seleccionar el último en ser registrado con el campo created_at
+    // const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
+    //     return group.reduce((latest, current) => {
+    //         return new Date(latest.created_at) > new Date(current.created_at) ? latest : current;
+    //     });
+    // });
 
     // Seleccionar el registro con la fecha de factura más reciente para cada grupo
     const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
@@ -287,7 +295,7 @@ const saveAudit = async (data) => {
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
+                    <h1 class="m-0">Gestión Auditorias de seguro CSR</h1>
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <IconField>
@@ -358,14 +366,14 @@ const saveAudit = async (data) => {
                 </template>
             </Column>
             <Column field="audit.auditor" header="Auditor" style="width: 8rem"> </Column>
-            <Column field="audit.description" header="Descripción Auditoría" style="width: 15rem"> </Column>
+            <Column field="audit.description" header="Descripción Auditoría" style="min-width: 15rem" sortable> </Column>
             <Column field="audit.created_at" header="Fecha Auditoría" style="width: 8rem">
                 <template #body="slotProps">
                     {{ slotProps.data.audit ? dformat(slotProps.data.audit.created_at, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
 
-            <Column field="audit.status" header="Estado Audit." sortable="">
+            <Column field="audit.status" header="Estado Audit." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit">
                         <i

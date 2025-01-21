@@ -44,6 +44,7 @@ const model = ref([
         label: 'Auditoría',
         items: [
             { label: 'Listas Auditor', icon: 'pi pi-fw pi-eye', to: '/audits', positions: ['AUDITOR MEDICO', 'ADMINISTRACION'] },
+            { label: 'Devoluciones Auditorías', icon: 'pi pi-fw pi-list', to: '/audits-devolutions', positions: ['FACTURACION', 'AUDITOR MEDICO', 'ADMINISTRACION'] },
             { label: 'Resultados Auditorías', icon: 'pi pi-fw pi-list', to: '/audits-results', positions: ['FACTURACION', 'AUDITOR MEDICO', 'ADMINISTRACION'] }
         ],
         positions: ['AUDITOR MEDICO', 'FACTURACION', 'ADMINISTRACION']
@@ -52,9 +53,9 @@ const model = ref([
         label: 'Gestión de Expedientes',
         items: [
             { label: 'Seguimiento His. Clín.', icon: 'pi pi-fw pi-book', to: '/medical-records-tracking', positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] },
-            { label: 'Gestión Exp. Seguros', icon: 'pi pi-fw pi-verified', to: '/insurers-tracking', positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] },
-            { label: 'Expedientes Seguros', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['FACTURACION'] },
-            { label: 'Solicitudes Expedientes', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['ADMINISTRACION', 'FACTURACION'] }
+            { label: 'Gestión Exp. Seguros', icon: 'pi pi-fw pi-verified', to: '/insurers-tracking', positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] }
+            // { label: 'Expedientes Seguros', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['FACTURACION'] },
+            // { label: 'Solicitudes Expedientes', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['ADMINISTRACION', 'FACTURACION'] }
         ],
         positions: ['FACTURACION', 'ADMINISTRACION', 'ARCHIVO HISTORIAS']
     },

@@ -124,17 +124,31 @@ const sendAudit = async () => {
         });
     }
 };
+function convertDateToExcelFormat(dateString) {
+    const date = new Date(dateString);
+    return (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+}
+function convertDateToExcelFormatDevolutions(dateString) {
+    // Convertir el formato dd/mm/yyyy hh:mm:ss a yyyy-mm-ddThh:mm:ss
+    const [datePart, timePart] = dateString.split(' ');
+    const [day, month, year] = datePart.split('/');
+    const formattedDateString = `${year}-${month}-${day}T${timePart || '00:00:00'}`;
 
+    const date = new Date(formattedDateString);
+    return (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+}
 const exportDevolutions = async () => {
     const colums = [
         { header: 'Nro. Admisión', key: 'number', width: 15 },
-        { header: 'Fecha Atención', key: 'attendance_date', width: 15 },
+        { header: 'Fecha Atención', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Fecha Devolución', key: 'date_dev', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Nro. Historia', key: 'medical_record_number', width: 15 },
         { header: 'Paciente', key: 'patient', width: 15 },
         { header: 'Médico', key: 'doctor', width: 15 },
         { header: 'Aseguradora', key: 'insurer_name', width: 15 },
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Nro. Factura', key: 'invoice_number', width: 15 },
+        { header: 'Fecha Factura', key: 'invoice_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Monto', key: 'invoice_amount', width: 15 },
         { header: 'Periodo', key: 'period_dev', width: 15 },
         { header: 'Tipo', key: 'type', width: 15 },
@@ -146,13 +160,15 @@ const exportDevolutions = async () => {
     let data = devolutions.value.map((devolution) => {
         return {
             number: devolution.number,
-            attendance_date: devolution.attendance_date,
+            attendance_date: convertDateToExcelFormat(devolution.attendance_date),
+            date_dev: convertDateToExcelFormatDevolutions(devolution.date_dev),
             medical_record_number: devolution.medical_record_number,
             patient: devolution.patient,
             doctor: devolution.doctor,
             insurer_name: devolution.insurer_name,
             biller: devolution.biller,
             invoice_number: devolution.invoice_number,
+            invoice_date: convertDateToExcelFormat(devolution.invoice_date),
             invoice_amount: formatCurrency(devolution.invoice_amount),
             period_dev: devolution.period_dev,
             type: devolution.type,
@@ -199,13 +215,23 @@ const exportDevolutions = async () => {
                 </div>
             </template>
             <Column field="number" header="Nro. Admisión" sortable></Column>
-            <Column field="attendance_date" header="Fecha Atención" sortable></Column>
+            <Column field="date_dev" header="Fecha Devolución" sortable></Column>
+            <Column field="attendance_date" header="Fecha Atención" sortable>
+                <template #body="slotProps">
+                    {{ dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') }}
+                </template>
+            </Column>
             <Column field="medical_record_number" header="Nro. Historia" sortable></Column>
             <Column field="patient" header="Paciente" sortable></Column>
             <Column field="doctor" header="Médico" sortable></Column>
             <Column field="insurer_name" header="Aseguradora" sortable></Column>
             <Column field="biller" header="Facturador" sortable></Column>
             <Column field="invoice_number" header="Nro. Factura" sortable></Column>
+            <Column field="invoice_date" header="Fecha Factura" sortable>
+                <template #body="slotProps">
+                    {{ dformat(slotProps.data.invoice_date, 'DD/MM/YYYY') }}
+                </template>
+            </Column>
             <Column field="invoice_amount" header="Monto" sortable>
                 <template #body="slotProps">
                     {{ formatCurrency(slotProps.data.invoice_amount) }}

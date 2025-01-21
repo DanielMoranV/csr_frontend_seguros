@@ -1,6 +1,7 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAdmissionsStore } from '@/stores/admissionsStore';
+import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { dformat } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
@@ -12,6 +13,7 @@ import { nextTick, onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
 const admissionsStore = useAdmissionsStore();
+const auditsStore = useAuditsStore();
 const op = ref();
 const authStore = useAuthStore();
 const toast = useToast();
@@ -347,6 +349,51 @@ const saveAdmissionList = async () => {
     await initialDataLoading();
     admissionDialog.value = false;
 };
+
+const resendAudit = async (admission) => {
+    let payload = {
+        id: admission.id,
+        // la fecha actual en formato mysql
+        audit_requested_at: new Date().getFullYear() + '-' + (new Date().getMonth() + 1).toString().padStart(2, '0') + '-' + new Date().getDate().toString().padStart(2, '0')
+    };
+    await admissionsListStore.updateAdmissionsList(payload);
+
+    // modificar el registro de  admissionsLists segun admision.admision_number
+    const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+    if (index !== -1) {
+        admissionsLists.value[index].audit_requested_at = null;
+        // modificar en indexedDB
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+    }
+
+    // Enviar auditoria
+    let payloadAudit = {
+        auditor: 'SIN ASIGNAR',
+        admission_number: admission.admission_number,
+        status: 'Pendiente',
+        description: 'Reenvio de auditoria',
+        type: 'Regular'
+    };
+    let responseAudit = {};
+    responseAudit = await auditsStore.createAudit(payloadAudit);
+
+    if (responseAudit.success) {
+        admissionsLists.value[index].audit = responseAudit.data;
+        toast.add({
+            severity: 'success',
+            summary: 'Auditoría enviada',
+            detail: 'La auditoría fue enviada correctamente.',
+            life: 3000
+        });
+    } else {
+        toast.add({
+            severity: 'error',
+            summary: 'Error al enviar auditoría',
+            detail: 'Ocurrió un error al enviar la auditoría.',
+            life: 3000
+        });
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -549,16 +596,28 @@ const saveAdmissionList = async () => {
                 </template>
             </Column>
             <Column field="status" header="Estado" sortable></Column>
-            <Column field="actions" header="Env. Audit" style="width: 5rem">
+            <Column field="actions" header="Env. Audit" style="min-width: 8rem">
                 <template #body="slotProps">
-                    <span v-if="!slotProps.data.audit_requested_at">
-                        <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="editAuditRequestedAt(slotProps.data)" />
-                    </span>
-                    <span v-else>
-                        <Button type="button" icon="pi pi-search" class="p-button-rounded p-button-outlined p-button-sm p-button-success" @click="viewAuditDescription($event, slotProps.data)" />
-                    </span>
+                    <div class="button-container">
+                        <span v-if="!slotProps.data.audit_requested_at">
+                            <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="editAuditRequestedAt(slotProps.data)" />
+                        </span>
+                        <span v-else>
+                            <Button type="button" icon="pi pi-search" class="p-button-rounded p-button-outlined p-button-sm p-button-success" @click="viewAuditDescription($event, slotProps.data)" />
+                            <span v-if="slotProps.data.audit && slotProps.data.audit.status === 'Con Observaciones'" class="ml-2">
+                                <Button type="button" icon="pi pi-refresh" class="p-button-rounded p-button-outlined p-button-sm p-button-warning" @click="resendAudit(slotProps.data)" />
+                            </span>
+                        </span>
+                    </div>
                 </template>
             </Column>
+            <!-- <Column field="resendAudit" header="Reenviar Audit" style="width: 5rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.audit && slotProps.data.audit.status === 'Con Observaciones'">
+                        <Button type="button" icon="pi pi-refresh" class="p-button-rounded p-button-outlined p-button-sm p-button-warning" @click="resendAudit(slotProps.data)" />
+                    </span>
+                </template>
+            </Column> -->
         </DataTable>
     </div>
     <Dialog v-model:visible="admissionDialog" :style="{ width: '40vw' }" header="Añadir Admisión a Lista" :modal="true" :closable="true">
@@ -607,3 +666,11 @@ const saveAdmissionList = async () => {
         </div>
     </Popover>
 </template>
+<style scoped>
+.button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem; /* Espacio entre los botones */
+}
+</style>
