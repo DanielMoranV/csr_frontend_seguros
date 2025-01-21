@@ -55,6 +55,7 @@ function clearFilter() {
 
 onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
+    console.log('data', data);
     admissionsLists.value = formatAdmissionsLists(data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
 });

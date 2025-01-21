@@ -73,6 +73,7 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
                 this.admissionsLists = data;
                 // obtener una lista de admisiones admission_number a partir de admissionsLists
                 const admissionNumbers = data.map((admissionsList) => admissionsList.admission_number);
+                console.log('admissionNumbers', admissionNumbers);
                 this.loading = true;
                 let { results, errors } = await FastApiService.admisionsByNumbers(admissionNumbers);
                 // Combinar los arrays
