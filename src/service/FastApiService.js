@@ -70,7 +70,6 @@ export default {
             ${DEVOLUCIONES}.tot_fac as invoice_amount,
             ${DEVOLUCIONES}.nom_cia as insurer_name,
             ${DEVOLUCIONES}.fec_doc as attendance_date,
-            ${DEVOLUCIONES}.nom_pac as nom_pac,
             ${DEVOLUCIONES}.nom_ser as doctor,
             ${DEVOLUCIONES}.tip_dev as type,
             ${DEVOLUCIONES}.mot_dev as reason,

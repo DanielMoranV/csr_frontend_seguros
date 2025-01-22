@@ -61,8 +61,6 @@ const searchAuditsByDate = async () => {
     try {
         const responseAudits = await auditsStore.fetchAuditsDateRange(payload);
         audits.value = responseAudits.data;
-        // filtrar y quitar todos los registros que contengan type == 'Regular'
-        audits.value = audits.value.filter((item) => item.type !== 'Regular');
     } catch (error) {
         toast.add({ severity: 'error', summary: 'Error', detail: error.message });
     }
@@ -152,17 +150,19 @@ const exportAudits = async () => {
             :value="audits"
             :paginator="true"
             :rows="10"
-            :rowsPerPageOptions="[5, 10, 20]"
+            v-model:filters="filters"
             stripedRows
             scrollable
             size="small"
             :loading="auditsStore.loading"
             :globalFilterFields="['id', 'created_at', 'admission_number', 'auditor', 'description', 'invoice_number', 'status']"
+            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+            :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} Auditorías"
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h1 class="m-0">Gestión Devoluciones de Seguro CSR</h1>
+                    <h1 class="m-0">Gestión General Auditorias de Seguro CSR</h1>
 
                     <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAudits()" />
                     <IconField>
@@ -216,7 +216,7 @@ const exportAudits = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="actions" header="Acciones">
+            <Column v-if="position === 'Auditor Medico'" field="actions" header="Acciones">
                 <template #body="slotProps">
                     <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editAudit(slotProps.data)" />
                 </template>

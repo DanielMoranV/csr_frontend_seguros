@@ -1,6 +1,7 @@
 <script setup>
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { dformat } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { FilterMatchMode } from '@primevue/core/api';
@@ -9,6 +10,8 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 
 const auditsStore = useAuditsStore();
 const authStore = useAuthStore();
+const position = authStore.getUser.position;
+const devolutionsStore = useDevolutionsStore();
 const toast = useToast();
 const filters = ref({ global: { value: '' } });
 const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -69,7 +72,7 @@ const searchAuditsByDate = async () => {
     formatAudits(audits.value);
 };
 
-const formatAudits = (data) => {
+const formatAudits = async (data) => {
     if (data.length === 0) {
         toast.add({
             severity: 'info',
@@ -79,6 +82,21 @@ const formatAudits = (data) => {
         });
         return [];
     }
+    const listNumbers = data.map((item) => item.invoice_number);
+    let responseDevolutions = await devolutionsStore.fetchDevolutionsByInvoices(listNumbers);
+    audits.value = audits.value.map((audit) => {
+        const devolution = responseDevolutions.find((dev) => dev.invoice_number === audit.invoice_number);
+        return {
+            ...audit,
+            attendance_date: devolution.attendance_date,
+            date_dev: devolution.date_dev,
+            doctor: devolution.doctor,
+            insurer_name: devolution.insurer_name,
+            invoice_amount: devolution.invoice_amount,
+            patient: devolution.patient,
+            reason: devolution.reason
+        };
+    });
 };
 
 const editAudit = (data) => {
@@ -152,12 +170,13 @@ const exportAudits = async () => {
             :value="audits"
             :paginator="true"
             :rows="10"
-            :rowsPerPageOptions="[5, 10, 20]"
+            v-model:filters="filters"
             stripedRows
             scrollable
             size="small"
             :loading="auditsStore.loading"
-            :globalFilterFields="['id', 'created_at', 'admission_number', 'auditor', 'description', 'invoice_number', 'status']"
+            :globalFilterFields="['id', 'created_at', 'admission_number', 'auditor', 'description', 'invoice_number', 'status', 'attendance_date', 'date_dev', 'doctor', 'insurer_name', 'invoice_amount', 'patient', 'reason']"
+            :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} Auditorías"
         >
             <template #header>
@@ -176,12 +195,22 @@ const exportAudits = async () => {
             <template #empty> No hay datos. </template>
             <template #loading> Cargando datos. Por favor, espere. </template>
             <Column field="id" header="ID" sortable />
-            <Column field="created_at" header="Fecha" sortable>
+            <Column field="admission_number" header="N° Admisión" sortable />
+            <Column field="attendance_date" header="Fecha Atención" sortable>
+                <template #body="slotProps">
+                    {{ dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') }}
+                </template>
+            </Column>
+            <Column field="date_dev" header="Fecha Devolución" sortable></Column>
+            <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
+            <Column field="doctor" header="Médico" sortable></Column>
+            <Column field="insurer_name" header="Aseguradora" sortable></Column>
+            <Column field="reason" header="Motivo" sorteable style="min-width: 10rem"></Column>
+            <Column field="created_at" header="Fecha Audit." sortable>
                 <template #body="slotProps">
                     {{ slotProps.data.created_at ? dformat(slotProps.data.created_at, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
-            <Column field="admission_number" header="N° Admisión" sortable />
             <Column field="auditor" header="Auditor" sortable />
             <Column field="description" header="Descripción" sortable />
             <Column field="invoice_number" header="N° Factura" sortable />
@@ -202,7 +231,7 @@ const exportAudits = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="type" header="Tipo">
+            <Column field="type" header="Tipo" sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.type">
                         <span
@@ -216,7 +245,7 @@ const exportAudits = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="actions" header="Acciones">
+            <Column v-if="position === 'Auditor Medico'" field="actions" header="Acciones">
                 <template #body="slotProps">
                     <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editAudit(slotProps.data)" />
                 </template>

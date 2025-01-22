@@ -257,7 +257,7 @@ const exportAdmissions = async () => {
             patient: admission.patient,
             doctor: admission.doctor,
             insurer_name: admission.insurer_name,
-            amount: admission.amount,
+            amount: Number(admission.amount),
             biller: admission.biller,
             period: admission.period,
             start_date: admission.start_date ? dformat(admission.start_date, 'DD/MM/YYYY') : '-',
@@ -351,21 +351,6 @@ const saveAdmissionList = async () => {
 };
 
 const resendAudit = async (admission) => {
-    let payload = {
-        id: admission.id,
-        // la fecha actual en formato mysql
-        audit_requested_at: new Date().getFullYear() + '-' + (new Date().getMonth() + 1).toString().padStart(2, '0') + '-' + new Date().getDate().toString().padStart(2, '0')
-    };
-    await admissionsListStore.updateAdmissionsList(payload);
-
-    // modificar el registro de  admissionsLists segun admision.admision_number
-    const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
-    if (index !== -1) {
-        admissionsLists.value[index].audit_requested_at = null;
-        // modificar en indexedDB
-        await indexedDB.setItem('admissionsLists', admissionsLists.value);
-    }
-
     // Enviar auditoria
     let payloadAudit = {
         auditor: 'SIN ASIGNAR',
@@ -378,6 +363,21 @@ const resendAudit = async (admission) => {
     responseAudit = await auditsStore.createAudit(payloadAudit);
 
     if (responseAudit.success) {
+        let payload = {
+            id: admission.id,
+            // la fecha actual en formato mysql
+            audit_id: responseAudit.data.id,
+            audit_requested_at: new Date().getFullYear() + '-' + (new Date().getMonth() + 1).toString().padStart(2, '0') + '-' + new Date().getDate().toString().padStart(2, '0')
+        };
+        await admissionsListStore.updateAdmissionsList(payload);
+
+        // modificar el registro de  admissionsLists segun admision.admision_number
+        const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+        if (index !== -1) {
+            admissionsLists.value[index].audit_requested_at = null;
+            // modificar en indexedDB
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+        }
         admissionsLists.value[index].audit = responseAudit.data;
         toast.add({
             severity: 'success',

@@ -69,11 +69,22 @@ const formatDevolitions = async (data) => {
         });
         return [];
     }
-    let admisionsNumbers = data.map((devolution) => devolution.number);
+
+    // Remove duplicates based on invoice_number
+    const uniqueData = [];
+    const invoiceNumbers = new Set();
+    data.forEach((devolution) => {
+        if (!invoiceNumbers.has(devolution.invoice_number)) {
+            invoiceNumbers.add(devolution.invoice_number);
+            uniqueData.push(devolution);
+        }
+    });
+
+    let admisionsNumbers = uniqueData.map((devolution) => devolution.number);
     let response = await auditsStore.getAuditsByAdmissions(admisionsNumbers);
     audits.value = response.data;
 
-    data.forEach((devolution) => {
+    uniqueData.forEach((devolution) => {
         let audit = null;
         if (audits.value && audits.value.length > 0) {
             audit = audits.value.find((audit) => audit.admission_number === devolution.number);
@@ -87,6 +98,8 @@ const formatDevolitions = async (data) => {
             devolution.status = 'Pagado';
         }
     });
+
+    devolutions.value = uniqueData;
 };
 
 const confirmSendAudit = (data) => {

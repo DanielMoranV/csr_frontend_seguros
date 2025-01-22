@@ -3,6 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { dformat } from '@/utils/day';
+import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -244,6 +245,37 @@ const saveAudit = async (data) => {
         });
     }
 };
+const exportAdmissions = async () => {
+    let exportData = admissionsLists.value.filter((admission) => admission.audit && admission.audit.status === 'Con Observaciones');
+    const columns = [
+        { header: 'Admisión', key: 'admission_number', width: 15 },
+        { header: 'Historia', key: 'medical_record_number', with: 15 },
+        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
+        { header: 'Estado Audit', key: 'audit.status', width: 15 }
+    ];
+
+    const data = exportData.map((admission) => {
+        return {
+            admission_number: admission.admission_number,
+            medical_record_number: admission.medical_record_number,
+            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            patient: admission.patient,
+            doctor: admission.doctor,
+            insurer_name: admission.insurer_name,
+            amount: Number(admission.amount),
+            biller: admission.biller,
+            'audit.description': admission.audit ? admission.audit.description : '-',
+            'audit.status': admission.audit ? admission.audit.status : '-'
+        };
+    });
+    await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
+};
 </script>
 <template>
     <div class="card">
@@ -298,6 +330,7 @@ const saveAudit = async (data) => {
                     <h1 class="m-0">Gestión Auditorias de seguro CSR</h1>
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
+                    <Button type="button" severity="warn" icon="pi pi-file-excel" label="Exportar Observados" outlined @click="exportAdmissions()" />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
