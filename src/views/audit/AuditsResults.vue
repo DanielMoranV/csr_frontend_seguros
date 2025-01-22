@@ -130,13 +130,13 @@ const exportAudits = async () => {
     <div class="card">
         <Toolbar class="mb-6">
             <template #start>
-                <IconField>
+                <!-- <IconField>
                     <InputIcon>
                         <i class="pi pi-search" />
                     </InputIcon>
                     <InputText v-model="searchAdmission" placeholder="N° Admisión" />
                 </IconField>
-                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" />
+                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" /> -->
             </template>
 
             <template #end>

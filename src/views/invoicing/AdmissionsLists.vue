@@ -103,6 +103,7 @@ const formatAdmissionsLists = (data) => {
 };
 
 const resumenAdmissionsList = (data) => {
+    console.log(data);
     const groupedData = data.reduce((acc, item) => {
         // Inicializar el objeto para el biller si no existe
 
@@ -115,6 +116,7 @@ const resumenAdmissionsList = (data) => {
                 invoiceNotNull: 0,
                 auditNotNull: 0,
                 medical_record_request: 0,
+                audit_requested_at: 0,
                 devolutionNotNull: 0,
                 totalAmount: 0 // como añado el monto total de amount por biller
             };
@@ -126,7 +128,8 @@ const resumenAdmissionsList = (data) => {
         if (amount > 0) {
             acc[item.biller].totalAmount += amount;
         }
-        if (item.is_closed === true) acc[item.biller].closedTrue++;
+        if (item.is_closed === 1) acc[item.biller].closedTrue++;
+        if (item.audit_requested_at !== null) acc[item.biller].audit_requested_at++;
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;
         if (item.audit_id !== null) acc[item.biller].auditNotNull++;
@@ -134,6 +137,8 @@ const resumenAdmissionsList = (data) => {
         if (item.devolution_date !== null) acc[item.biller].devolutionNotNull++;
         return acc;
     }, {});
+
+    console.log('groupedData', groupedData);
     return groupedData;
 };
 
@@ -243,6 +248,7 @@ const exportAdmissions = async () => {
                     </Column>
                     <Column field="medical_record_request" header="Entreg."></Column>
                     <Column field="closedTrue" header="Liquid."></Column>
+                    <Column field="audit_requested_at" header="Env. Aud."></Column>
                     <Column field="auditNotNull" header="Audit."></Column>
                     <Column field="invoiceNotNull" header="Factur."></Column>
                     <Column field="paidNotNull" header="Pagad."></Column>

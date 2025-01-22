@@ -136,6 +136,7 @@ const resumenAdmissionsList = (data) => {
                 invoiceNotNull: 0,
                 auditNotNull: 0,
                 medical_record_request: 0,
+                audit_requested_at: 0,
                 devolutionNotNull: 0,
                 totalAmount: 0 // como añado el monto total de amount por biller
             };
@@ -147,8 +148,9 @@ const resumenAdmissionsList = (data) => {
         if (amount > 0) {
             acc[item.biller].totalAmount += amount;
         }
-        if (item.is_closed === true) acc[item.biller].closedTrue++;
+        if (item.is_closed === 0) acc[item.biller].closedTrue++;
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
+        if (item.audit_requested_at !== null) acc[item.biller].audit_requested_at++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;
         if (item.audit_id !== null) acc[item.biller].auditNotNull++;
         if (item.medical_record_request.status == 'Atendido') acc[item.biller].medical_record_request++;
@@ -245,6 +247,39 @@ const saveAudit = async (data) => {
         });
     }
 };
+
+const exportAdmissionsFull = async () => {
+    const columns = [
+        { header: 'Admisión', key: 'admission_number', width: 15 },
+        { header: 'Historia', key: 'medical_record_number', with: 15 },
+        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Auditor', key: 'audit.auditor', width: 15 },
+        { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
+        { header: 'Estado Audit', key: 'audit.status', width: 15 }
+    ];
+
+    const data = admissionsLists.value.map((admission) => {
+        return {
+            admission_number: admission.admission_number,
+            medical_record_number: admission.medical_record_number,
+            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            patient: admission.patient,
+            doctor: admission.doctor,
+            insurer_name: admission.insurer_name,
+            amount: Number(admission.amount),
+            biller: admission.biller,
+            'audit.auditor': admission.audit ? admission.audit.auditor : '-',
+            'audit.description': admission.audit ? admission.audit.description : '-',
+            'audit.status': admission.audit ? admission.audit.status : '-'
+        };
+    });
+    await exportToExcel(columns, data, 'Admisiones Auditadas', 'Admisiones Auditadas');
+};
 const exportAdmissions = async () => {
     let exportData = admissionsLists.value.filter((admission) => admission.audit && admission.audit.status === 'Con Observaciones');
     const columns = [
@@ -256,6 +291,7 @@ const exportAdmissions = async () => {
         { header: 'Aseguradora', key: 'insurer_name', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Auditor', key: 'audit.auditor', width: 15 },
         { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
         { header: 'Estado Audit', key: 'audit.status', width: 15 }
     ];
@@ -270,11 +306,12 @@ const exportAdmissions = async () => {
             insurer_name: admission.insurer_name,
             amount: Number(admission.amount),
             biller: admission.biller,
+            'audit.auditor': admission.audit ? admission.audit.auditor : '-',
             'audit.description': admission.audit ? admission.audit.description : '-',
             'audit.status': admission.audit ? admission.audit.status : '-'
         };
     });
-    await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
+    await exportToExcel(columns, data, 'Admisiones Observadas', 'Admisiones Observadas');
 };
 </script>
 <template>
@@ -289,7 +326,7 @@ const exportAdmissions = async () => {
                             {{ formatCurrency(slotProps.data.totalAmount) }}
                         </template>
                     </Column>
-
+                    <Column field="audit_requested_at" header="Env. Aud."></Column>
                     <Column field="auditNotNull" header="Audit."></Column>
                     <Column field="invoiceNotNull" header="Factur."></Column>
                     <Column field="paidNotNull" header="Pagad."></Column>
@@ -331,6 +368,7 @@ const exportAdmissions = async () => {
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <Button type="button" severity="warn" icon="pi pi-file-excel" label="Exportar Observados" outlined @click="exportAdmissions()" />
+                    <Button type="button" severity="success" icon="pi pi-file-excel" label="Exportar" outlined @click="exportAdmissionsFull()" />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />

@@ -38,22 +38,7 @@ onBeforeMount(() => {
     initFilters();
 });
 onMounted(async () => {
-    // let payload = {
-    //     from: dformat(starDate.value, 'YYYY-MM-DD'),
-    //     to: dformat(new Date(endDate.value.setHours(23, 0, 0, 0)), 'YYYY-MM-DD HH:mm:ss')
-    // };
-    // try {
-    //     const responseAudits = await auditsStore.fetchAudits();
-    //     audits.value = responseAudits.data;
-    //     console.log(audits.value);
-    //     // filtrar y quitar todos los registros que contengan type == 'Regular'
-    //     audits.value = audits.value.filter((item) => item.type !== 'Regular');
-    //     console.log(audits.value);
-    // } catch (error) {
-    //     toast.add({ severity: 'error', summary: 'Error', detail: error.message });
-    // }
     await searchAuditsByDate();
-    // formatAudits(audits.value);
 });
 
 const searchAuditsByDate = async () => {
@@ -91,12 +76,52 @@ const formatAudits = async (data) => {
             attendance_date: devolution.attendance_date,
             date_dev: devolution.date_dev,
             doctor: devolution.doctor,
+            biller: devolution.biller,
             insurer_name: devolution.insurer_name,
             invoice_amount: devolution.invoice_amount,
             patient: devolution.patient,
             reason: devolution.reason
         };
     });
+
+    resumenDevolutions(audits.value);
+};
+
+const resumenDevolutions = (data) => {
+    const groupedData = data.reduce((acc, item) => {
+        // Inicializar el objeto para el biller si no existe
+
+        if (!acc[item.auditor]) {
+            acc[item.auditor] = {
+                biller: item.auditor,
+                total: 0,
+                closedTrue: 0,
+                paidNotNull: 0,
+                invoiceNotNull: 0,
+                auditNotNull: 0,
+                audit_requested_at: 0,
+                devolutionNotNull: 0,
+                totalAmount: 0 // como añado el monto total de amount por biller
+            };
+        }
+
+        // Actualizar los contadores
+        acc[item.auditor].total++;
+        let amount = parseFloat(item.amount);
+        if (amount > 0) {
+            acc[item.auditor].totalAmount += amount;
+        }
+        if (item.is_closed === 1) acc[item.auditor].closedTrue++;
+        if (item.audit_requested_at !== null) acc[item.auditor].audit_requested_at++;
+        if (item.paid_invoice_number !== null) acc[item.auditor].paidNotNull++;
+        if (item.invoice_number !== null && item.invoice_number !== '') acc[item.auditor].invoiceNotNull++;
+        if (item.audit_id !== null) acc[item.auditor].auditNotNull++;
+        if (item.devolution_date !== null) acc[item.auditor].devolutionNotNull++;
+        return acc;
+    }, {});
+
+    console.log('groupedData', groupedData);
+    return groupedData;
 };
 
 const editAudit = (data) => {
@@ -112,10 +137,10 @@ const saveAudit = async (data) => {
     if (responseAudit.success) {
         audits.value = audits.value.map((item) => (item.id === responseAudit.data.id ? { ...item, ...responseAudit.data } : item));
 
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Auditoría actualizada correctamente.' });
+        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Auditoría actualizada correctamente.', life: 3000 });
         displayDialog.value = false;
     } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar la auditoría.' });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar la auditoría.', life: 3000 });
     }
     displayDialog.value = false;
 };
@@ -127,10 +152,12 @@ const exportAudits = async () => {
         { header: 'N° Admisión', key: 'admission_number', width: 20 },
         { header: 'Auditor', key: 'auditor', width: 20 },
         { header: 'Descripción', key: 'description', width: 20 },
+        { header: 'Facturador', key: 'biller', width: 20 },
         { header: 'N° Factura', key: 'invoice_number', width: 20 },
         { header: 'Estado', key: 'status', width: 20 },
         { header: 'Tipo', key: 'type', width: 20 }
     ];
+    console.log('audits.value', audits.value);
     let data = audits.value.map((item) => {
         return {
             id: item.id,
@@ -138,6 +165,7 @@ const exportAudits = async () => {
             admission_number: item.admission_number,
             auditor: item.auditor,
             description: item.description,
+            biller: item.biller,
             invoice_number: item.invoice_number,
             status: item.status,
             type: item.type
@@ -150,13 +178,13 @@ const exportAudits = async () => {
     <div class="card">
         <Toolbar class="mb-6">
             <template #start>
-                <IconField>
+                <!-- <IconField>
                     <InputIcon>
                         <i class="pi pi-search" />
                     </InputIcon>
                     <InputText v-model="searchAdmission" placeholder="N° Admisión" />
                 </IconField>
-                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" />
+                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" /> -->
             </template>
 
             <template #end>
@@ -175,7 +203,8 @@ const exportAudits = async () => {
             scrollable
             size="small"
             :loading="auditsStore.loading"
-            :globalFilterFields="['id', 'created_at', 'admission_number', 'auditor', 'description', 'invoice_number', 'status', 'attendance_date', 'date_dev', 'doctor', 'insurer_name', 'invoice_amount', 'patient', 'reason']"
+            :globalFilterFields="['id', 'created_at', 'admission_number', 'auditor', 'description', 'invoice_number', 'status', 'attendance_date', 'date_dev', 'doctor', 'insurer_name', 'invoice_amount', 'patient', 'reason', 'biller']"
+            paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} Auditorías"
         >
@@ -205,6 +234,7 @@ const exportAudits = async () => {
             <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
             <Column field="doctor" header="Médico" sortable></Column>
             <Column field="insurer_name" header="Aseguradora" sortable></Column>
+            <Column field="biller" header="Facturador" sortable></Column>
             <Column field="reason" header="Motivo" sorteable style="min-width: 10rem"></Column>
             <Column field="created_at" header="Fecha Audit." sortable>
                 <template #body="slotProps">
@@ -245,7 +275,7 @@ const exportAudits = async () => {
                     </span>
                 </template>
             </Column>
-            <Column v-if="position === 'Auditor Medico'" field="actions" header="Acciones">
+            <Column v-if="position === 'AUDITOR MEDICO'" field="actions" header="Acciones">
                 <template #body="slotProps">
                     <Button icon="pi pi-pencil" class="p-button-rounded p-button-success mr-2" @click="editAudit(slotProps.data)" />
                 </template>
