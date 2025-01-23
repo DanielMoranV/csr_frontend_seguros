@@ -70,3 +70,14 @@ export const isToday = (someDate) => {
 };
 
 export default day;
+export function compareDates(date1, date2) {
+    const day1 = day(date1, 'YYYY-MM-DD');
+    const day2 = day(date2, 'YYYY-MM-DD');
+    if (day1.isBefore(day2)) {
+        return -1;
+    } else if (day1.isAfter(day2)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}

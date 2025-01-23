@@ -2,7 +2,7 @@
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
-import { dformat } from '@/utils/day';
+import { compareDates, dformat } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -19,6 +19,7 @@ const endDate = ref(new Date());
 
 const audits = ref([]);
 const audit = ref(null);
+const dataGeneralSummary = ref(null);
 const displayDialog = ref(false);
 const statuses = ref([
     { label: 'Aprobado', value: 'Aprobado' },
@@ -71,6 +72,7 @@ const formatAudits = async (data) => {
     let responseDevolutions = await devolutionsStore.fetchDevolutionsByInvoices(listNumbers);
     audits.value = audits.value.map((audit) => {
         const devolution = responseDevolutions.find((dev) => dev.invoice_number === audit.invoice_number);
+        const rebilled = devolution.invoice_date && devolution.last_invoice && compareDates(devolution.invoice_date, devolution.date_last_invoice) === -1;
         return {
             ...audit,
             attendance_date: devolution.attendance_date,
@@ -79,49 +81,65 @@ const formatAudits = async (data) => {
             biller: devolution.biller,
             insurer_name: devolution.insurer_name,
             invoice_amount: devolution.invoice_amount,
+            invoice_date: devolution.invoice_date,
             patient: devolution.patient,
-            reason: devolution.reason
+            reason: devolution.reason,
+            date_last_invoice: devolution.date_last_invoice,
+            last_invoice: devolution.last_invoice,
+            rebilled
         };
     });
 
-    resumenDevolutions(audits.value);
+    dataGeneralSummary.value = [generalSummary(audits.value)];
 };
 
-const resumenDevolutions = (data) => {
-    const groupedData = data.reduce((acc, item) => {
-        // Inicializar el objeto para el biller si no existe
+// const resumenDevolutions = (data) => {
+//     console.log(data);
+//     const groupedData = data.reduce((acc, item) => {
+//         // Inicializar el objeto para el biller si no existe
 
-        if (!acc[item.auditor]) {
-            acc[item.auditor] = {
-                biller: item.auditor,
-                total: 0,
-                closedTrue: 0,
-                paidNotNull: 0,
-                invoiceNotNull: 0,
-                auditNotNull: 0,
-                audit_requested_at: 0,
-                devolutionNotNull: 0,
-                totalAmount: 0 // como añado el monto total de amount por biller
-            };
-        }
+//         if (!acc[item.auditor]) {
+//             acc[item.auditor] = {
+//                 biller: item.auditor,
+//                 total: 0,
+//                 closedTrue: 0,
+//                 paidNotNull: 0,
+//                 invoiceNotNull: 0,
+//                 auditNotNull: 0,
+//                 audit_requested_at: 0,
+//                 devolutionNotNull: 0,
+//                 totalAmount: 0 // como añado el monto total de amount por biller
+//             };
+//         }
 
-        // Actualizar los contadores
-        acc[item.auditor].total++;
-        let amount = parseFloat(item.amount);
-        if (amount > 0) {
-            acc[item.auditor].totalAmount += amount;
-        }
-        if (item.is_closed === 1) acc[item.auditor].closedTrue++;
-        if (item.audit_requested_at !== null) acc[item.auditor].audit_requested_at++;
-        if (item.paid_invoice_number !== null) acc[item.auditor].paidNotNull++;
-        if (item.invoice_number !== null && item.invoice_number !== '') acc[item.auditor].invoiceNotNull++;
-        if (item.audit_id !== null) acc[item.auditor].auditNotNull++;
-        if (item.devolution_date !== null) acc[item.auditor].devolutionNotNull++;
-        return acc;
-    }, {});
+//         // Actualizar los contadores
+//         acc[item.auditor].total++;
+//         let amount = parseFloat(item.amount);
+//         if (amount > 0) {
+//             acc[item.auditor].totalAmount += amount;
+//         }
+//         if (item.is_closed === 1) acc[item.auditor].closedTrue++;
+//         if (item.audit_requested_at !== null) acc[item.auditor].audit_requested_at++;
+//         if (item.paid_invoice_number !== null) acc[item.auditor].paidNotNull++;
+//         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.auditor].invoiceNotNull++;
+//         if (item.audit_id !== null) acc[item.auditor].auditNotNull++;
+//         if (item.devolution_date !== null) acc[item.auditor].devolutionNotNull++;
+//         return acc;
+//     }, {});
 
-    console.log('groupedData', groupedData);
-    return groupedData;
+//     console.log('groupedData', groupedData);
+//     return groupedData;
+// };
+const generalSummary = (data) => {
+    const resumen = {
+        total: data.length,
+        pending: data.filter((item) => item.status === 'Pendiente').length,
+        approved: data.filter((item) => item.status === 'Aprobado').length,
+        observed: data.filter((item) => item.status === 'Con Observaciones').length,
+        rebilled: data.filter((item) => item.rebilled === true).length
+    };
+    console.log('resumenGeneral', resumen);
+    return resumen;
 };
 
 const editAudit = (data) => {
@@ -148,12 +166,16 @@ const saveAudit = async (data) => {
 const exportAudits = async () => {
     const colums = [
         { header: 'ID', key: 'id', width: 10 },
-        { header: 'Fecha', key: 'created_at', width: 20 },
+        { header: 'Fecha Entrega', key: 'created_at', width: 14, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'N° Admisión', key: 'admission_number', width: 20 },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
         { header: 'Auditor', key: 'auditor', width: 20 },
         { header: 'Descripción', key: 'description', width: 20 },
         { header: 'Facturador', key: 'biller', width: 20 },
         { header: 'N° Factura', key: 'invoice_number', width: 20 },
+        { header: 'Refacturado', key: 'rebilled', width: 20 },
         { header: 'Estado', key: 'status', width: 20 },
         { header: 'Tipo', key: 'type', width: 20 }
     ];
@@ -161,13 +183,17 @@ const exportAudits = async () => {
     let data = audits.value.map((item) => {
         return {
             id: item.id,
-            created_at: item.created_at,
+            created_at: new Date(item.created_at),
             admission_number: item.admission_number,
+            patient: item.patient,
+            doctor: item.doctor,
+            insurer_name: item.insurer_name,
             auditor: item.auditor,
             description: item.description,
             biller: item.biller,
             invoice_number: item.invoice_number,
             status: item.status,
+            rebilled: item.rebilled ? 'Sí' : 'No',
             type: item.type
         };
     });
@@ -175,6 +201,59 @@ const exportAudits = async () => {
 };
 </script>
 <template>
+    <!-- <div class="card">
+        <Toolbar class="mb-6">
+            <template #start>
+                <DataTable :value="dataGeneralSummary" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
+                    <Column field="approved" header="Aprobados">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-green-100 text-green-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.approved }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column field="observed" header="Observados">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.observed }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column field="pending" header="Pendientes">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-red-100 text-red-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.pending }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column field="total" header="Entregados"></Column>
+                    <Column field="rebilled" header="Refacturados">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-blue-100 text-blue-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.rebilled }}
+                            </span>
+                        </template>
+                    </Column>
+                </DataTable>
+            </template>
+        </Toolbar>
+    </div> -->
     <div class="card">
         <Toolbar class="mb-6">
             <template #start>
@@ -185,6 +264,53 @@ const exportAudits = async () => {
                     <InputText v-model="searchAdmission" placeholder="N° Admisión" />
                 </IconField>
                 <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" /> -->
+                <DataTable :value="dataGeneralSummary" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
+                    <Column field="approved" header="Aprobados">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-green-100 text-green-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.approved }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column field="observed" header="Observados">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.observed }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column field="pending" header="Pendientes">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-red-100 text-red-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.pending }}
+                            </span>
+                        </template>
+                    </Column>
+                    <Column field="total" header="Entregados"></Column>
+                    <Column field="rebilled" header="Refacturados">
+                        <template #body="slotProps">
+                            <span
+                                :class="{
+                                    'bg-blue-100 text-blue-800 px-2 py-1 rounded-full': true
+                                }"
+                            >
+                                {{ slotProps.data.rebilled }}
+                            </span>
+                        </template>
+                    </Column>
+                </DataTable>
             </template>
 
             <template #end>
@@ -244,6 +370,16 @@ const exportAudits = async () => {
             <Column field="auditor" header="Auditor" sortable />
             <Column field="description" header="Descripción" sortable />
             <Column field="invoice_number" header="N° Factura" sortable />
+            <Column field="rebilled" header="Refct" sortable>
+                <template #body="slotProps">
+                    <i
+                        :class="{
+                            'pi pi-check-circle text-green-500': slotProps.data.rebilled,
+                            'pi pi-times-circle text-red-500': !slotProps.data.rebilled
+                        }"
+                    ></i>
+                </template>
+            </Column>
             <Column field="status" header="Estado" sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.status">
