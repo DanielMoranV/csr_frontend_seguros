@@ -136,6 +136,7 @@ const generalSummary = (data) => {
         pending: data.filter((item) => item.status === 'Pendiente').length,
         approved: data.filter((item) => item.status === 'Aprobado').length,
         observed: data.filter((item) => item.status === 'Con Observaciones').length,
+        audited: data.filter((item) => item.status !== 'Pendiente').length,
         rebilled: data.filter((item) => item.rebilled === true).length
     };
     console.log('resumenGeneral', resumen);
@@ -265,25 +266,15 @@ const exportAudits = async () => {
                 </IconField>
                 <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchAdmissions" /> -->
                 <DataTable :value="dataGeneralSummary" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
-                    <Column field="approved" header="Aprobados">
+                    <Column field="total" header="Entregados"></Column>
+                    <Column field="approved" header="Aduditados">
                         <template #body="slotProps">
                             <span
                                 :class="{
                                     'bg-green-100 text-green-800 px-2 py-1 rounded-full': true
                                 }"
                             >
-                                {{ slotProps.data.approved }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column field="observed" header="Observados">
-                        <template #body="slotProps">
-                            <span
-                                :class="{
-                                    'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full': true
-                                }"
-                            >
-                                {{ slotProps.data.observed }}
+                                {{ slotProps.data.audited }}
                             </span>
                         </template>
                     </Column>
@@ -298,7 +289,6 @@ const exportAudits = async () => {
                             </span>
                         </template>
                     </Column>
-                    <Column field="total" header="Entregados"></Column>
                     <Column field="rebilled" header="Refacturados">
                         <template #body="slotProps">
                             <span

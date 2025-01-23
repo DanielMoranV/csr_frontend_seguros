@@ -71,6 +71,8 @@ onMounted(async () => {
     admissionsLists.value = formatAdmissionsLists(data);
 
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+
+    console.log('AdmissionsLists', admissionsLists.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -258,6 +260,8 @@ const exportAdmissionsFull = async () => {
         { header: 'Aseguradora', key: 'insurer_name', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Entrega Auditoria', key: 'audit_requested_at', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Fecha Auditoria', key: 'audit.created_at', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Auditor', key: 'audit.auditor', width: 15 },
         { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
         { header: 'Estado Audit', key: 'audit.status', width: 15 }
@@ -273,6 +277,8 @@ const exportAdmissionsFull = async () => {
             insurer_name: admission.insurer_name,
             amount: Number(admission.amount),
             biller: admission.biller,
+            audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
+            'audit.created_at': admission.audit ? dformat(admission.audit.created_at, 'DD/MM/YYYY') : '-',
             'audit.auditor': admission.audit ? admission.audit.auditor : '-',
             'audit.description': admission.audit ? admission.audit.description : '-',
             'audit.status': admission.audit ? admission.audit.status : '-'

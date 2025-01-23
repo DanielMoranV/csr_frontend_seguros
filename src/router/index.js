@@ -45,7 +45,7 @@ const router = createRouter({
                     path: '/admissions-list-biller',
                     name: 'admissions-list-biller',
                     component: () => import('@/views/invoicing/BillerAdmissionsList.vue'),
-                    meta: { positions: ['FACTURACION'] }
+                    meta: { positions: ['FACTURACION', 'ADMINISTRACION'] }
                 },
                 {
                     path: '/settlements',
