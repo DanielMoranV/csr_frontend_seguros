@@ -154,7 +154,7 @@ const resumenAdmissionsList = (data) => {
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
         if (item.audit_requested_at !== null) acc[item.biller].audit_requested_at++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;
-        if (item.audit_id !== null) acc[item.biller].auditNotNull++;
+        if (item.audit && item.audit_id !== null && item.audit.status !== 'Pendiente') acc[item.biller].auditNotNull++;
         if (item.medical_record_request.status == 'Atendido') acc[item.biller].medical_record_request++;
         if (item.devolution_date !== null) acc[item.biller].devolutionNotNull++;
         return acc;
@@ -442,7 +442,7 @@ const exportAdmissions = async () => {
                     </span>
                 </template>
             </Column>
-            <Column field="audit.auditor" header="Auditor" style="width: 8rem"> </Column>
+            <Column field="audit.auditor" header="Auditor" style="width: 8rem" sortable></Column>
             <Column field="audit.description" header="Descripción Auditoría" style="min-width: 15rem" sortable> </Column>
             <Column field="audit.created_at" header="Fecha Auditoría" style="width: 8rem">
                 <template #body="slotProps">

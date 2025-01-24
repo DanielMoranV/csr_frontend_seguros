@@ -154,6 +154,7 @@ const resumenAdmissionsList = (data) => {
                 invoiceNotNull: 0,
                 auditNotNull: 0,
                 medical_record_request: 0,
+                audit_requested_at: 0,
                 devolutionNotNull: 0,
                 totalAmount: 0 // como añado el monto total de amount por biller
             };
@@ -167,6 +168,7 @@ const resumenAdmissionsList = (data) => {
         }
         if (item.is_closed === true) acc[item.biller].closedTrue++;
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
+        if (item.audit_requested_at !== null) acc[item.biller].audit_requested_at++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;
         if (item.audit_id !== null) acc[item.biller].auditNotNull++;
         if (item.medical_record_request.status == 'Atendido') acc[item.biller].medical_record_request++;
@@ -353,7 +355,7 @@ const saveAdmissionList = async () => {
 const resendAudit = async (admission) => {
     // Enviar auditoria
     let payloadAudit = {
-        auditor: 'SIN ASIGNAR',
+        auditor: admission.audit.auditor,
         admission_number: admission.admission_number,
         status: 'Pendiente',
         description: 'Reenvio de auditoria',
@@ -410,6 +412,7 @@ const resendAudit = async (admission) => {
                     </Column>
                     <Column field="medical_record_request" header="Entreg."></Column>
                     <Column field="closedTrue" header="Liquid."></Column>
+                    <Column field="audit_requested_at" header="Env. Aud."></Column>
                     <Column field="auditNotNull" header="Audit."></Column>
                     <Column field="invoiceNotNull" header="Factur."></Column>
                     <Column field="paidNotNull" header="Pagad."></Column>
