@@ -70,7 +70,6 @@ export const useAdmissionsListsStore = defineStore('admissionsListStore', {
             this.loading = true;
             const { data } = await handleResponseStore(fetchAdmissionsListsByPeriod(period), this);
             if (this.success) {
-                console.log('data', data);
                 this.admissionsLists = data;
                 // obtener una lista de admisiones admission_number a partir de admissionsLists
                 const admissionNumbers = data.map((admissionsList) => admissionsList.admission_number);

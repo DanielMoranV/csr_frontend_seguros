@@ -59,7 +59,6 @@ onMounted(async () => {
     const responseMedicalRecords = await medicalRecordsRequestsStore.fetchMedicalRecordsRequestsByDateRange(payload);
 
     if (responseMedicalRecords.data) {
-        console.log(responseMedicalRecords.data);
         medicalRecords.value = responseMedicalRecords.data;
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Datos cargados correctamente', life: 3000 });
     }
@@ -121,7 +120,6 @@ const sendMedicalRecord = async (medicalRecord) => {
 };
 
 const confirmRejectMedicalRecord = (data) => {
-    console.log(data);
     if (!data.remarks) {
         toast.add({ severity: 'error', summary: 'Rejected', detail: 'Detallar el motivo del rechazo en el campo OBSERVACIÓN', life: 3000 });
         return;
@@ -193,7 +191,9 @@ const searchPatient = async () => {
     medicalRecord.value = {
         ...dataPatient
     };
-    console.log(medicalRecord.value);
+    if (!dataPatient) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró el paciente', life: 3000 });
+    }
 };
 
 const createNewRequest = () => {
@@ -210,9 +210,6 @@ const saveNewRequest = async () => {
         request_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
         remarks: medicalRecord.value.remarks
     };
-
-    console.log(payload);
-
     let responseNewRequest = await medicalRecordsRequestsStore.createMedicalRecordsRequest(payload);
     newRequestDialog.value = false;
     if (responseNewRequest.success) {
@@ -222,9 +219,11 @@ const saveNewRequest = async () => {
             requester_nick: responseNewRequest.data.requester_nick,
             status: 'Pendiente',
             patient: medicalRecord.value.patient,
-            insurer_name: medicalRecord.value.insurer_name
+            insurer_name: medicalRecord.value.insurer_name,
+            medical_record_number: medicalRecord.value.medical_record_number,
+            remarks: medicalRecord.value.remarks
         };
-        medicalRecords.value.push(newRequest);
+        medicalRecords.value.unshift(newRequest);
         await indexedDB.setItem('medicalRecordsRequests', medicalRecords.value);
 
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Solicitud enviada correctamente', life: 3000 });
@@ -290,9 +289,17 @@ const saveNewRequest = async () => {
             <Column field="patient" header="Paciente" sortable />
             <Column field="insurer_name" header="Aseguradora" sortable />
             <Column field="requester_nick" header="Solicitante" sortable />
-            <Column field="request_date" header="Fecha Solicitud" sortable />
+            <Column field="request_date" header="Fecha Solicitud" sortable>
+                <template #body="slotProps">
+                    {{ slotProps.data.request_date ? dformat(slotProps.data.request_date, 'DD/MM/YYYY HH:mm:ss') : '-' }}
+                </template>
+            </Column>
             <Column field="requested_nick" header="Respondido Por: " sortable />
-            <Column field="response_date" header="Fecha Respuesta" sortable />
+            <Column field="response_date" header="Fecha Respuesta" sortable>
+                <template #body="slotProps">
+                    {{ slotProps.data.response_date ? dformat(slotProps.data.response_date, 'DD/MM/YYYY HH:mm:ss') : '-' }}
+                </template>
+            </Column>
             <Column field="remarks" header="Comentario" sortable>
                 <template #body="slotProps">
                     {{ slotProps.data.remarks || '-' }}

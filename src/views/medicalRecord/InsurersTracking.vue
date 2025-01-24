@@ -244,7 +244,6 @@ const editObservation = async (admission) => {
 };
 
 const sendMedicalRecord = async (medicalRecord) => {
-    console.log(medicalRecord.medical_record_request);
     let medicalRecordRequest = medicalRecord.medical_record_request;
     let payload = {
         ...medicalRecordRequest,
@@ -268,7 +267,6 @@ const sendMedicalRecord = async (medicalRecord) => {
 };
 
 const confirmRejectMedicalRecord = (data) => {
-    console.log(data);
     if (!data.observations) {
         toast.add({ severity: 'error', summary: 'Rejected', detail: 'Detallar el motivo del rechazo en el campo OBSERVACIÓN', life: 3000 });
         return;
@@ -297,19 +295,13 @@ const confirmRejectMedicalRecord = (data) => {
                 requested_nick: nickName.value,
                 response_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
             };
-
-            console.log(payload);
             let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
-            console.log(responseMedicalRecord);
             if (responseMedicalRecord.success) {
                 const index = admissionsLists.value.findIndex((item) => item.admission_number === data.admission_number);
                 if (index !== -1) {
-                    console.log('responseMedicalRecord.data:', responseMedicalRecord.data); // Agregar este log para depuración
                     admissionsLists.value[index].medical_record_request = {
                         ...responseMedicalRecord.data
                     };
-
-                    console.log(admissionsLists.value[index]);
                     // modificar en indexedDB
                     await indexedDB.setItem('admissionsLists', admissionsLists.value);
                 } else {
@@ -393,6 +385,7 @@ const confirmRejectMedicalRecord = (data) => {
                 </template>
             </Column>
             <Column field="admission_number" sortable header="Admisión" frozen></Column>
+            <Column field="medical_record_number" header="Historia" sortable style="min-width: 5rem"></Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}

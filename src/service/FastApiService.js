@@ -332,14 +332,14 @@ export default {
     async patientsByNumbers(numbers) {
         // Construcción de la consulta SQL con IN
         const buildQuery = (numbers) => `
-                SELECT
-                    ${PACIENTES}.nh_pac as medical_record_number,
-                    ${PACIENTES}.nom_pac as patient,
-                    ${ASEGURADORAS}.nom_cia as insurer_name
-                FROM ${PACIENTES}
-                LEFT JOIN ${ASEGURADORAS} ON ${PACIENTES}.id_cia = ${ASEGURADORAS}.id_cia
-                WHERE ${PACIENTES}.nh_pac IN (${numbers.map((num) => `'${num}'`).join(', ')})
-                ORDER BY ${PACIENTES}.nh_pac DESC;
+            SELECT
+                ${PACIENTES}.nh_pac as medical_record_number,
+                ${PACIENTES}.nom_pac as patient,
+                ${ASEGURADORAS}.nom_cia as insurer_name
+            FROM ${PACIENTES}
+            LEFT JOIN ${ASEGURADORAS} ON CAST(${PACIENTES}.id_cia AS UNSIGNED) = CAST(${ASEGURADORAS}.id_cia AS UNSIGNED)
+            WHERE ${PACIENTES}.nh_pac IN (${numbers.map((num) => `'${num}'`).join(', ')})
+            ORDER BY ${PACIENTES}.nh_pac DESC;
             `;
         try {
             // Dividir números en bloques pequeños si son demasiados

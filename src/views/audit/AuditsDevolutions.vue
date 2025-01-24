@@ -180,7 +180,6 @@ const exportAudits = async () => {
         { header: 'Estado', key: 'status', width: 20 },
         { header: 'Tipo', key: 'type', width: 20 }
     ];
-    console.log('audits.value', audits.value);
     let data = audits.value.map((item) => {
         return {
             id: item.id,

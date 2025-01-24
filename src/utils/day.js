@@ -5,7 +5,9 @@ import customParseFormat from 'dayjs/plugin/customParseFormat';
 import duration from 'dayjs/plugin/duration';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 day.locale('es');
+day.extend(utc);
 day.extend(timezone);
 day.tz.setDefault('America/Lima');
 
@@ -23,7 +25,7 @@ export function dparseFromFormat(date, format) {
 }
 
 export function dformat(date = new Date(), format = 'YYYY-MM-DDTHH:mm') {
-    return day(date).format(format);
+    return day.utc(date).tz('America/Lima').format(format);
 }
 
 export function isAfterFromNow(date) {

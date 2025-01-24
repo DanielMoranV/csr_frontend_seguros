@@ -69,14 +69,10 @@ function clearFilter() {
 onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     admissionsLists.value = formatAdmissionsLists(data);
-
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-
-    console.log('AdmissionsLists', admissionsLists.value);
 });
 
 const formatAdmissionsLists = (data) => {
-    console.log(data);
     if (data.length === 0) {
         admissionsLists.value = [];
         toast.add({
@@ -140,7 +136,8 @@ const resumenAdmissionsList = (data) => {
                 medical_record_request: 0,
                 audit_requested_at: 0,
                 devolutionNotNull: 0,
-                totalAmount: 0 // como añado el monto total de amount por biller
+                totalAmount: 0, // como añado el monto total de amount por biller
+                auditors: {}
             };
         }
 
@@ -157,9 +154,42 @@ const resumenAdmissionsList = (data) => {
         if (item.audit && item.audit_id !== null && item.audit.status !== 'Pendiente') acc[item.biller].auditNotNull++;
         if (item.medical_record_request.status == 'Atendido') acc[item.biller].medical_record_request++;
         if (item.devolution_date !== null) acc[item.biller].devolutionNotNull++;
+        // Procesar los datos del auditor
+        if (item.audit && item.audit.auditor && item.audit.status !== 'Pendiente') {
+            const auditorNick = item.audit.auditor; // Nickname del auditor
+            if (!acc[item.biller].auditors[auditorNick]) {
+                // Inicializar el contador del auditor si no existe
+                acc[item.biller].auditors[auditorNick] = {
+                    name: auditorNick, // Nickname del auditor
+                    count: 0 // Conteo inicial de auditorías
+                };
+            }
+            // Incrementar el conteo de auditorías para el auditor correspondiente
+            acc[item.biller].auditors[auditorNick].count++;
+        }
         return acc;
     }, {});
     return groupedData;
+};
+
+const getTotal = (field) => {
+    return resumenAdmissions.value.reduce((sum, item) => sum + (item[field] || 0), 0);
+};
+
+const getTotalAuditsByAuditor = () => {
+    const totalsByAuditor = {};
+
+    resumenAdmissions.value.forEach((item) => {
+        const auditors = item.auditors || {};
+        Object.entries(auditors).forEach(([key, auditor]) => {
+            if (!totalsByAuditor[auditor.name]) {
+                totalsByAuditor[auditor.name] = 0;
+            }
+            totalsByAuditor[auditor.name] += auditor.count;
+        });
+    });
+
+    return totalsByAuditor;
 };
 
 const searchPeriod = async () => {
@@ -325,18 +355,63 @@ const exportAdmissions = async () => {
         <Toolbar class="mb-6">
             <template #start>
                 <DataTable :value="resumenAdmissions" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
-                    <Column field="biller" header="Facturador"></Column>
-                    <Column field="total" header="Total"></Column>
+                    <Column field="biller" header="Facturador">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic">TOTAL</strong>
+                        </template>
+                    </Column>
+                    <Column field="total" header="Total">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic">{{ getTotal('total') }}</strong>
+                        </template>
+                    </Column>
                     <Column field="totalAmount" header="Monto">
                         <template #body="slotProps">
                             {{ formatCurrency(slotProps.data.totalAmount) }}
                         </template>
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ formatCurrency(getTotal('totalAmount')) }}</strong>
+                        </template>
                     </Column>
-                    <Column field="audit_requested_at" header="Env. Aud."></Column>
-                    <Column field="auditNotNull" header="Audit."></Column>
-                    <Column field="invoiceNotNull" header="Factur."></Column>
-                    <Column field="paidNotNull" header="Pagad."></Column>
-                    <Column field="devolutionNotNull" header="Devol."></Column>
+                    <Column field="audit_requested_at" header="Env. Aud.">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ getTotal('audit_requested_at') }}</strong>
+                        </template>
+                    </Column>
+                    <Column field="auditNotNull" header="Audit.">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ getTotal('auditNotNull') }}</strong>
+                        </template>
+                    </Column>
+                    <Column field="invoiceNotNull" header="Factur.">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ getTotal('invoiceNotNull') }}</strong>
+                        </template>
+                    </Column>
+                    <Column field="paidNotNull" header="Pagad.">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ getTotal('paidNotNull') }}</strong>
+                        </template>
+                    </Column>
+                    <Column field="devolutionNotNull" header="Devol.">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ getTotal('devolutionNotNull') }}</strong>
+                        </template>
+                    </Column>
+                    <Column header="Auditores">
+                        <template #body="slotProps">
+                            <ul>
+                                <li v-for="(auditor, key) in slotProps.data.auditors" :key="key">{{ auditor.name }}: {{ auditor.count }}</li>
+                            </ul>
+                        </template>
+                        <template #footer>
+                            <ul>
+                                <li v-for="(total, auditor) in getTotalAuditsByAuditor()" :key="auditor">
+                                    <strong style="font-weight: bold; font-style: italic"> {{ auditor }}: {{ total }} </strong>
+                                </li>
+                            </ul>
+                        </template>
+                    </Column>
                 </DataTable>
             </template>
 

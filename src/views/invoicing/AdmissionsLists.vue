@@ -56,11 +56,8 @@ function clearFilter() {
 
 onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
-    console.log('data', data);
     admissionsLists.value = formatAdmissionsLists(data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-
-    console.log(getTotalAuditsByAuditor());
 });
 
 const formatAdmissionsLists = (data) => {
@@ -106,7 +103,6 @@ const formatAdmissionsLists = (data) => {
 };
 
 const resumenAdmissionsList = (data) => {
-    console.log(data);
     const groupedData = data.reduce((acc, item) => {
         // Inicializar el objeto para el biller si no existe
         if (!acc[item.biller]) {
@@ -155,8 +151,6 @@ const resumenAdmissionsList = (data) => {
 
         return acc;
     }, {});
-
-    console.log('groupedData', groupedData);
     return groupedData;
 };
 

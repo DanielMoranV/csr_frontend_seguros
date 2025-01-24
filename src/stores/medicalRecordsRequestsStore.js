@@ -58,8 +58,6 @@ export const useMedicalRecordsRequestsStore = defineStore('medicalRecordsRequest
             this.loading = true;
             let { results, errors } = await FastApiService.patientsByNumbers([number]);
             console.log('errors', errors);
-            // Combinar los arrays
-            console.log(results);
             this.loading = false;
             return results[0];
         },
@@ -121,10 +119,11 @@ export const useMedicalRecordsRequestsStore = defineStore('medicalRecordsRequest
             this.loading = true;
             const { data } = await handleResponseStore(createMedicalRecordsRequest(payload), this);
             if (this.success) {
-                this.medicalRecordsRequests.push(data);
-                await indexedDB.setItem('medicalRecordsRequests', this.medicalRecordsRequests);
+                //this.medicalRecordsRequests.push(data);
+                //await indexedDB.setItem('medicalRecordsRequests', this.medicalRecordsRequests);
+                this.message = 'Solicitud de historia clínica creada correctamente...';
             }
-            return { success: this.success, data: this.medicalRecordsRequests };
+            return { success: this.success, data };
         },
         async updateMedicalRecordsRequest(payload) {
             this.loading = true;
