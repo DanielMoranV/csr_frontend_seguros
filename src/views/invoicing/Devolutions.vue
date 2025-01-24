@@ -1,7 +1,7 @@
 <script setup>
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -231,7 +231,7 @@ const exportDevolutions = async () => {
             <Column field="date_dev" header="Fecha Devolución" sortable></Column>
             <Column field="attendance_date" header="Fecha Atención" sortable>
                 <template #body="slotProps">
-                    {{ dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') }}
+                    {{ dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') }}
                 </template>
             </Column>
             <Column field="medical_record_number" header="Nro. Historia" sortable></Column>
@@ -242,7 +242,7 @@ const exportDevolutions = async () => {
             <Column field="invoice_number" header="Nro. Factura" sortable></Column>
             <Column field="invoice_date" header="Fecha Factura" sortable>
                 <template #body="slotProps">
-                    {{ dformat(slotProps.data.invoice_date, 'DD/MM/YYYY') }}
+                    {{ dformatLocal(slotProps.data.invoice_date, 'DD/MM/YYYY') }}
                 </template>
             </Column>
             <Column field="invoice_amount" header="Monto" sortable>

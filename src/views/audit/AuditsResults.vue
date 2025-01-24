@@ -1,7 +1,7 @@
 <script setup>
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -178,7 +178,7 @@ const exportAudits = async () => {
             <Column field="id" header="ID" sortable />
             <Column field="created_at" header="Fecha" sortable>
                 <template #body="slotProps">
-                    {{ slotProps.data.created_at ? dformat(slotProps.data.created_at, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.created_at ? dformatLocal(slotProps.data.created_at, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
             <Column field="admission_number" header="N° Admisión" sortable />

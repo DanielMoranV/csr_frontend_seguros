@@ -28,6 +28,10 @@ export function dformat(date = new Date(), format = 'YYYY-MM-DDTHH:mm') {
     return day.utc(date).tz('America/Lima').format(format);
 }
 
+export function dformatLocal(date = new Date(), format = 'YYYY-MM-DDTHH:mm') {
+    return day(date).format(format);
+}
+
 export function isAfterFromNow(date) {
     return day().isAfter(date);
 }

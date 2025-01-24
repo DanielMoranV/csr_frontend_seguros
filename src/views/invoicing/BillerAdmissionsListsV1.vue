@@ -1,6 +1,6 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { onBeforeMount, onMounted, ref } from 'vue';
@@ -118,7 +118,7 @@ const searchPeriod = async () => {
             </Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.attendance_date ? dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
             <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>

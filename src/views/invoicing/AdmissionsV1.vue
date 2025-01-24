@@ -3,7 +3,7 @@ import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { useSettlementsStore } from '@/stores/settlementsStore';
 import { classifyDataSettlements, importSettlements } from '@/utils/dataProcessingHelpers';
-import { dformat, getDaysPassed } from '@/utils/day';
+import { dformat, dformatLocal, getDaysPassed } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseSettlements, validateData, validateHeaders } from '@/utils/excelUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -298,7 +298,7 @@ const searchAdmissionsByDate = () => {
                 <Column field="number" header="Número" sortable style="min-width: 5rem"></Column>
                 <Column field="attendance_date" header="Fecha" sortable style="min-width: 5rem">
                     <template #body="slotProps">
-                        {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
+                        {{ slotProps.data.attendance_date ? dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                     </template>
                 </Column>
                 <Column field="daysPassed" header="Días" sortable style="min-width: 3rem">

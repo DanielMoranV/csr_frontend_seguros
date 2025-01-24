@@ -1,7 +1,7 @@
 <script setup>
 import { fetchAdmissionsListsByPeriod } from '@/api';
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -190,7 +190,7 @@ const exportAdmissions = async () => {
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
-            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            attendance_date: admission.attendance_date ? dformatLocal(admission.attendance_date, 'DD/MM/YYYY') : '-',
             patient: admission.patient,
             doctor: admission.doctor,
             insurer_name: admission.insurer_name,
@@ -204,7 +204,7 @@ const exportAdmissions = async () => {
             medicalRecordRequestStatus: admission.medical_record_request ? admission.medical_record_request.status : '-',
             medicalRecordRequestResponseDate: admission.medical_record_request ? dformat(admission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
             is_closed: admission.is_closed ? 'Si' : 'No',
-            audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
+            audit_requested_at: admission.audit_requested_at ? dformatLocal(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
             auditDescription: admission.audit ? admission.audit.description : '-',
             auditStatus: admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
@@ -220,7 +220,7 @@ const exportAdmissions = async () => {
             data.push({
                 admission_number: newAdmission.admission_number,
                 medical_record_number: newAdmission.medical_record_number,
-                attendance_date: newAdmission.attendance_date ? dformat(newAdmission.attendance_date, 'DD/MM/YYYY') : '-',
+                attendance_date: newAdmission.attendance_date ? dformatLocal(newAdmission.attendance_date, 'DD/MM/YYYY') : '-',
                 patient: newAdmission.patient,
                 doctor: newAdmission.doctor,
                 insurer_name: newAdmission.insurer_name,
@@ -234,7 +234,7 @@ const exportAdmissions = async () => {
                 medicalRecordRequestStatus: newAdmission.medical_record_request ? newAdmission.medical_record_request.status : '-',
                 medicalRecordRequestResponseDate: newAdmission.medical_record_request ? dformat(newAdmission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
                 is_closed: newAdmission.is_closed ? 'Si' : 'No',
-                audit_requested_at: newAdmission.audit_requested_at ? dformat(newAdmission.audit_requested_at, 'DD/MM/YYYY') : '-',
+                audit_requested_at: newAdmission.audit_requested_at ? dformatLocal(newAdmission.audit_requested_at, 'DD/MM/YYYY') : '-',
                 auditDescription: newAdmission.audit ? newAdmission.audit.description : '-',
                 auditStatus: newAdmission.audit ? newAdmission.audit.status : '-',
                 invoice_number: newAdmission.invoice_number ? newAdmission.invoice_number : '-',
@@ -415,7 +415,7 @@ const getTotalAuditsByAuditor = () => {
             </Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.attendance_date ? dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
             <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
@@ -480,7 +480,7 @@ const getTotalAuditsByAuditor = () => {
             <Column field="audit_requested_at" header="Entr. Audit." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit_requested_at">
-                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>

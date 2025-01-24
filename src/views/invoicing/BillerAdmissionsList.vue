@@ -3,7 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
@@ -255,7 +255,7 @@ const exportAdmissions = async () => {
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
-            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            attendance_date: admission.attendance_date ? dformatLocal(admission.attendance_date, 'DD/MM/YYYY') : '-',
             patient: admission.patient,
             doctor: admission.doctor,
             insurer_name: admission.insurer_name,
@@ -473,7 +473,7 @@ const resendAudit = async (admission) => {
             <Column field="medical_record_number" header="Historia" sortable style="min-width: 5rem"></Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.attendance_date ? dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
             <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
@@ -536,7 +536,7 @@ const resendAudit = async (admission) => {
             <Column field="audit_requested_at" header="Entr. Audit." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit_requested_at">
-                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>

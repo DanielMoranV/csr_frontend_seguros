@@ -2,7 +2,7 @@
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
@@ -301,14 +301,14 @@ const exportAdmissionsFull = async () => {
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
-            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            attendance_date: admission.attendance_date ? dformatLocal(admission.attendance_date, 'DD/MM/YYYY') : '-',
             patient: admission.patient,
             doctor: admission.doctor,
             insurer_name: admission.insurer_name,
             amount: Number(admission.amount),
             biller: admission.biller,
             audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
-            'audit.created_at': admission.audit ? dformat(admission.audit.created_at, 'DD/MM/YYYY') : '-',
+            'audit.created_at': admission.audit ? dformatLocal(admission.audit.created_at, 'DD/MM/YYYY') : '-',
             'audit.auditor': admission.audit ? admission.audit.auditor : '-',
             'audit.description': admission.audit ? admission.audit.description : '-',
             'audit.status': admission.audit ? admission.audit.status : '-'
@@ -336,7 +336,7 @@ const exportAdmissions = async () => {
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
-            attendance_date: admission.attendance_date ? dformat(admission.attendance_date, 'DD/MM/YYYY') : '-',
+            attendance_date: admission.attendance_date ? dformatLocal(admission.attendance_date, 'DD/MM/YYYY') : '-',
             patient: admission.patient,
             doctor: admission.doctor,
             insurer_name: admission.insurer_name,
@@ -469,7 +469,7 @@ const exportAdmissions = async () => {
             <Column field="period" sortable header="Periodo"></Column>
             <Column field="attendance_date" header="Atención" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.attendance_date ? dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.attendance_date ? dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
             <Column field="patient" header="Paciente" sortable style="min-width: 8rem"></Column>
@@ -521,7 +521,7 @@ const exportAdmissions = async () => {
             <Column field="audit.description" header="Descripción Auditoría" style="min-width: 15rem" sortable> </Column>
             <Column field="audit.created_at" header="Fecha Auditoría" style="width: 8rem">
                 <template #body="slotProps">
-                    {{ slotProps.data.audit ? dformat(slotProps.data.audit.created_at, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.audit ? dformatLocal(slotProps.data.audit.created_at, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
 

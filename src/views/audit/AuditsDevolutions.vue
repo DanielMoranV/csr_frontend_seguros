@@ -2,7 +2,7 @@
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
-import { compareDates, dformat } from '@/utils/day';
+import { compareDates, dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -342,7 +342,7 @@ const exportAudits = async () => {
             <Column field="admission_number" header="N° Admisión" sortable />
             <Column field="attendance_date" header="Fecha Atención" sortable>
                 <template #body="slotProps">
-                    {{ dformat(slotProps.data.attendance_date, 'DD/MM/YYYY') }}
+                    {{ dformatLocal(slotProps.data.attendance_date, 'DD/MM/YYYY') }}
                 </template>
             </Column>
             <Column field="date_dev" header="Fecha Devolución" sortable></Column>
@@ -350,10 +350,10 @@ const exportAudits = async () => {
             <Column field="doctor" header="Médico" sortable></Column>
             <Column field="insurer_name" header="Aseguradora" sortable></Column>
             <Column field="biller" header="Facturador" sortable></Column>
-            <Column field="reason" header="Motivo" sorteable style="min-width: 10rem"></Column>
+            <Column field="reason" header="Motivo" sortable style="min-width: 10rem"></Column>
             <Column field="created_at" header="Fecha Audit." sortable>
                 <template #body="slotProps">
-                    {{ slotProps.data.created_at ? dformat(slotProps.data.created_at, 'DD/MM/YYYY') : '-' }}
+                    {{ slotProps.data.created_at ? dformatLocal(slotProps.data.created_at, 'DD/MM/YYYY') : '-' }}
                 </template>
             </Column>
             <Column field="auditor" header="Auditor" sortable />
