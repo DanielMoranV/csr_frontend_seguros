@@ -39,7 +39,7 @@ const router = createRouter({
                     path: '/admissions-lists',
                     name: 'admissions-lists',
                     component: () => import('@/views/invoicing/AdmissionsLists.vue'),
-                    meta: { positions: ['ADMINISTRACION', 'AUDITOR MEDICO'] }
+                    meta: { positions: ['ADMINISTRACION', 'AUDITOR MEDICO', 'ASISTENTE FACTURACION'] }
                 },
                 {
                     path: '/admissions-list-biller',
@@ -89,6 +89,12 @@ const router = createRouter({
                     name: 'medical-records-tracking',
                     component: () => import('@/views/medicalRecord/MedicalRecordsTracking.vue'),
                     meta: { positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] }
+                },
+                {
+                    path: '/shipments',
+                    name: 'shipments',
+                    component: () => import('@/views/shipments/Shipments.vue'),
+                    meta: { positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] }
                 }
             ]
         },

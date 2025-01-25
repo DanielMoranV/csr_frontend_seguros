@@ -97,3 +97,15 @@ export const fetchMedicalRecordsRequestsByNumber = (number) => axios.get(`/medic
 
 export const executeQuery = (payload) => axios.post('/excequte_query', payload);
 export const getAdmissionsByDateRange = (payload) => axios.post('admissions_by_date_range', payload);
+
+// shipments
+export const fetchShipments = () => axios.get('/shipments');
+export const createShipment = (payload) => axios.post('/shipments', payload);
+export const updateShipment = (payload, id) => axios.put(`/shipments/${id}`, payload);
+export const deleteShipment = (id) => axios.delete(`/shipments/${id}`);
+export const createShipments = (payload) => axios.post('/shipments/store', payload);
+export const updateShipments = (payload) => axios.patch('/shipments/update', payload);
+export const fetchShipmentsByDateRange = (payload) => axios.post('/shipments/by-date-range', payload);
+export const fetchShipmentsByNumber = (number) => axios.get(`/shipments/by-number/${number}`);
+export const fetchShipmentsByAdmissionNumber = (number) => axios.get(`/shipments/by-admission-number/${number}`);
+export const fetchShipmentsByAdmissionsNumbers = (numbers) => axios.post('/shipments/by-admissions-numbers', numbers);
