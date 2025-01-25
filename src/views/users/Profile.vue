@@ -102,6 +102,11 @@ const updatePassword = async () => {
     isLoadingPassword.value = true;
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
+    if (!password || !confirmPassword) {
+        toast.add({ severity: 'warn', summary: 'Advertencia', detail: 'Por favor, complete todos los campos requeridos', life: 3000 });
+        isLoadingPassword.value = false;
+        return;
+    }
     if (password === confirmPassword) {
         const success = await authStore.updateProfile({ password: password }, user.value.id);
         handleResponseToast(success, authStore.auth.message, authStore.auth.status, toast);
@@ -185,7 +190,7 @@ watch(() => user.value.phone, validatePhoneField);
                 </div>
                 <div class="flex flex-col gap-2 w-full">
                     <label for="dni">DNI</label>
-                    <InputText id="dni" v-model="user.dni" @input="validateDNIField" @keypress="restrictToNumbers" maxlength="8" />
+                    <InputText id="dni" v-model="user.dni" @input="validateDNIField" @keypress="restrictToNumbers" maxlength="8" disabled />
                 </div>
                 <div class="flex flex-col gap-2 w-full">
                     <label for="email">Email</label>
