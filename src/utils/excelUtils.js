@@ -44,8 +44,11 @@ export const exportToExcel = async (columns, data, sheetName = 'Sheet1', fileNam
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
-    // Generate unique file name with timestamp
-    const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
+    // Generate unique file name with timestamp (YYYYMMDD_HHMMSSSSS)
+    const timestamp = new Date()
+        .toISOString()
+        .replace(/[-T:.Z]/g, '')
+        .slice(0, 17);
     fileName = `${fileName}_${timestamp}.xlsx`;
 
     // Guardar archivo

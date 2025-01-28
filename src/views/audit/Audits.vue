@@ -2,7 +2,7 @@
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { dformat, dformatLocal } from '@/utils/day';
+import { dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
@@ -307,7 +307,7 @@ const exportAdmissionsFull = async () => {
             insurer_name: admission.insurer_name,
             amount: Number(admission.amount),
             biller: admission.biller,
-            audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
+            audit_requested_at: admission.audit_requested_at ? dformatLocal(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
             'audit.created_at': admission.audit ? dformatLocal(admission.audit.created_at, 'DD/MM/YYYY') : '-',
             'audit.auditor': admission.audit ? admission.audit.auditor : '-',
             'audit.description': admission.audit ? admission.audit.description : '-',
@@ -510,7 +510,7 @@ const exportAdmissions = async () => {
             <Column field="audit_requested_at" header="Entr. Audit." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.audit_requested_at">
-                        <span class="text-green-500">{{ dformat(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.audit_requested_at, 'DD/MM') }}</span>
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>

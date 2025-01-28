@@ -267,7 +267,7 @@ const exportAdmissions = async () => {
             observations: admission.observations,
             'medical_record_request.status': admission.medical_record_request ? admission.medical_record_request.status : '-',
             is_closed: admission.is_closed ? 'Si' : 'No',
-            audit_requested_at: admission.audit_requested_at ? dformat(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
+            audit_requested_at: admission.audit_requested_at ? dformatLocal(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
             'audit.description': admission.audit ? admission.audit.description : '-',
             'audit.status': admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
