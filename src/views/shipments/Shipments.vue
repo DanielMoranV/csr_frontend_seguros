@@ -3,7 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { dformat, dformatLocal } from '@/utils/day';
-import { exportToExcel } from '@/utils/excelUtils';
+import { exportToExcel, validateData, validateHeaders } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
@@ -12,6 +12,7 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
 const medicalRecordStore = useMedicalRecordsRequestsStore();
+const isLoading = ref(false);
 const confirm = useConfirm();
 const toast = useToast();
 const admissionsLists = ref([]);
@@ -21,6 +22,27 @@ const periods = ref([]);
 const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
+const headerShipments = ref([
+    'Admisión',
+    'Historia',
+    'Fecha',
+    'Paciente',
+    'Médico,',
+    'Aseguradora',
+    'Tipo',
+    'Monto',
+    'Facturador',
+    'Estado Audit',
+    'Factura',
+    'Pago',
+    'Env Iniciado',
+    'Env. Trama',
+    'Env. Currier',
+    'Env. Email',
+    'URL Sust.',
+    'Comentarios',
+    'Verif. Envío'
+]);
 const getCurrentPeriod = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -191,7 +213,7 @@ const onUploadShipments = async (event) => {
         try {
             isLoading.value = true;
             const rows = await loadExcelFile(file);
-            const isValidHeaders = validateHeaders(rows[1], headerSettlements);
+            const isValidHeaders = validateHeaders(rows[1], headerShipments);
             if (!isValidHeaders.success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: `Faltan las cabeceras: ${isValidHeaders.missingHeaders.join(', ')}`, life: 3000 });
                 isLoading.value = false;
