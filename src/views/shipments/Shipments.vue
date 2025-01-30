@@ -86,6 +86,8 @@ onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     admissionsLists.value = formatAdmissionsLists(data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+
+    console.log(admissionsLists.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -220,7 +222,7 @@ const onUploadShipments = async (event) => {
                 return;
             }
             const isValidData = validateData(rows);
-            const dataSet = processDataDatabaseSettlements(rows);
+            const dataSet = processDataDatabaseShipments(rows);
             if (!isValidData || dataSet.length === 0) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 isLoading.value = false;

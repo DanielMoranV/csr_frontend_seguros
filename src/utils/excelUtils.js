@@ -117,6 +117,28 @@ export const processDataDatabaseSettlements = (rows) => {
     return dataSetSettlements;
 };
 
+// Procesar los datos de la tabla de envíos
+export const processDataDatabaseShipments = (rows) => {
+    const dataSetShipments = rows
+        .slice(2)
+        .filter((row) => row[11] != '')
+        .filter((row) => row[14]?.toLowerCase() === 'x')
+        .filter((row) => row[15]?.toLowerCase() === 'x')
+        .filter((row) => row[16]?.toLowerCase() === 'x')
+        .filter((row) => row[17])
+        .filter((row) => row[18])
+        .filter((row) => row[19])
+        .map((row) => ({
+            admission_number: row[1],
+            medical_record_number: row[2] ? parseInt(row[2], 10) : null,
+            biller: row[10],
+            period: row[11],
+            start_date: row[12] ? validateDate(row[12]) : null,
+            end_date: row[13] ? validateDate(row[13]) : null
+        }));
+    return dataSetShipments;
+};
+
 // Función para procesar los datos
 export const processDataDatabase = (rows) => {
     const dataSet = rows
