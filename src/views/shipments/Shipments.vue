@@ -1,11 +1,9 @@
 <script setup>
-import { fetchAdmissionsListsByPeriod } from '@/api';
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { dformat, dformatLocal } from '@/utils/day';
-import { exportToExcel } from '@/utils/excelUtils';
-import indexedDB from '@/utils/indexedDB';
+import { exportToExcel, validateData, validateHeaders } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
@@ -14,6 +12,7 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
 const medicalRecordStore = useMedicalRecordsRequestsStore();
+const isLoading = ref(false);
 const confirm = useConfirm();
 const toast = useToast();
 const admissionsLists = ref([]);
@@ -23,6 +22,27 @@ const periods = ref([]);
 const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
+const headerShipments = ref([
+    'Admisión',
+    'Historia',
+    'Fecha',
+    'Paciente',
+    'Médico,',
+    'Aseguradora',
+    'Tipo',
+    'Monto',
+    'Facturador',
+    'Estado Audit',
+    'Factura',
+    'Pago',
+    'Env Iniciado',
+    'Env. Trama',
+    'Env. Currier',
+    'Env. Email',
+    'URL Sust.',
+    'Comentarios',
+    'Verif. Envío'
+]);
 const getCurrentPeriod = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -70,7 +90,6 @@ onMounted(async () => {
 
 const formatAdmissionsLists = (data) => {
     if (data.length === 0) {
-        admissionsLists.value = [];
         toast.add({
             severity: 'info',
             summary: 'No hay datos',
@@ -79,34 +98,29 @@ const formatAdmissionsLists = (data) => {
         });
         return [];
     }
-    // Agrupar por número de admisión
-    const groupedAdmissions = data.reduce((acc, admission) => {
-        if (!acc[admission.number]) {
-            acc[admission.number] = [];
-        }
-        acc[admission.number].push(admission);
-        return acc;
-    }, {});
 
-    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
-    const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
-        return group.reduce((latest, current) => {
-            return new Date(latest.invoice_date) > new Date(current.invoice_date) ? latest : current;
-        });
-    });
+    // Filtrar registros que tengan invoice_number y que no inicien con '005-'
+    const filteredData = data.filter((admission) => admission.invoice_number && !admission.invoice_number.startsWith('005-'));
+
+    // Agrupar por número de admisión y seleccionar el registro con la fecha de factura más reciente
+    const uniqueAdmissions = Object.values(
+        filteredData.reduce((acc, admission) => {
+            if (!acc[admission.number] || new Date(acc[admission.number].invoice_date) < new Date(admission.invoice_date)) {
+                acc[admission.number] = admission;
+            }
+            return acc;
+        }, {})
+    );
 
     uniqueAdmissions.forEach((admission) => {
-        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
-            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
-        }
-        // end_date es la fecha limite que se permite facturar comprarla con invoice_date para determinar si esta a tiempo o no, si end_date es mayor a invoice_date esta a tiempo
+        // if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
+        //     admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
+        // }
+        // Determinar si la admisión está a tiempo o fuera de tiempo
         admission.isLate = new Date(admission.end_date) >= new Date(admission.invoice_date);
-        if (admission.isLate) {
-            admission.status = 'A tiempo';
-        } else {
-            admission.status = 'Fuera de tiempo';
-        }
+        admission.status = admission.isLate ? 'A tiempo' : 'Fuera de tiempo';
     });
+
     return uniqueAdmissions;
 };
 
@@ -153,19 +167,16 @@ const exportAdmissions = async () => {
         { header: 'Tipo', key: 'type', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
-        { header: 'Periodo', key: 'period', width: 15 },
-        { header: 'Fecha Inicio', key: 'start_date', width: 13 },
-        { header: 'Fecha Final', key: 'end_date', width: 13 },
-        { header: 'Observacion Facturación', key: 'observations', width: 15 },
-        { header: 'Entrega Historia', key: 'medicalRecordRequestStatus', width: 15 },
-        { header: 'Fecha Entrega Historia', key: 'medicalRecordRequestResponseDate', width: 15 },
-        { header: 'Liquidado', key: 'is_closed', width: 15 },
-        { header: 'Entrega  Auditoria', key: 'audit_requested_at', width: 15 },
-        { header: 'Descripción Auditoria', key: 'auditDescription', width: 15 },
         { header: 'Estado Audit', key: 'auditStatus', width: 15 },
         { header: 'Factura', key: 'invoice_number', width: 15 },
-        { header: 'Fecha Envío', key: 'shipmentVerifiedShipmentDate', width: 15 },
-        { header: 'Pago', key: 'paid_invoice_number', width: 15 }
+        { header: 'Pago', key: 'paid_invoice_number', width: 15 },
+        { header: 'Env Iniciado', key: 'shipment_id', width: 15 },
+        { header: 'Env. Trama', key: 'shipment.trama_date', width: 15 },
+        { header: 'Env. Currier', key: 'shipment.courier_date', width: 15 },
+        { header: 'Env. Email', key: 'shipment.email_verified_date', width: 15 },
+        { header: 'URL Sust.', key: 'shipment.url_sustenance', width: 15 },
+        { header: 'Comentarios', key: 'shipment.remarks', width: 15 },
+        { header: 'Verif. Envío', key: 'shipmentVerifiedShipmentDate', width: 15 }
     ];
 
     const data = admissionsLists.value.map((admission) => {
@@ -179,142 +190,58 @@ const exportAdmissions = async () => {
             amount: Number(admission.amount),
             type: admission.type,
             biller: admission.biller,
-            period: admission.period,
-            start_date: admission.start_date ? dformat(admission.start_date, 'DD/MM/YYYY') : '-',
-            end_date: admission.end_date ? dformat(admission.end_date, 'DD/MM/YYYY') : '-',
-            observations: admission.observations,
-            medicalRecordRequestStatus: admission.medical_record_request ? admission.medical_record_request.status : '-',
-            medicalRecordRequestResponseDate: admission.medical_record_request && admission.medical_record_request.response_date ? dformat(admission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
-            is_closed: admission.is_closed ? 'Si' : 'No',
-            audit_requested_at: admission.audit_requested_at ? dformatLocal(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
-            auditDescription: admission.audit ? admission.audit.description : '-',
             auditStatus: admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
             shipmentVerifiedShipmentDate: admission.shipment ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
-            paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No'
+            paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No',
+            shipment_id: admission.shipment_id ? 'Si' : 'No',
+            'shipment.trama_date': admission.shipment ? dformat(admission.shipment.trama_date, 'DD/MM/YYYY') : '-',
+            'shipment.courier_date': admission.shipment ? dformat(admission.shipment.courier_date, 'DD/MM/YYYY') : '-',
+            'shipment.email_verified_date': admission.shipment ? dformat(admission.shipment.email_verified_date, 'DD/MM/YYYY') : '-',
+            'shipment.url_sustenance': admission.shipment ? admission.shipment.url_sustenance : '-', // url_sustenance
+            'shipment.remarks': admission.shipment ? admission.shipment.remarks : '-' // remarks
         };
     });
-    let responseAdmissionsList = await fetchAdmissionsListsByPeriod(period.value);
-    // Add new records from responseAdmissionsList.data to data if they don't already exist
-    responseAdmissionsList.data.forEach((newAdmission) => {
-        const exists = data.some((admission) => admission.admission_number === newAdmission.admission_number);
-        if (!exists) {
-            data.push({
-                admission_number: newAdmission.admission_number,
-                medical_record_number: newAdmission.medical_record_number,
-                attendance_date: newAdmission.attendance_date ? dformatLocal(newAdmission.attendance_date, 'DD/MM/YYYY') : '-',
-                patient: newAdmission.patient,
-                doctor: newAdmission.doctor,
-                insurer_name: newAdmission.insurer_name,
-                amount: newAdmission.amount ? Number(newAdmission.amount) : 0,
-                type: newAdmission.type,
-                biller: newAdmission.biller,
-                period: newAdmission.period,
-                start_date: newAdmission.start_date ? dformat(newAdmission.start_date, 'DD/MM/YYYY') : '-',
-                end_date: newAdmission.end_date ? dformat(newAdmission.end_date, 'DD/MM/YYYY') : '-',
-                observations: newAdmission.observations,
-                medicalRecordRequestStatus: newAdmission.medical_record_request ? newAdmission.medical_record_request.status : '-',
-                medicalRecordRequestResponseDate: newAdmission.medical_record_request ? dformat(newAdmission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
-                is_closed: newAdmission.is_closed ? 'Si' : 'No',
-                audit_requested_at: newAdmission.audit_requested_at ? dformatLocal(newAdmission.audit_requested_at, 'DD/MM/YYYY') : '-',
-                auditDescription: newAdmission.audit ? newAdmission.audit.description : '-',
-                auditStatus: newAdmission.audit ? newAdmission.audit.status : '-',
-                invoice_number: newAdmission.invoice_number ? newAdmission.invoice_number : '-',
-                shipmentVerifiedShipmentDate: newAdmission.shipment ? dformat(newAdmission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
-                paid_invoice_number: newAdmission.paid_invoice_number ? 'Si' : 'No'
-            });
-        }
-    });
-    await exportToExcel(columns, data, 'Admisiones Facturadas', 'Admisiones Facturadas');
-};
-const editObservation = async (admission) => {
-    let payload = {
-        id: admission.id,
-        observations: admission.observations
-    };
-    await admissionsListStore.updateAdmissionsList(payload);
 
-    // modificar el registro de  admissionsLists segun admision.admision_number
-    const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
-    if (index !== -1) {
-        admissionsLists.value[index].observations = admission.observations;
-        // modificar en indexedDB
-        await indexedDB.setItem('admissionsLists', admissionsLists.value);
-    }
+    await exportToExcel(columns, data, 'Facturas para Envios', 'Facturas para Envios');
 };
 
-const sendMedicalRecord = async (medicalRecord) => {
-    let medicalRecordRequest = medicalRecord.medical_record_request;
-    let payload = {
-        ...medicalRecordRequest,
-        status: 'Atendido',
-        requested_nick: nickName.value,
-        response_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
-    };
-    let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
-
-    if (responseMedicalRecord.success) {
-        const index = admissionsLists.value.findIndex((item) => item.admission_number === medicalRecord.admission_number);
-        toast.add({ severity: 'info', summary: 'Confirmación', detail: 'Entrega de historia confirmado', life: 3000 });
-        if (index !== -1) {
-            admissionsLists.value[index].medical_record_request = responseMedicalRecord.data;
-            // modificar en indexedDB
-            await indexedDB.setItem('admissionsLists', admissionsLists.value);
-        } else {
-            toast.add({ severity: 'error', summary: 'Cancelar', detail: 'Has cancelado la operación', life: 3000 });
-        }
-    }
-};
-
-const confirmRejectMedicalRecord = (data) => {
-    if (!data.observations) {
-        toast.add({ severity: 'error', summary: 'Rejected', detail: 'Detallar el motivo del rechazo en el campo OBSERVACIÓN', life: 3000 });
-        return;
-    }
-
-    confirm.require({
-        message: 'Motivo: ' + data.observations,
-        header: 'Rechazar Envío Historia',
-        icon: 'pi pi-info-circle',
-        rejectLabel: 'Cancelar',
-        rejectProps: {
-            label: 'Cancelar',
-            severity: 'secondary',
-            outlined: true
-        },
-        acceptProps: {
-            label: 'Rechazar',
-            severity: 'danger'
-        },
-        accept: async () => {
-            let medicalRecordRequest = data.medical_record_request;
-            let payload = {
-                ...medicalRecordRequest,
-                status: 'Rechazado',
-                remarks: data.observations,
-                requested_nick: nickName.value,
-                response_date: new Date().toISOString().slice(0, 19).replace('T', ' ')
-            };
-            let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
-            if (responseMedicalRecord.success) {
-                const index = admissionsLists.value.findIndex((item) => item.admission_number === data.admission_number);
-                if (index !== -1) {
-                    admissionsLists.value[index].medical_record_request = {
-                        ...responseMedicalRecord.data
-                    };
-                    // modificar en indexedDB
-                    await indexedDB.setItem('admissionsLists', admissionsLists.value);
-                } else {
-                    toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró la admisión', life: 3000 });
-                }
+// Importar Meta Envios
+const onUploadShipments = async (event) => {
+    const file = event.files[0];
+    if (file && file.name.endsWith('.xlsx')) {
+        try {
+            isLoading.value = true;
+            const rows = await loadExcelFile(file);
+            const isValidHeaders = validateHeaders(rows[1], headerShipments);
+            if (!isValidHeaders.success) {
+                toast.add({ severity: 'error', summary: 'Error', detail: `Faltan las cabeceras: ${isValidHeaders.missingHeaders.join(', ')}`, life: 3000 });
+                isLoading.value = false;
+                return;
+            }
+            const isValidData = validateData(rows);
+            const dataSet = processDataDatabaseSettlements(rows);
+            if (!isValidData || dataSet.length === 0) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
+                isLoading.value = false;
+                return;
             }
 
-            toast.add({ severity: 'info', summary: 'Confirmación', detail: 'Entrega de historia rechazado', life: 3000 });
-        },
-        reject: () => {
-            toast.add({ severity: 'error', summary: 'Rejected', detail: 'You have rejected', life: 3000 });
+            let { seenMedicalRecordsRequests } = await classifyAdmissionsLists(dataSet);
+
+            let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
+            if (!success) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
+            } else {
+                toast.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo cargado correctamente', life: 3000 });
+            }
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
         }
-    });
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no es válido', life: 3000 });
+    }
+    isLoading.value = false;
 };
 </script>
 <template>
@@ -427,7 +354,8 @@ const confirmRejectMedicalRecord = (data) => {
             <Column field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem"></Column>
             <Column field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem"></Column>
             <Column field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem"></Column>
-            <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 5rem"></Column>
+            <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 8rem"></Column>
+            <Column field="shipment.remarks" header="Comentarios" sortable style="min-width: 5rem"></Column>
             <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Envío">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
@@ -439,14 +367,14 @@ const confirmRejectMedicalRecord = (data) => {
                 </template>
             </Column>
             <Column field="status" header="Estado" sortable></Column>
-            <Column field="actions" header="Envío Fact" style="width: 8rem">
+            <!-- <Column field="actions" header="Verf. Envío" style="width: 8rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.medical_record_request.status == 'Pendiente'" class="flex gap-2">
                         <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="sendMedicalRecord(slotProps.data)" />
                         <Button type="button" icon="pi pi-times" class="p-button-rounded p-button-danger p-button-outlined p-button-sm" @click="confirmRejectMedicalRecord(slotProps.data)" />
                     </span>
                 </template>
-            </Column>
+            </Column> -->
         </DataTable>
     </div>
 </template>
