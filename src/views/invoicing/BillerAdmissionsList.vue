@@ -166,7 +166,7 @@ const resumenAdmissionsList = (data) => {
         if (amount > 0) {
             acc[item.biller].totalAmount += amount;
         }
-        if (item.is_closed === true) acc[item.biller].closedTrue++;
+        if (item.is_closed === 1) acc[item.biller].closedTrue++;
         if (item.paid_invoice_number !== null) acc[item.biller].paidNotNull++;
         if (item.audit_requested_at !== null) acc[item.biller].audit_requested_at++;
         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.biller].invoiceNotNull++;

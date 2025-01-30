@@ -120,7 +120,7 @@ export default {
                 ${DEVOLUCIONES}.num_fac as invoice_number,
                 ${DEVOLUCIONES}.fec_fac as invoice_date,
                 ${DEVOLUCIONES}.tot_fac as invoice_amount,
-                ${DEVOLUCIONES}.nom_cia as insurer_name,
+                ${ASEGURADORAS}.nom_cia as insurer_name,
                 ${DEVOLUCIONES}.fec_doc as attendance_date,
                 ${DEVOLUCIONES}.nom_pac as nom_pac,
                 ${DEVOLUCIONES}.nom_ser as doctor,
@@ -147,11 +147,16 @@ export default {
                     GROUP BY ${FACTURAS}.num_doc
                 ) AS last_invoice_data ON ${DEVOLUCIONES}.num_doc = last_invoice_data.num_doc
                 INNER JOIN ${PACIENTES} ON ${DEVOLUCIONES}.cod_pac = ${PACIENTES}.cod_pac
+                LEFT JOIN ${ADMISIONES} ON ${ADMISIONES}.num_doc = ${DEVOLUCIONES}.num_doc
+                LEFT JOIN ${ASEGURADORAS} ON LEFT(${ADMISIONES}.cod_emp, 2) = ${ASEGURADORAS}.cod_cia
                 WHERE
                 ${DEVOLUCIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
+                AND ${ASEGURADORAS}.nom_cia <> 'PARTICULAR'
+                AND ${ASEGURADORAS}.nom_cia <> 'PACIENTES PARTICULARES'
                 ORDER BY ${DEVOLUCIONES}.num_doc DESC;
                 `;
         try {
+            console.log(query);
             const response = await executeQuery({ query });
             return handleResponseMysql(response);
         } catch (error) {

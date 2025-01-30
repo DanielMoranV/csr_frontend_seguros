@@ -88,7 +88,7 @@ const router = createRouter({
                     path: '/medical-records-tracking',
                     name: 'medical-records-tracking',
                     component: () => import('@/views/medicalRecord/MedicalRecordsTracking.vue'),
-                    meta: { positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] }
+                    meta: { positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS', 'FACTURACION'] }
                 },
                 {
                     path: '/shipments',

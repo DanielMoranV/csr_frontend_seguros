@@ -52,7 +52,7 @@ const model = ref([
     {
         label: 'Gestión de Expedientes',
         items: [
-            { label: 'Seguimiento His. Clín.', icon: 'pi pi-fw pi-book', to: '/medical-records-tracking', positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] },
+            { label: 'Seguimiento His. Clín.', icon: 'pi pi-fw pi-book', to: '/medical-records-tracking', positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS', 'FACTURACION'] },
             { label: 'Gestión Exp. Seguros', icon: 'pi pi-fw pi-verified', to: '/insurers-tracking', positions: ['ADMINISTRACION', 'ARCHIVO HISTORIAS'] }
             // { label: 'Expedientes Seguros', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['FACTURACION'] },
             // { label: 'Solicitudes Expedientes', icon: 'pi pi-fw pi-user-plus', to: '/patients-tracking', positions: ['ADMINISTRACION', 'FACTURACION'] }
@@ -61,7 +61,7 @@ const model = ref([
     },
     {
         label: 'Envios de Facturas',
-        items: [{ label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/shipments', positions: ['ASISTENTE FACTURACION'] }]
+        items: [{ label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/shipments', positions: ['ASISTENTE FACTURACION', 'FACTURACION', 'ADMINISTRACION'] }]
     },
     {
         label: 'Sistemas',
