@@ -232,6 +232,12 @@ const onUploadShipments = async (event) => {
             console.log('newShipments', newShipments);
             console.log('updatedShipments', updatedShipments);
 
+            let payload = {
+                newShipments,
+                updatedShipments
+            };
+            console.log('payload', payload);
+
             return;
 
             let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
