@@ -122,19 +122,22 @@ export const processDataDatabaseShipments = (rows) => {
     const dataSetShipments = rows
         .slice(2)
         .filter((row) => row[11] != '')
-        .filter((row) => row[14]?.toLowerCase() === 'x')
-        .filter((row) => row[15]?.toLowerCase() === 'x')
-        .filter((row) => row[16]?.toLowerCase() === 'x')
+        .filter((row) => row[13])
+        .filter((row) => row[14])
+        .filter((row) => row[15])
+        .filter((row) => row[16])
         .filter((row) => row[17])
         .filter((row) => row[18])
         .filter((row) => row[19])
         .map((row) => ({
-            admission_number: row[1],
-            medical_record_number: row[2] ? parseInt(row[2], 10) : null,
-            biller: row[10],
-            period: row[11],
-            start_date: row[12] ? validateDate(row[12]) : null,
-            end_date: row[13] ? validateDate(row[13]) : null
+            invoice_number: row[11],
+            isNewShipment: row[13]?.toLowerCase() === 'no' ? true : row[13]?.toLowerCase() === 'si' ? false : null,
+            trama_date: row[14] ? row[14] : null,
+            courier_date: row[15] ? row[15] : null,
+            email_verified_date: row[16] ? row[16] : null,
+            url_sustenance: row[17] ? row[17] : null,
+            remarks: row[18] ? row[18] : null,
+            verified_shipment_date: row[19] ? validateDate(row[19]) : null
         }));
     return dataSetShipments;
 };

@@ -143,6 +143,54 @@ export const classifyAdmissionsLists = async (dataSet) => {
     };
 };
 
+export const classifyShipments = async (dataSet) => {
+    // Obtener la fecha actual en formato MySQL (YYYY-MM-DD)
+    const getCurrentDate = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+    };
+
+    // Arrays para almacenar los envíos clasificados
+    const newShipments = [];
+    const updatedShipments = [];
+
+    // Procesar cada envío en el dataSet
+    dataSet.forEach((shipment) => {
+        const { isNewShipment, trama_date, courier_date, email_verified_date, ...rest } = shipment;
+
+        // Función para procesar una fecha
+        const processDate = (dateValue) => {
+            if (dateValue?.toLowerCase() === 'x') {
+                return getCurrentDate(); // Asignar fecha actual si es "x" o "X"
+            } else if (dateValue) {
+                return null; // Eliminar el campo si tiene un valor distinto a "x" o "X"
+            }
+            return null; // Si está vacío, dejar como null
+        };
+
+        // Crear un nuevo objeto con las fechas procesadas
+        const processedShipment = {
+            ...rest,
+            ...(processDate(trama_date) && { trama_date: processDate(trama_date) }),
+            ...(processDate(courier_date) && { courier_date: processDate(courier_date) }),
+            ...(processDate(email_verified_date) && { email_verified_date: processDate(email_verified_date) })
+        };
+
+        // Clasificar el envío en newShipments o updatedShipments
+        if (isNewShipment === true) {
+            newShipments.push(processedShipment);
+        } else if (isNewShipment === false) {
+            updatedShipments.push(processedShipment);
+        }
+    });
+
+    // Retornar los envíos clasificados y procesados
+    return {
+        newShipments,
+        updatedShipments
+    };
+};
+
 export const importSettlements = async (seenSettlements, settlementsStore, toast) => {
     let settlements = await settlementsStore.initializeStore();
     let settlementsData = seenSettlements;

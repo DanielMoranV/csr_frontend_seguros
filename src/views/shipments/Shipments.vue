@@ -2,8 +2,9 @@
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
+import { classifyShipments } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
-import { exportToExcel, validateData, validateHeaders } from '@/utils/excelUtils';
+import { exportToExcel, loadExcelFile, processDataDatabaseShipments, validateData, validateHeaders } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
@@ -22,12 +23,11 @@ const periods = ref([]);
 const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
-const headerShipments = ref([
+const headerShipments = [
     'Admisión',
     'Historia',
     'Fecha',
     'Paciente',
-    'Médico,',
     'Aseguradora',
     'Tipo',
     'Monto',
@@ -42,7 +42,7 @@ const headerShipments = ref([
     'URL Sust.',
     'Comentarios',
     'Verif. Envío'
-]);
+];
 const getCurrentPeriod = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -86,8 +86,6 @@ onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     admissionsLists.value = formatAdmissionsLists(data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-
-    console.log(admissionsLists.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -134,7 +132,7 @@ const resumenAdmissionsList = (data) => {
             acc[item.biller] = {
                 biller: item.biller,
                 total: 0,
-                medical_record_request: 0,
+                verified_shipment: 0,
                 totalAmount: 0 // como añado el monto total de amount por biller
             };
         }
@@ -145,7 +143,7 @@ const resumenAdmissionsList = (data) => {
         if (amount > 0) {
             acc[item.biller].totalAmount += amount;
         }
-        if (item.medical_record_request.status == 'Atendido') acc[item.biller].medical_record_request++;
+        if (item.shipment && item.shipment?.verified_shipment_date) acc[item.biller].verified_shipment++;
 
         return acc;
     }, {});
@@ -229,7 +227,12 @@ const onUploadShipments = async (event) => {
                 return;
             }
 
-            let { seenMedicalRecordsRequests } = await classifyAdmissionsLists(dataSet);
+            let { newShipments, updatedShipments } = await classifyShipments(dataSet);
+
+            console.log('newShipments', newShipments);
+            console.log('updatedShipments', updatedShipments);
+
+            return;
 
             let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
             if (!success) {
@@ -238,6 +241,7 @@ const onUploadShipments = async (event) => {
                 toast.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo cargado correctamente', life: 3000 });
             }
         } catch (error) {
+            console.log(error);
             toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
         }
     } else {
@@ -258,7 +262,7 @@ const onUploadShipments = async (event) => {
                             {{ formatCurrency(slotProps.data.totalAmount) }}
                         </template>
                     </Column>
-                    <Column field="medical_record_request" header="Entreg."></Column>
+                    <Column field="verified_shipment" header="Verf Envi."></Column>
                 </DataTable>
             </template>
 
@@ -298,6 +302,10 @@ const onUploadShipments = async (event) => {
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAdmissions()" />
+                    <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Envios" chooseLabel="Envios" class="w-full inline-block" :auto="true" @select="onUploadShipments($event)" />
+                    <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
+                        <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
+                    </div>
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
