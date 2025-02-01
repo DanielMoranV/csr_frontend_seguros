@@ -1,4 +1,4 @@
-import { createShipment, deleteShipment, fetchShipments, updateShipment } from '@/api';
+import { createAndUpdateShipments, createShipment, deleteShipment, fetchShipments, updateShipment } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -66,6 +66,17 @@ export const useShipmentsStore = defineStore('shipmentsStore', {
                 this.message = 'Envío eliminado correctamente';
             }
             return this.success;
+        },
+
+        async createAndUpdateShipments(payload) {
+            this.loading = true;
+            const { data } = await handleResponseStore(createAndUpdateShipments(payload), this);
+            if (this.success) {
+                this.shipments = data;
+                indexedDB.setItem('shipments', this.shipments);
+                this.message = 'Envío creado y actualizado correctamente';
+            }
+            return { success: this.success, data: data };
         }
     }
 });

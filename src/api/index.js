@@ -109,3 +109,4 @@ export const fetchShipmentsByDateRange = (payload) => axios.post('/shipments/by-
 export const fetchShipmentsByNumber = (number) => axios.get(`/shipments/by-number/${number}`);
 export const fetchShipmentsByAdmissionNumber = (number) => axios.get(`/shipments/by-admission-number/${number}`);
 export const fetchShipmentsByAdmissionsNumbers = (numbers) => axios.post('/shipments/by-admissions-numbers', numbers);
+export const createAndUpdateShipments = (payload) => axios.post('/shipments/create-and-update', payload);

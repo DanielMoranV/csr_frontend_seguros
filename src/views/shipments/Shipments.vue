@@ -2,6 +2,7 @@
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
+import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { classifyShipments } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseShipments, validateData, validateHeaders } from '@/utils/excelUtils';
@@ -12,6 +13,7 @@ import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
+const shipmentsStore = useShipmentsStore();
 const medicalRecordStore = useMedicalRecordsRequestsStore();
 const isLoading = ref(false);
 const confirm = useConfirm();
@@ -238,9 +240,8 @@ const onUploadShipments = async (event) => {
             };
             console.log('payload', payload);
 
-            return;
-
-            let { success, data } = await admissionsListStore.createAdmissionListAndRequest(seenMedicalRecordsRequests);
+            let { success, data } = await shipmentsStore.createAndUpdateShipments(payload);
+            console.log('success', data);
             if (!success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
             } else {
