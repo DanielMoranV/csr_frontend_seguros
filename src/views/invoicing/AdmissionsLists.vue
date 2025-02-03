@@ -187,6 +187,9 @@ const exportAdmissions = async () => {
     ];
 
     const data = admissionsLists.value.map((admission) => {
+        const formatDate = (date) => {
+            return date ? dformat(date, 'DD/MM/YYYY') : '-';
+        };
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
@@ -202,7 +205,7 @@ const exportAdmissions = async () => {
             end_date: admission.end_date ? dformat(admission.end_date, 'DD/MM/YYYY') : '-',
             observations: admission.observations,
             medicalRecordRequestStatus: admission.medical_record_request ? admission.medical_record_request.status : '-',
-            medicalRecordRequestResponseDate: admission.medical_record_request ? dformat(admission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
+            medicalRecordRequestResponseDate: admission.medical_record_request ? formatDate(admission.medical_record_request.response_date) : '-',
             is_closed: admission.is_closed ? 'Si' : 'No',
             audit_requested_at: admission.audit_requested_at ? dformatLocal(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
             auditDescription: admission.audit ? admission.audit.description : '-',

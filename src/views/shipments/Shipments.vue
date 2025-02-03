@@ -182,6 +182,9 @@ const exportAdmissions = async () => {
     ];
 
     const data = admissionsLists.value.map((admission) => {
+        const formatDate = (date) => {
+            return date ? dformat(date, 'DD/MM/YYYY') : '-';
+        };
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
@@ -194,14 +197,14 @@ const exportAdmissions = async () => {
             biller: admission.biller,
             auditStatus: admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
-            shipmentVerifiedShipmentDate: admission.shipment ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
+            shipmentVerifiedShipmentDate: admission.shipment ? formatDate(admission.shipment.verified_shipment_date) : '-',
             paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No',
             shipment_id: admission.shipment_id ? 'Si' : 'No',
-            'shipment.trama_date': admission.shipment ? dformat(admission.shipment.trama_date, 'DD/MM/YYYY') : '-',
-            'shipment.courier_date': admission.shipment ? dformat(admission.shipment.courier_date, 'DD/MM/YYYY') : '-',
-            'shipment.email_verified_date': admission.shipment ? dformat(admission.shipment.email_verified_date, 'DD/MM/YYYY') : '-',
-            'shipment.url_sustenance': admission.shipment ? admission.shipment.url_sustenance : '-', // url_sustenance
-            'shipment.remarks': admission.shipment ? admission.shipment.remarks : '-' // remarks
+            'shipment.trama_date': admission.shipment ? formatDate(admission.shipment.trama_date) : '-',
+            'shipment.courier_date': admission.shipment ? formatDate(admission.shipment.courier_date) : '-',
+            'shipment.email_verified_date': admission.shipment ? formatDate(admission.shipment.email_verified_date) : '-',
+            'shipment.url_sustenance': admission.shipment ? admission.shipment.url_sustenance : '-',
+            'shipment.remarks': admission.shipment ? admission.shipment.remarks : '-'
         };
     });
 
@@ -231,17 +234,13 @@ const onUploadShipments = async (event) => {
 
             let { newShipments, updatedShipments } = await classifyShipments(dataSet);
 
-            console.log('newShipments', newShipments);
-            console.log('updatedShipments', updatedShipments);
-
             let payload = {
                 newShipments,
                 updatedShipments
             };
-            console.log('payload', payload);
 
             let { success, data } = await shipmentsStore.createAndUpdateShipments(payload);
-            console.log('success', data);
+
             if (!success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
             } else {
@@ -368,12 +367,59 @@ const onUploadShipments = async (event) => {
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem"></Column>
-            <Column field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem"></Column>
-            <Column field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem"></Column>
-            <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 8rem"></Column>
-            <Column field="shipment.remarks" header="Comentarios" sortable style="min-width: 5rem"></Column>
-            <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Envío">
+            <Column field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.trama_date">
+                        {{ dformat(slotProps.data.shipment.trama_date, 'DD/MM/YYYY') }}
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.courier_date">
+                        {{ dformat(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.email_verified_date">
+                        {{ dformat(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 8rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.url_sustenance">
+                        <a :href="slotProps.data.shipment.url_sustenance" target="_blank">
+                            {{ slotProps.data.shipment.url_sustenance }}
+                        </a>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="shipment.remarks" header="Comentarios" sortable style="min-width: 5rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.remarks">
+                        {{ slotProps.data.shipment.remarks }}
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Verif. Envío">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
                         <span class="text-green-500">{{ dformat(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>

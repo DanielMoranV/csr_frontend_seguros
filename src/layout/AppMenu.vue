@@ -35,8 +35,7 @@ const model = ref([
             { label: 'Análisis de Metas', icon: 'pi pi-fw pi-map', to: '/admissions-lists', positions: ['ADMINISTRACION', 'AUDITOR MEDICO', 'ASISTENTE FACTURACION'] },
             { label: 'Lista Facturador', icon: 'pi pi-fw pi-file', to: '/admissions-list-biller', positions: ['FACTURACION', 'ADMINISTRACION'] },
             { label: 'Devoluciones', icon: 'pi pi-fw pi-ban', to: '/devolutions', positions: ['FACTURACION', 'AUDITOR MEDICO', 'ADMINISTRACION'] },
-            { label: 'Notas de Crédito', icon: 'pi pi-fw pi-dollar', to: '/credit-notes', positions: ['admin'] },
-            { label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/shipments', positions: ['FACTURACION', 'ADMINISTRACION'] }
+            { label: 'Notas de Crédito', icon: 'pi pi-fw pi-dollar', to: '/credit-notes', positions: ['admin'] }
         ],
         positions: ['FACTURACION', 'ADMINISTRACION', 'AUDITOR MEDICO', 'ASISTENTE FACTURACION']
     },
@@ -61,7 +60,11 @@ const model = ref([
     },
     {
         label: 'Envios de Facturas',
-        items: [{ label: 'Envios Facturas', icon: 'pi pi-fw pi-send', to: '/shipments', positions: ['ASISTENTE FACTURACION', 'FACTURACION', 'ADMINISTRACION'] }]
+        items: [
+            { label: 'Envios Listas', icon: 'pi pi-fw pi-send', to: '/shipments', positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] },
+            { label: 'Envios General', icon: 'pi pi-fw pi-file', to: '/shipments-all', positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] }
+        ],
+        positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION']
     },
     {
         label: 'Sistemas',

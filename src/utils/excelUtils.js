@@ -121,6 +121,7 @@ export const processDataDatabaseSettlements = (rows) => {
 export const processDataDatabaseShipments = (rows) => {
     const dataSetShipments = rows
         .slice(2)
+        .filter((row) => row[1] !== '')
         .filter((row) => row[11] != '')
         .filter((row) => row[13])
         .filter((row) => row[14])
@@ -130,6 +131,7 @@ export const processDataDatabaseShipments = (rows) => {
         .filter((row) => row[18])
         .filter((row) => row[19])
         .map((row) => ({
+            admission_number: row[1],
             invoice_number: row[11],
             isNewShipment: row[13]?.toLowerCase() === 'no' ? true : row[13]?.toLowerCase() === 'si' ? false : null,
             trama_date: row[14] ? row[14] : null,
