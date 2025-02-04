@@ -64,27 +64,47 @@ export const useMedicalRecordsRequestsStore = defineStore('medicalRecordsRequest
 
         async fetchMedicalRecordsRequestsByDateRange(payload) {
             this.loading = true;
+
             const { data } = await handleResponseStore(fetchMedicalRecordsRequestsByDateRange(payload), this);
-            if (this.success) {
-                this.medicalRecordsRequests = data;
 
-                const patientsNumbers = data.map((patientsList) => patientsList.medical_record_number.replace(/^0+/, ''));
+            if (this.success && Array.isArray(data)) {
+                // Filtrar solo elementos válidos
+                this.medicalRecordsRequests = data.filter((request) => request?.medical_record_number);
 
-                let { results, errors } = await FastApiService.patientsByNumbers(patientsNumbers);
-                // Combinar los arrays
-                console.log('errors', errors);
-                // Combinar los arrays
-                const combinedArray = data.map((request) => {
-                    const patient = results.find((result) => result.medical_record_number.replace(/^0+/, '') === request.medical_record_number.replace(/^0+/, ''));
-                    return { ...request, ...patient };
-                });
-                // Filtrar elementos sin coincidencia si es necesario
-                const filteredCombinedArray = combinedArray.filter((item) => item.medical_record_number);
-                await indexedDB.setItem('medicalRecordsRequests', filteredCombinedArray);
-                this.medicalRecordsRequests = filteredCombinedArray;
+                // Extraer los números de historia clínica, eliminando ceros iniciales
+                const patientsNumbers = this.medicalRecordsRequests.map((request) => request.medical_record_number?.replace(/^0+/, '') || '');
+
+                // Verificar si hay números de pacientes válidos antes de la consulta
+                if (patientsNumbers.length > 0) {
+                    let { results, errors } = await FastApiService.patientsByNumbers(patientsNumbers);
+
+                    // Imprimir errores si existen
+                    if (errors?.length) {
+                        console.error('Errores en la consulta a FastAPI:', errors);
+                    }
+
+                    // Asegurar que `results` es un array antes de procesarlo
+                    if (Array.isArray(results)) {
+                        const combinedArray = this.medicalRecordsRequests.map((request) => {
+                            const patient = results.find((result) => result?.medical_record_number?.replace(/^0+/, '') === request?.medical_record_number?.replace(/^0+/, ''));
+                            return { ...request, ...(patient || {}) }; // Combinar solo si se encuentra el paciente
+                        });
+
+                        // Filtrar datos sin `medical_record_number`
+                        const filteredCombinedArray = combinedArray.filter((item) => item?.medical_record_number);
+
+                        // Guardar en IndexedDB solo si hay datos válidos
+                        if (filteredCombinedArray.length > 0) {
+                            await indexedDB.setItem('medicalRecordsRequests', filteredCombinedArray);
+                        }
+
+                        this.medicalRecordsRequests = filteredCombinedArray;
+                    }
+                }
             } else {
                 this.medicalRecordsRequests = [];
             }
+
             this.loading = false;
             return { success: this.success, data: this.medicalRecordsRequests };
         },
