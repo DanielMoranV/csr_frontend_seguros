@@ -356,6 +356,11 @@ export const importDevolutions = async (seenDevolutions, devolutionsStore, toast
     return { successComplete: responseUpdate.success && responseNew.success, countNew: responseNew.countSuccess, countUpdate: responseUpdate.countSuccess, countErrorNew: responseNew.countError, countErrorUpdate: responseUpdate.countError };
 };
 
+// Función genérica para calcular totales
+export const getTotal = (resumen, field) => {
+    return resumen.reduce((sum, item) => sum + (item[field] || 0), 0);
+};
+
 const updateExistingRecords = async (records, store, toast) => {
     if (records.length === 0) return { countSuccess: 0, countError: 0, success: true };
     const results = { countSuccess: 0, countError: 0, success: true };

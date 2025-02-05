@@ -3,6 +3,7 @@ import { fetchAdmissionsListsByPeriod } from '@/api';
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
+import { getTotal } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
@@ -322,14 +323,29 @@ const confirmRejectMedicalRecord = (data) => {
         <Toolbar class="mb-6">
             <template #start>
                 <DataTable :value="resumenAdmissions" tableStyle="min-width: 30rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
-                    <Column field="biller" header="Facturador"></Column>
-                    <Column field="total" header="Total"></Column>
+                    <Column field="biller" header="Facturador">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic">TOTAL</strong>
+                        </template>
+                    </Column>
+                    <Column field="total" header="Total">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic">{{ getTotal(resumenAdmissions, 'total') }}</strong>
+                        </template>
+                    </Column>
                     <Column field="totalAmount" header="Monto">
                         <template #body="slotProps">
                             {{ formatCurrency(slotProps.data.totalAmount) }}
                         </template>
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic"> {{ formatCurrency(getTotal(resumenAdmissions, 'totalAmount')) }}</strong>
+                        </template>
                     </Column>
-                    <Column field="medical_record_request" header="Entreg."></Column>
+                    <Column field="medical_record_request" header="Entreg.">
+                        <template #footer>
+                            <strong style="font-weight: bold; font-style: italic">{{ getTotal(resumenAdmissions, 'medical_record_request') }}</strong>
+                        </template>
+                    </Column>
                 </DataTable>
             </template>
 
