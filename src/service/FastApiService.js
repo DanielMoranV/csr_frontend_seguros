@@ -196,7 +196,6 @@ export default {
             LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
             WHERE
                 ${ADMISIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
-                AND ${FACTURAS}.num_fac NOT LIKE '005-%'
                 AND ${ADMISIONES}.tot_doc >= 0
                 AND ${ADMISIONES}.nom_pac <> ''
                 AND ${ADMISIONES}.nom_pac <> 'No existe...'
@@ -233,12 +232,10 @@ export default {
             LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
             LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
             WHERE ${ADMISIONES}.num_doc LIKE '%${number}%'
-            AND ${FACTURAS}.num_fac NOT LIKE '005-%'
             ORDER BY ${ADMISIONES}.num_doc DESC; `;
         try {
             // const response = await apiClient.post(endpoint, { query });
             const response = await executeQuery({ query });
-            console.log('response', response);
             //return handleResponse(response);
             return handleResponseMysql(response);
         } catch (error) {
@@ -290,7 +287,6 @@ export default {
                 LEFT JOIN ${FACTURAS} ON ${ADMISIONES}.num_doc = ${FACTURAS}.num_doc
                 LEFT JOIN ${FACTURAS_PAGADAS} ON ${FACTURAS}.num_doc = ${FACTURAS_PAGADAS}.num_doc
                 WHERE ${ADMISIONES}.num_doc IN (${numbers.map((num) => `'${num}'`).join(', ')})
-                AND (${FACTURAS}.num_fac NOT LIKE '005-%' OR ${FACTURAS}.num_fac IS NULL)
                 ORDER BY ${ADMISIONES}.num_doc DESC;
             `;
 
