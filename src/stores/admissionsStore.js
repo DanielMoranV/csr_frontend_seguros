@@ -83,7 +83,6 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
         async fetchAdmissionByNumberApi(number) {
             this.loading = true;
             const { data } = await handleResponseStore(FastApiService.admisionsByNumberMySql(number), this);
-            console.log('datax', data);
             if (this.success) {
                 this.admissions = data;
                 await indexedDB.setItem('admissions', this.admissions);

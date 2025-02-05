@@ -95,6 +95,13 @@ const router = createRouter({
                     name: 'shipments',
                     component: () => import('@/views/shipments/Shipments.vue'),
                     meta: { positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] }
+                },
+
+                {
+                    path: '/shipments-all',
+                    name: 'shipments-all',
+                    component: () => import('@/views/shipments/ShipmentsAll.vue'),
+                    meta: { positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] }
                 }
             ]
         },

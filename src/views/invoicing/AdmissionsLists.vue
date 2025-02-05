@@ -82,9 +82,20 @@ const formatAdmissionsLists = (data) => {
 
     // Seleccionar el registro con la fecha de factura más reciente para cada grupo
     const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
-        return group.reduce((latest, current) => {
-            return new Date(latest.invoice_date) > new Date(current.invoice_date) ? latest : current;
-        });
+        // Ordenamos por fecha descendente
+        group.sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date));
+
+        // Filtramos facturas con la fecha más reciente
+        const latestDate = group[0].invoice_date;
+        const latestInvoices = group.filter((invoice) => invoice.invoice_date === latestDate);
+
+        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-"
+        if (latestInvoices.length > 2) {
+            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-')) || latestInvoices[0];
+        }
+
+        // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
+        return latestInvoices[0];
     });
 
     uniqueAdmissions.forEach((admission) => {

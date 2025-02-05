@@ -62,7 +62,7 @@ const model = ref([
         label: 'Envios de Facturas',
         items: [
             { label: 'Envios Listas', icon: 'pi pi-fw pi-send', to: '/shipments', positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] },
-            { label: 'Envios General', icon: 'pi pi-fw pi-file', to: '/shipments-all', positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] }
+            { label: 'Envios General', icon: 'pi pi-fw pi-list', to: '/shipments-all', positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION'] }
         ],
         positions: ['ADMINISTRACION', 'FACTURACION', 'ASISTENTE FACTURACION']
     },
