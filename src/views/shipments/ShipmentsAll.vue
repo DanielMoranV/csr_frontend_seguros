@@ -13,7 +13,12 @@ import { onBeforeMount, onMounted, ref } from 'vue';
 
 const admissionsListStore = useAdmissionsListsStore();
 const shipmentsStore = useShipmentsStore();
+const starDate = ref(new Date());
+starDate.value.setDate(starDate.value.getDate() - 30);
+starDate.value.setHours(0, 0, 0, 0);
+const endDate = ref(new Date());
 const medicalRecordStore = useMedicalRecordsRequestsStore();
+const shipments = ref([]);
 const isLoading = ref(false);
 const confirm = useConfirm();
 const toast = useToast();
@@ -87,6 +92,12 @@ onMounted(async () => {
     let data = await admissionsListStore.initializeStoreByPeriod(period.value);
     admissionsLists.value = formatAdmissionsLists(data);
     resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+    let payload = {
+        from: dformat(starDate.value, 'MM-DD-YYYY'),
+        to: dformat(endDate.value, 'MM-DD-YYYY')
+    };
+    shipments.value = await shipmentsStore.initializeStoreFetchShipmentsByDateRange(payload);
+    console.log(shipments.value);
 });
 
 const formatAdmissionsLists = (data) => {
@@ -257,7 +268,7 @@ const onUploadShipments = async (event) => {
 </script>
 <template>
     <div class="card">
-        <Toolbar class="mb-6">
+        <Toolbar>
             <template #start>
                 <IconField>
                     <InputIcon>
