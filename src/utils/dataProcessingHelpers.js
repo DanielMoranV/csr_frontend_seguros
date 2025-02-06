@@ -183,7 +183,6 @@ export const classifyShipments = async (dataSet) => {
             updatedShipments.push(processedShipment);
         }
     });
-
     // Retornar los envíos clasificados y procesados
     return {
         newShipments,

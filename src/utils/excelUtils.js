@@ -144,6 +144,32 @@ export const processDataDatabaseShipments = (rows) => {
     return dataSetShipments;
 };
 
+export const processDataDatabaseShipmentsAll = (rows) => {
+    const dataSetShipments = rows
+        .slice(2)
+        .filter((row) => row[1] !== '')
+        .filter((row) => row[2] != '')
+        .filter((row) => row[3])
+        .filter((row) => row[4])
+        .filter((row) => row[5])
+        .filter((row) => row[6])
+        .filter((row) => row[7])
+        .filter((row) => row[8])
+        .filter((row) => row[9])
+        .map((row) => ({
+            admission_number: row[1],
+            invoice_number: row[2],
+            isNewShipment: row[3]?.toLowerCase() === 'no' ? true : row[3]?.toLowerCase() === 'si' ? false : null,
+            trama_date: row[4] ? row[4] : null,
+            courier_date: row[5] ? row[5] : null,
+            email_verified_date: row[6] ? row[6] : null,
+            url_sustenance: row[7] ? row[7] : null,
+            remarks: row[8] ? row[8] : null,
+            verified_shipment_date: row[9] ? validateDate(row[9]) : null
+        }));
+    return dataSetShipments;
+};
+
 // Función para procesar los datos
 export const processDataDatabase = (rows) => {
     const dataSet = rows

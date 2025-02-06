@@ -1,11 +1,10 @@
 <script setup>
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { classifyShipments } from '@/utils/dataProcessingHelpers';
-import { dformat, dformatLocal } from '@/utils/day';
-import { exportToExcel, loadExcelFile, processDataDatabaseShipments, validateData, validateHeaders } from '@/utils/excelUtils';
+import { dformat } from '@/utils/day';
+import { exportToExcel, loadExcelFile, processDataDatabaseShipmentsAll, validateData, validateHeaders } from '@/utils/excelUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
@@ -17,7 +16,7 @@ const starDate = ref(new Date());
 starDate.value.setDate(starDate.value.getDate() - 30);
 starDate.value.setHours(0, 0, 0, 0);
 const endDate = ref(new Date());
-const medicalRecordStore = useMedicalRecordsRequestsStore();
+const admissionNumber = ref();
 const shipments = ref([]);
 const isLoading = ref(false);
 const confirm = useConfirm();
@@ -29,26 +28,7 @@ const periods = ref([]);
 const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
-const headerShipments = [
-    'Admisión',
-    'Historia',
-    'Fecha',
-    'Paciente',
-    'Aseguradora',
-    'Tipo',
-    'Monto',
-    'Facturador',
-    'Estado Audit',
-    'Factura',
-    'Pago',
-    'Env Iniciado',
-    'Env. Trama',
-    'Env. Currier',
-    'Env. Email',
-    'URL Sust.',
-    'Comentarios',
-    'Verif. Envío'
-];
+const headerShipmentsAll = ['Admisión', 'Factura', 'Env Iniciado', 'Env. Trama', 'Env. Currier', 'Env. Email', 'URL Sust.', 'Comentarios', 'Verif. Envío'];
 const getCurrentPeriod = () => {
     const date = new Date();
     const year = date.getFullYear();
@@ -89,136 +69,58 @@ function clearFilter() {
 
 onMounted(async () => {
     nickName.value = authStore.getNickName;
-    let data = await admissionsListStore.initializeStoreByPeriod(period.value);
-    admissionsLists.value = formatAdmissionsLists(data);
-    resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
     let payload = {
-        from: dformat(starDate.value, 'MM-DD-YYYY'),
-        to: dformat(endDate.value, 'MM-DD-YYYY')
+        from: dformat(starDate.value, 'YYYY-MM-DD'),
+        to: dformat(endDate.value, 'YYYY-MM-DD')
     };
     shipments.value = await shipmentsStore.initializeStoreFetchShipmentsByDateRange(payload);
-    console.log(shipments.value);
 });
 
-const formatAdmissionsLists = (data) => {
-    if (data.length === 0) {
-        toast.add({
-            severity: 'info',
-            summary: 'No hay datos',
-            detail: 'No se encontraron admisiones para el periodo seleccionado.',
-            life: 5000
-        });
-        return [];
-    }
-
-    // Filtrar registros que tengan invoice_number y que no inicien con '005-'
-    const filteredData = data.filter((admission) => admission.invoice_number && !admission.invoice_number.startsWith('005-'));
-
-    // Agrupar por número de admisión y seleccionar el registro con la fecha de factura más reciente
-    const uniqueAdmissions = Object.values(
-        filteredData.reduce((acc, admission) => {
-            if (!acc[admission.number] || new Date(acc[admission.number].invoice_date) < new Date(admission.invoice_date)) {
-                acc[admission.number] = admission;
-            }
-            return acc;
-        }, {})
-    );
-
-    uniqueAdmissions.forEach((admission) => {
-        // if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
-        //     admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
-        // }
-        // Determinar si la admisión está a tiempo o fuera de tiempo
-        admission.isLate = new Date(admission.end_date) >= new Date(admission.invoice_date);
-        admission.status = admission.isLate ? 'A tiempo' : 'Fuera de tiempo';
-    });
-
-    return uniqueAdmissions;
+const searchShipment = async () => {
+    let response = await shipmentsStore.fetchShipmentsByAdmissionNumber(admissionNumber.value);
+    shipments.value = response.data;
 };
 
-const resumenAdmissionsList = (data) => {
-    const groupedData = data.reduce((acc, item) => {
-        // Inicializar el objeto para el biller si no existe
-
-        if (!acc[item.biller]) {
-            acc[item.biller] = {
-                biller: item.biller,
-                total: 0,
-                verified_shipment: 0,
-                totalAmount: 0 // como añado el monto total de amount por biller
-            };
-        }
-
-        // Actualizar los contadores
-        acc[item.biller].total++;
-        let amount = parseFloat(item.amount);
-        if (amount > 0) {
-            acc[item.biller].totalAmount += amount;
-        }
-        if (item.shipment && item.shipment?.verified_shipment_date) acc[item.biller].verified_shipment++;
-
-        return acc;
-    }, {});
-    return groupedData;
-};
-
-const searchPeriod = async () => {
-    let response = await admissionsListStore.fetchAdmissionsListsByPeriod(period.value);
-    admissionsLists.value = formatAdmissionsLists(response.data);
-    resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+const searchShipmentsByDate = async () => {
+    let payload = {
+        from: dformat(starDate.value, 'YYYY-MM-DD'),
+        to: dformat(endDate.value, 'YYYY-MM-DD')
+    };
+    let response = await shipmentsStore.fetchShipmentsByDateRange(payload);
+    shipments.value = response.data;
 };
 
 const exportAdmissions = async () => {
     const columns = [
         { header: 'Admisión', key: 'admission_number', width: 15 },
-        { header: 'Historia', key: 'medical_record_number', with: 15 },
-        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
-        { header: 'Paciente', key: 'patient', width: 30 },
-        { header: 'Médico', key: 'doctor', width: 30 },
-        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
-        { header: 'Tipo', key: 'type', width: 15 },
-        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
-        { header: 'Facturador', key: 'biller', width: 15 },
-        { header: 'Estado Audit', key: 'auditStatus', width: 15 },
         { header: 'Factura', key: 'invoice_number', width: 15 },
-        { header: 'Pago', key: 'paid_invoice_number', width: 15 },
         { header: 'Env Iniciado', key: 'shipment_id', width: 15 },
-        { header: 'Env. Trama', key: 'shipment.trama_date', width: 15 },
-        { header: 'Env. Currier', key: 'shipment.courier_date', width: 15 },
-        { header: 'Env. Email', key: 'shipment.email_verified_date', width: 15 },
-        { header: 'URL Sust.', key: 'shipment.url_sustenance', width: 15 },
-        { header: 'Comentarios', key: 'shipment.remarks', width: 15 },
+        { header: 'Env. Trama', key: 'trama_date', width: 15 },
+        { header: 'Env. Currier', key: 'courier_date', width: 15 },
+        { header: 'Env. Email', key: 'email_verified_date', width: 15 },
+        { header: 'URL Sust.', key: 'url_sustenance', width: 15 },
+        { header: 'Comentarios', key: 'remarks', width: 15 },
         { header: 'Verif. Envío', key: 'shipmentVerifiedShipmentDate', width: 15 }
     ];
 
-    const data = admissionsLists.value.map((admission) => {
+    const data = shipments.value.map((shipment) => {
         const formatDate = (date) => {
             return date ? dformat(date, 'DD/MM/YYYY') : '-';
         };
         return {
-            admission_number: admission.admission_number,
-            medical_record_number: admission.medical_record_number,
-            attendance_date: admission.attendance_date ? dformatLocal(admission.attendance_date, 'DD/MM/YYYY') : '-',
-            patient: admission.patient,
-            doctor: admission.doctor,
-            insurer_name: admission.insurer_name,
-            amount: Number(admission.amount),
-            type: admission.type,
-            biller: admission.biller,
-            auditStatus: admission.audit ? admission.audit.status : '-',
-            invoice_number: admission.invoice_number ? admission.invoice_number : '-',
-            shipmentVerifiedShipmentDate: admission.shipment ? formatDate(admission.shipment.verified_shipment_date) : '-',
-            paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No',
-            shipment_id: admission.shipment_id ? 'Si' : 'No',
-            'shipment.trama_date': admission.shipment ? formatDate(admission.shipment.trama_date) : '-',
-            'shipment.courier_date': admission.shipment ? formatDate(admission.shipment.courier_date) : '-',
-            'shipment.email_verified_date': admission.shipment ? formatDate(admission.shipment.email_verified_date) : '-',
-            'shipment.url_sustenance': admission.shipment ? admission.shipment.url_sustenance : '-',
-            'shipment.remarks': admission.shipment ? admission.shipment.remarks : '-'
+            admission_number: shipment.admission_number,
+            invoice_number: shipment.invoice_number ? shipment.invoice_number : '-',
+            shipmentVerifiedShipmentDate: shipment.verified_shipment_date ? formatDate(shipment.verified_shipment_date) : '-',
+            shipment_id: shipment.id ? 'Si' : 'No',
+            trama_date: shipment.trama_date ? formatDate(shipment.trama_date) : '-',
+            courier_date: shipment.courier_date ? formatDate(shipment.courier_date) : '-',
+            email_verified_date: shipment.email_verified_date ? formatDate(shipment.email_verified_date) : '-',
+            url_sustenance: shipment.url_sustenance ? shipment.url_sustenance : '-',
+            remarks: shipment.remarks ? shipment.remarks : '-'
         };
     });
 
-    await exportToExcel(columns, data, 'Facturas para Envios', 'Facturas para Envios');
+    await exportToExcel(columns, data, 'Facturas Enviadas', 'Facturas Enviadas');
 };
 
 // Importar Meta Envios
@@ -228,20 +130,19 @@ const onUploadShipments = async (event) => {
         try {
             isLoading.value = true;
             const rows = await loadExcelFile(file);
-            const isValidHeaders = validateHeaders(rows[1], headerShipments);
+            const isValidHeaders = validateHeaders(rows[1], headerShipmentsAll);
             if (!isValidHeaders.success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: `Faltan las cabeceras: ${isValidHeaders.missingHeaders.join(', ')}`, life: 3000 });
                 isLoading.value = false;
                 return;
             }
             const isValidData = validateData(rows);
-            const dataSet = processDataDatabaseShipments(rows);
+            const dataSet = processDataDatabaseShipmentsAll(rows);
             if (!isValidData || dataSet.length === 0) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'El archivo no contiene suficientes datos', life: 3000 });
                 isLoading.value = false;
                 return;
             }
-
             let { newShipments, updatedShipments } = await classifyShipments(dataSet);
 
             let payload = {
@@ -254,6 +155,7 @@ const onUploadShipments = async (event) => {
             if (!success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
             } else {
+                searchShipmentsByDate();
                 toast.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo cargado correctamente', life: 3000 });
             }
         } catch (error) {
@@ -274,15 +176,15 @@ const onUploadShipments = async (event) => {
                     <InputIcon>
                         <i class="pi pi-search" />
                     </InputIcon>
-                    <InputText v-model="numberMedicalRecord" placeholder="N° Historia" />
+                    <InputText v-model="admissionNumber" placeholder="N° Admisión" />
                 </IconField>
-                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchMedicalRecord" />
+                <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchShipment" />
             </template>
 
             <template #end>
                 <DatePicker v-model="starDate" placeholder="Fecha Inicial" class="mr-2" />
                 <DatePicker v-model="endDate" placeholder="Fecha Final" class="mr-2" />
-                <Button label="Buscar" icon="pi pi-search" class="mr-2" @click="searchMedicalRecordByDate" />
+                <Button label="Buscar" icon="pi pi-search" class="mr-2" @click="searchShipmentsByDate" />
             </template>
         </Toolbar>
     </div>
@@ -290,7 +192,7 @@ const onUploadShipments = async (event) => {
         <ConfirmDialog></ConfirmDialog>
         <DataTable
             :style="{ fontSize: '11px', fontFamily: 'Arial, sans-serif' }"
-            :value="admissionsLists"
+            :value="shipments"
             :paginator="true"
             :rows="10"
             v-model:filters="filters"
@@ -298,7 +200,7 @@ const onUploadShipments = async (event) => {
             scrollable
             size="small"
             filterDisplay="menu"
-            :loading="admissionsListStore.loading"
+            :loading="shipmentsStore.loading"
             :globalFilterFields="['number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status']"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
@@ -330,30 +232,32 @@ const onUploadShipments = async (event) => {
                     {{ slotProps.index + 1 }}
                 </template>
             </Column>
-            <Column field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem">
+            <Column field="admission_number" header="N° Admisión" sortable style="min-width: 5rem"></Column>
+            <Column field="invoice_number" header="N° Factura" sortable style="min-width: 7rem"></Column>
+            <Column field="trama_date" header="Env. Trama" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.trama_date">
-                        {{ dformat(slotProps.data.shipment.trama_date, 'DD/MM/YYYY') }}
+                    <span v-if="slotProps.data.trama_date">
+                        {{ dformat(slotProps.data.trama_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem">
+            <Column field="courier_date" header="Env. Currier" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.courier_date">
-                        {{ dformat(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
+                    <span v-if="slotProps.data.courier_date">
+                        {{ dformat(slotProps.data.courier_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
+            <Column field="email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.email_verified_date">
-                        {{ dformat(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
+                    <span v-if="slotProps.data.email_verified_date">
+                        {{ dformat(slotProps.data.email_verified_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -362,9 +266,9 @@ const onUploadShipments = async (event) => {
             </Column>
             <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 8rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.url_sustenance">
-                        <a :href="slotProps.data.shipment.url_sustenance" target="_blank">
-                            {{ slotProps.data.shipment.url_sustenance }}
+                    <span v-if="slotProps.data.url_sustenance">
+                        <a :href="slotProps.data.url_sustenance" target="_blank">
+                            {{ slotProps.data.url_sustenance }}
                         </a>
                     </span>
                     <span v-else>
@@ -372,35 +276,26 @@ const onUploadShipments = async (event) => {
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.remarks" header="Comentarios" sortable style="min-width: 5rem">
+            <Column field="remarks" header="Comentarios" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.remarks">
-                        {{ slotProps.data.shipment.remarks }}
+                    <span v-if="slotProps.data.remarks">
+                        {{ slotProps.data.remarks }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Verif. Envío">
+            <Column field="verified_shipment_date" sortable style="min-width: 5rem" header="Verif. Envío">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
-                        <span class="text-green-500">{{ dformat(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>
+                    <span v-if="slotProps.data.verified_shipment_date">
+                        <span class="text-green-500">{{ dformat(slotProps.data.verified_shipment_date, 'DD/MM/YYYY') }}</span>
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>
-            <Column field="status" header="Estado" sortable></Column>
-            <!-- <Column field="actions" header="Verf. Envío" style="width: 8rem">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.medical_record_request.status == 'Pendiente'" class="flex gap-2">
-                        <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="sendMedicalRecord(slotProps.data)" />
-                        <Button type="button" icon="pi pi-times" class="p-button-rounded p-button-danger p-button-outlined p-button-sm" @click="confirmRejectMedicalRecord(slotProps.data)" />
-                    </span>
-                </template>
-            </Column> -->
         </DataTable>
     </div>
 </template>

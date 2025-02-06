@@ -1,4 +1,4 @@
-import { createAndUpdateShipments, createShipment, deleteShipment, fetchShipments, fetchShipmentsByDateRange, updateShipment } from '@/api';
+import { createAndUpdateShipments, createShipment, deleteShipment, fetchShipments, fetchShipmentsByAdmissionNumber, fetchShipmentsByDateRange, updateShipment } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -52,6 +52,17 @@ export const useShipmentsStore = defineStore('shipmentsStore', {
             }
             return { success: this.success, data: this.shipments };
         },
+        async fetchShipmentsByAdmissionNumber(admissionNumber) {
+            this.loading = true;
+            const { data } = await handleResponseStore(fetchShipmentsByAdmissionNumber(admissionNumber), this);
+            if (this.success) {
+                this.shipments = data;
+                indexedDB.setItem('shipments', this.shipments);
+            } else {
+                this.shipments = [];
+            }
+            return { success: this.success, data: this.shipments };
+        },
         async fetchShipments() {
             this.loading = true;
             const { data } = await handleResponseStore(fetchShipments(), this);
@@ -95,8 +106,8 @@ export const useShipmentsStore = defineStore('shipmentsStore', {
             this.loading = true;
             const { data } = await handleResponseStore(createAndUpdateShipments(payload), this);
             if (this.success) {
-                this.shipments = data;
-                indexedDB.setItem('shipments', this.shipments);
+                //this.shipments = data;
+                //indexedDB.setItem('shipments', this.shipments);
                 this.message = 'Envío creado y actualizado correctamente';
             }
             return { success: this.success, data: data };
