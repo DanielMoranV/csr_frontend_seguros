@@ -244,6 +244,7 @@ const onUploadShipments = async (event) => {
             if (!success) {
                 toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar el archivo', life: 3000 });
             } else {
+                await searchPeriod();
                 toast.add({ severity: 'success', summary: 'Éxito', detail: 'Archivo cargado correctamente', life: 3000 });
             }
         } catch (error) {
@@ -304,7 +305,10 @@ const onUploadShipments = async (event) => {
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
+                    <h1 class="m-0">Gestión Envios de Facturas</h1>
+                    <a href="https://1drv.ms/f/s!AlehBy_4oTnf9wNK5DRflCQmdmb4?e=eXcxv3" target="_blank" class="text-blue-500 hover:underline">
+                        <i class="pi pi-external-link"></i>
+                    </a>
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAdmissions()" />
@@ -380,7 +384,7 @@ const onUploadShipments = async (event) => {
             <Column field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.shipment && slotProps.data.shipment.courier_date">
-                        {{ dformat(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
+                        {{ dformatLocal(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -390,18 +394,18 @@ const onUploadShipments = async (event) => {
             <Column field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.shipment && slotProps.data.shipment.email_verified_date">
-                        {{ dformat(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
+                        {{ dformatLocal(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>
-            <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 8rem">
+            <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.shipment && slotProps.data.shipment.url_sustenance">
                         <a :href="slotProps.data.shipment.url_sustenance" target="_blank">
-                            {{ slotProps.data.shipment.url_sustenance }}
+                            <i class="pi pi-external-link text-blue-500"></i>
                         </a>
                     </span>
                     <span v-else>
@@ -422,7 +426,7 @@ const onUploadShipments = async (event) => {
             <Column field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Verif. Envío">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
-                        <span class="text-green-500">{{ dformat(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -430,14 +434,6 @@ const onUploadShipments = async (event) => {
                 </template>
             </Column>
             <Column field="status" header="Estado" sortable></Column>
-            <!-- <Column field="actions" header="Verf. Envío" style="width: 8rem">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.medical_record_request.status == 'Pendiente'" class="flex gap-2">
-                        <Button type="button" icon="pi pi-send" class="p-button-rounded p-button-outlined p-button-sm" @click="sendMedicalRecord(slotProps.data)" />
-                        <Button type="button" icon="pi pi-times" class="p-button-rounded p-button-danger p-button-outlined p-button-sm" @click="confirmRejectMedicalRecord(slotProps.data)" />
-                    </span>
-                </template>
-            </Column> -->
         </DataTable>
     </div>
 </template>

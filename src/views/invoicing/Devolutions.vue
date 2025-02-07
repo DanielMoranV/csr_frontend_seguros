@@ -61,6 +61,7 @@ onMounted(async () => {
     formatDevolitions(devolutions.value);
 
     shipments.value = await shipmentsStore.initializeStore();
+    console.log(shipments.value);
 });
 
 const formatDevolitions = async (data) => {
@@ -93,6 +94,8 @@ const formatDevolitions = async (data) => {
         return acc;
     }, {});
 
+    console.log(shipmentsData);
+
     uniqueData.forEach((devolution) => {
         let audit = null;
         if (audits.value && audits.value.length > 0) {
@@ -104,7 +107,16 @@ const formatDevolitions = async (data) => {
             devolution.status = 'Facturado';
         }
 
+        if (shipmentsData[devolution.invoice_number] && shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
+            console.log(shipmentsData[devolution.invoice_number]);
+            devolution.status = 'Enviado';
+        }
+
         // if (shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
+        //     console.log('enviado');
+        //     console.log(devolution.invoice_number);
+        //     console.log(shipmentsData[devolution.invoice_number]?.verified_shipment_date);
+        //     console.log(shipmentsData[devolution.invoice_number]);
         //     devolution.status = 'Enviado';
         // }
 

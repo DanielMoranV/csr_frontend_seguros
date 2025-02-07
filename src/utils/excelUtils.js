@@ -137,7 +137,7 @@ export const processDataDatabaseShipments = (rows) => {
             trama_date: row[14] ? row[14] : null,
             courier_date: row[15] ? row[15] : null,
             email_verified_date: row[16] ? row[16] : null,
-            url_sustenance: row[17] ? row[17] : null,
+            url_sustenance: row[17] ? (typeof row[17] === 'object' ? row[17].text || row[17].hyperlink || null : row[17]) : null,
             remarks: row[18] ? row[18] : null,
             verified_shipment_date: row[19] ? validateDate(row[19]) : null
         }));
@@ -163,7 +163,7 @@ export const processDataDatabaseShipmentsAll = (rows) => {
             trama_date: row[4] ? row[4] : null,
             courier_date: row[5] ? row[5] : null,
             email_verified_date: row[6] ? row[6] : null,
-            url_sustenance: row[7] ? row[7] : null,
+            url_sustenance: row[17] ? (typeof row[17] === 'object' ? row[17].text || row[17].hyperlink || null : row[17]) : null,
             remarks: row[8] ? row[8] : null,
             verified_shipment_date: row[9] ? validateDate(row[9]) : null
         }));

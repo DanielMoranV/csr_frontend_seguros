@@ -60,13 +60,6 @@ onBeforeMount(() => {
     initFilters();
 });
 
-function clearFilter() {
-    filters.value = {
-        global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-    };
-    initFilters();
-}
-
 onMounted(async () => {
     nickName.value = authStore.getNickName;
     let payload = {
@@ -209,9 +202,11 @@ const onUploadShipments = async (event) => {
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
-                    <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
+                    <h1 class="m-0">Gestión General Envios de Facturas</h1>
+                    <a href="https://1drv.ms/f/s!AlehBy_4oTnf9wNK5DRflCQmdmb4?e=eXcxv3" target="_blank" class="text-blue-500 hover:underline">
+                        <i class="pi pi-external-link"></i>
+                    </a>
 
-                    <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportAdmissions()" />
                     <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Envios" chooseLabel="Envios" class="w-full inline-block" :auto="true" @select="onUploadShipments($event)" />
                     <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
@@ -268,7 +263,7 @@ const onUploadShipments = async (event) => {
                 <template #body="slotProps">
                     <span v-if="slotProps.data.url_sustenance">
                         <a :href="slotProps.data.url_sustenance" target="_blank">
-                            {{ slotProps.data.url_sustenance }}
+                            <i class="pi pi-external-link text-blue-500"></i>
                         </a>
                     </span>
                     <span v-else>
