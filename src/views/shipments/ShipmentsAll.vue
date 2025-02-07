@@ -3,7 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { classifyShipments } from '@/utils/dataProcessingHelpers';
-import { dformat } from '@/utils/day';
+import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseShipmentsAll, validateData, validateHeaders } from '@/utils/excelUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
@@ -84,7 +84,7 @@ const searchShipment = async () => {
 const searchShipmentsByDate = async () => {
     let payload = {
         from: dformat(starDate.value, 'YYYY-MM-DD'),
-        to: dformat(endDate.value, 'YYYY-MM-DD')
+        to: dformat(endDate.value.setHours(23, 59, 59), 'YYYY-MM-DD HH:mm:ss')
     };
     let response = await shipmentsStore.fetchShipmentsByDateRange(payload);
     shipments.value = response.data;
@@ -237,7 +237,7 @@ const onUploadShipments = async (event) => {
             <Column field="trama_date" header="Env. Trama" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.trama_date">
-                        {{ dformat(slotProps.data.trama_date, 'DD/MM/YYYY') }}
+                        {{ dformatLocal(slotProps.data.trama_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -247,7 +247,7 @@ const onUploadShipments = async (event) => {
             <Column field="courier_date" header="Env. Currier" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.courier_date">
-                        {{ dformat(slotProps.data.courier_date, 'DD/MM/YYYY') }}
+                        {{ dformatLocal(slotProps.data.courier_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -257,7 +257,7 @@ const onUploadShipments = async (event) => {
             <Column field="email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.email_verified_date">
-                        {{ dformat(slotProps.data.email_verified_date, 'DD/MM/YYYY') }}
+                        {{ dformatLocal(slotProps.data.email_verified_date, 'DD/MM/YYYY') }}
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -289,7 +289,7 @@ const onUploadShipments = async (event) => {
             <Column field="verified_shipment_date" sortable style="min-width: 5rem" header="Verif. Envío">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.verified_shipment_date">
-                        <span class="text-green-500">{{ dformat(slotProps.data.verified_shipment_date, 'DD/MM/YYYY') }}</span>
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.verified_shipment_date, 'DD/MM/YYYY') }}</span>
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>

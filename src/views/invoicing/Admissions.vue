@@ -4,6 +4,7 @@ import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
 import { useSettlementsStore } from '@/stores/settlementsStore';
+import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { classifyAdmissionsLists } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal, getDaysPassed } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseSettlements, validateData, validateHeaders } from '@/utils/excelUtils';
@@ -17,7 +18,7 @@ const admissionsListStore = useAdmissionsListsStore();
 const devolutionsStore = useDevolutionsStore();
 const settlementsStore = useSettlementsStore();
 const insurersStore = useInsurersStore();
-
+const shipmentsStore = useShipmentsStore();
 // Headers
 const headerSettlements = [
     'Admisión', // Número de documento
@@ -34,12 +35,15 @@ const headerSettlements = [
     'Fecha Final' // Fecha Final
 ];
 
+const shipments = ref([]);
+
 onMounted(async () => {
     let payload = {
         start_date: dformat(starDate.value, 'MM-DD-YYYY'),
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     insurers.value = await insurersStore.initializeStore();
+    shipments.value = await shipmentsStore.initializeStore();
 
     let response = await admissionsStore.initializeStoreAdmissionsDateRangeApi(payload);
     formatAdmissions(response);
@@ -104,6 +108,9 @@ function getStatusLabel(status) {
 
         case 'Pendiente':
             return 'danger';
+
+        case 'Enviado':
+            return 'info';
 
         default:
             return null;
@@ -304,6 +311,11 @@ const formatAdmissions = (data) => {
         return acc;
     }, {});
 
+    const shipmentsData = shipments.value.reduce((acc, shipment) => {
+        acc[shipment.invoice_number] = shipment;
+        return acc;
+    }, {});
+
     admissions.value = uniqueAdmissions;
     admissions.value.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
@@ -319,6 +331,10 @@ const formatAdmissions = (data) => {
             admission.status = 'Pagado';
         } else {
             admission.status = 'Liquidado';
+        }
+
+        if (shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
+            admission.status = 'Enviado';
         }
 
         // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones

@@ -1,6 +1,7 @@
 <script setup>
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
+import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
@@ -9,11 +10,13 @@ import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
 
 const devolutionsStore = useDevolutionsStore();
+const shipmentsStore = useShipmentsStore();
 const auditsStore = useAuditsStore();
 
 const toast = useToast();
 const devolutions = ref([]);
 const devolution = ref(null);
+const shipments = ref([]);
 const auditDialog = ref(false);
 const audits = ref([]);
 const filters = ref(null);
@@ -56,6 +59,8 @@ onMounted(async () => {
     };
     devolutions.value = await devolutionsStore.initializeStoreDevolutionsDataRange(payload);
     formatDevolitions(devolutions.value);
+
+    shipments.value = await shipmentsStore.initializeStore();
 });
 
 const formatDevolitions = async (data) => {
@@ -83,6 +88,10 @@ const formatDevolitions = async (data) => {
     let admisionsNumbers = uniqueData.map((devolution) => devolution.number);
     let response = await auditsStore.getAuditsByAdmissions(admisionsNumbers);
     audits.value = response.data;
+    const shipmentsData = shipments.value.reduce((acc, shipment) => {
+        acc[shipment.invoice_number] = shipment;
+        return acc;
+    }, {});
 
     uniqueData.forEach((devolution) => {
         let audit = null;
@@ -94,6 +103,11 @@ const formatDevolitions = async (data) => {
         if (devolution.invoice_date < devolution.date_last_invoice) {
             devolution.status = 'Facturado';
         }
+
+        // if (shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
+        //     devolution.status = 'Enviado';
+        // }
+
         if (devolution.paid_admission === 1) {
             devolution.status = 'Pagado';
         }
@@ -260,7 +274,8 @@ const exportDevolutions = async () => {
                             :class="{
                                 'bg-green-100 text-green-800 px-2 py-1 rounded': slotProps.data.status === 'Pagado',
                                 'bg-yellow-100 text-yellow-800 px-2 py-1 rounded': slotProps.data.status === 'Facturado',
-                                'bg-red-100 text-red-800 px-2 py-1 rounded': slotProps.data.status === 'Pendiente'
+                                'bg-red-100 text-red-800 px-2 py-1 rounded': slotProps.data.status === 'Pendiente',
+                                'bg-blue-100 text-blue-800 px-2 py-1 rounded': slotProps.data.status === 'Enviado'
                             }"
                         >
                             {{ slotProps.data.status }}
