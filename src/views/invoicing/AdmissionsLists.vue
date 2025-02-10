@@ -1,6 +1,7 @@
 <script setup>
 import { fetchAdmissionsListsByPeriod } from '@/api';
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
+import { getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
@@ -16,12 +17,7 @@ const auditors = ref([]);
 const periods = ref([]);
 const filters = ref(null);
 const period = ref(null);
-const getCurrentPeriod = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    return `${year}${month.toString().padStart(2, '0')}`;
-};
+
 period.value = getCurrentPeriod();
 
 function initFilters() {

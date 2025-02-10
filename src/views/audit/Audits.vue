@@ -2,6 +2,7 @@
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
@@ -22,12 +23,7 @@ const resumenAdmissions = ref([]);
 const periods = ref([]);
 const filters = ref(null);
 const period = ref(null);
-const getCurrentPeriod = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    return `${year}${month.toString().padStart(2, '0')}`;
-};
+
 const statuses = ref([
     { label: 'Aprobado', value: 'Aprobado' },
     { label: 'Con Observaciones', value: 'Con Observaciones' },

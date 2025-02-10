@@ -190,6 +190,23 @@ export const classifyShipments = async (dataSet) => {
     };
 };
 
+export const getCurrentPeriod = () => {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // getMonth() returns 0-11
+    return `${year}${month.toString().padStart(2, '0')}`;
+};
+
+export const getMesEnEspanol = (numeroMes) => {
+    // iniciales de los meses
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    return meses[numeroMes - 1] || 'Mes inválido'; // Ajusta el índice (1-12 → 0-11)
+};
+
+export const getMonth = (date) => {
+    return date.split('-')[1];
+};
 export const importSettlements = async (seenSettlements, settlementsStore, toast) => {
     let settlements = await settlementsStore.initializeStore();
     let settlementsData = seenSettlements;

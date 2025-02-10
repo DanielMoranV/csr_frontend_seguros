@@ -2,7 +2,7 @@
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useShipmentsStore } from '@/stores/shipmentsStore';
-import { classifyShipments } from '@/utils/dataProcessingHelpers';
+import { classifyShipments, getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseShipmentsAll, validateData, validateHeaders } from '@/utils/excelUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
@@ -29,12 +29,7 @@ const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
 const headerShipmentsAll = ['Admisión', 'Factura', 'Env Iniciado', 'Env. Trama', 'Env. Currier', 'Env. Email', 'URL Sust.', 'Comentarios', 'Verif. Envío'];
-const getCurrentPeriod = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    return `${year}${month.toString().padStart(2, '0')}`;
-};
+
 period.value = getCurrentPeriod();
 
 function initFilters() {

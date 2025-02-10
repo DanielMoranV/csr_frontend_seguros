@@ -333,7 +333,7 @@ const formatAdmissions = (data) => {
             admission.status = 'Liquidado';
         }
 
-        if (shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
+        if (shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
             admission.status = 'Enviado';
         }
 

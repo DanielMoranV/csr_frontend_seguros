@@ -3,7 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { useShipmentsStore } from '@/stores/shipmentsStore';
-import { classifyShipments } from '@/utils/dataProcessingHelpers';
+import { classifyShipments, getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseShipments, validateData, validateHeaders } from '@/utils/excelUtils';
 import { formatCurrency } from '@/utils/validationUtils';
@@ -45,12 +45,6 @@ const headerShipments = [
     'Comentarios',
     'Verif. Envío'
 ];
-const getCurrentPeriod = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    return `${year}${month.toString().padStart(2, '0')}`;
-};
 period.value = getCurrentPeriod();
 
 function initFilters() {

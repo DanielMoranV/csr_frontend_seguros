@@ -3,7 +3,7 @@ import { fetchAdmissionsListsByPeriod } from '@/api';
 import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
-import { getTotal } from '@/utils/dataProcessingHelpers';
+import { getCurrentPeriod, getTotal } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
@@ -24,12 +24,7 @@ const periods = ref([]);
 const nickName = ref();
 const filters = ref(null);
 const period = ref(null);
-const getCurrentPeriod = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    return `${year}${month.toString().padStart(2, '0')}`;
-};
+
 period.value = getCurrentPeriod();
 
 function initFilters() {

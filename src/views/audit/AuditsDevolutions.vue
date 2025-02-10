@@ -14,7 +14,7 @@ const position = authStore.getUser.position;
 const devolutionsStore = useDevolutionsStore();
 const toast = useToast();
 const filters = ref({ global: { value: '' } });
-const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+const starDate = ref(new Date(new Date().getFullYear(), 0, 1));
 const endDate = ref(new Date());
 
 const audits = ref([]);

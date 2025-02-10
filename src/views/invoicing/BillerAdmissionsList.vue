@@ -3,6 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
@@ -28,12 +29,7 @@ const period = ref(null);
 const startDate = ref(new Date());
 const endDate = ref(new Date());
 const admissionDialog = ref(false);
-const getCurrentPeriod = () => {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1; // getMonth() returns 0-11
-    return `${year}${month.toString().padStart(2, '0')}`;
-};
+
 period.value = getCurrentPeriod();
 const viewAuditDescription = (event, audit) => {
     op.value.hide();
