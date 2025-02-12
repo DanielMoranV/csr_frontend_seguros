@@ -57,11 +57,12 @@ onMounted(async () => {
         start_date: starDate,
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
+    // mejorar el la consulta de envios, para que solo cargue las devoluciones.
+    shipments.value = await shipmentsStore.initializeStore();
     devolutions.value = await devolutionsStore.initializeStoreDevolutionsDataRange(payload);
     formatDevolitions(devolutions.value);
 
-    shipments.value = await shipmentsStore.initializeStore();
-    console.log(shipments.value);
+    console.log(devolutions.value);
 });
 
 const formatDevolitions = async (data) => {
@@ -94,12 +95,10 @@ const formatDevolitions = async (data) => {
         return acc;
     }, {});
 
-    console.log(shipmentsData);
-
     uniqueData.forEach((devolution) => {
         let audit = null;
         if (audits.value && audits.value.length > 0) {
-            audit = audits.value.find((audit) => audit.admission_number === devolution.number);
+            audit = audits.value.find((audit) => audit.admission_number === devolution.number && audit.invoice_number === devolution.invoice_number);
         }
         devolution.audit = audit;
         devolution.status = 'Pendiente';
@@ -108,7 +107,6 @@ const formatDevolitions = async (data) => {
         }
 
         if (shipmentsData[devolution.invoice_number] && shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
-            console.log(shipmentsData[devolution.invoice_number]);
             devolution.status = 'Enviado';
         }
 
@@ -162,6 +160,40 @@ const sendAudit = async () => {
             life: 3000
         });
     }
+};
+
+const editAuditUrl = async (audit) => {
+    console.log(audit);
+    let payload = {
+        id: audit.id,
+        url: audit.url
+    };
+    console.log(payload);
+    await auditsStore.updateAudit(payload);
+
+    // modificar el registro de  admissionsLists segun admision.admision_number
+    // const index = audits.value.findIndex((item) => item.id === audit.id);
+    // if (index !== -1) {
+    //     audits.value[index].audit.url = audit.url;
+    //     // modificar en indexedDB
+    //     await indexedDB.setItem('audits', audits.value);
+    // }
+
+    const indexDevolutions = devolutions.value.findIndex((item) => item.id === audit.id);
+    if (indexDevolutions !== -1) {
+        console.log(audit.url);
+        console.log(devolutions.value[indexDevolutions].audit.url);
+        devolutions.value[indexDevolutions].audit.url = audit.url;
+        // modificar en indexedDB
+        await indexedDB.setItem('devolutions', devolutions.value);
+    }
+
+    toast.add({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: 'URL actualizada correctamente.',
+        life: 3000
+    });
 };
 function convertDateToExcelFormat(dateString) {
     const date = new Date(dateString);
@@ -238,10 +270,14 @@ const exportDevolutions = async () => {
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} Devoluciones"
+            editMode="cell"
         >
             <template #header>
                 <div class="flex flex-wrap gap-2 items-center justify-between">
                     <h1 class="m-0">Gestión admisiones de seguro CSR</h1>
+                    <a href="https://1drv.ms/f/s!AlehBy_4oTnf904O8zdXxIS9D3TO?e=XfLwUH" target="_blank" class="text-blue-500 hover:underline">
+                        <i class="pi pi-external-link"></i>
+                    </a>
 
                     <!-- <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" /> -->
                     <Button type="button" icon="pi pi-file-excel" label="Exportar Excel" outlined @click="exportDevolutions()" />
@@ -308,6 +344,24 @@ const exportDevolutions = async () => {
                         >
                             {{ slotProps.data.audit.status }}
                         </span>
+                    </span>
+                </template>
+            </Column>
+            <Column field="audit.url" header="URL" sortable style="min-width: 10rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.audit && slotProps.data.audit.url">
+                        <a :href="slotProps.data.audit.url" target="_blank">
+                            <i class="pi pi-external-link text-blue-500"></i>
+                        </a>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+                <template #editor="slotProps">
+                    <InputText v-if="slotProps.data.audit" v-model="slotProps.data.audit.url" @blur="editAuditUrl(slotProps.data.audit)" />
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>

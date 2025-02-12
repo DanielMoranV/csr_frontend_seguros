@@ -11,7 +11,7 @@ const auditsStore = useAuditsStore();
 const authStore = useAuthStore();
 const toast = useToast();
 const filters = ref({ global: { value: '' } });
-const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+const starDate = ref(new Date(new Date().getFullYear(), 0, 1));
 const endDate = ref(new Date());
 
 const audits = ref([]);
@@ -35,22 +35,7 @@ onBeforeMount(() => {
     initFilters();
 });
 onMounted(async () => {
-    // let payload = {
-    //     from: dformat(starDate.value, 'YYYY-MM-DD'),
-    //     to: dformat(new Date(endDate.value.setHours(23, 0, 0, 0)), 'YYYY-MM-DD HH:mm:ss')
-    // };
-    // try {
-    //     const responseAudits = await auditsStore.fetchAudits();
-    //     audits.value = responseAudits.data;
-    //     console.log(audits.value);
-    //     // filtrar y quitar todos los registros que contengan type == 'Regular'
-    //     audits.value = audits.value.filter((item) => item.type !== 'Regular');
-    //     console.log(audits.value);
-    // } catch (error) {
-    //     toast.add({ severity: 'error', summary: 'Error', detail: error.message });
-    // }
     await searchAuditsByDate();
-    // formatAudits(audits.value);
 });
 
 const searchAuditsByDate = async () => {
@@ -182,6 +167,18 @@ const exportAudits = async () => {
                 </template>
             </Column>
             <Column field="admission_number" header="N° Admisión" sortable />
+            <Column field="url" header="URL" sortable style="min-width: 10rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.url">
+                        <a :href="slotProps.data.url" target="_blank">
+                            <i class="pi pi-external-link text-blue-500"></i>
+                        </a>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="auditor" header="Auditor" sortable />
             <Column field="description" header="Descripción" sortable />
             <Column field="invoice_number" header="N° Factura" sortable />
@@ -229,6 +226,7 @@ const exportAudits = async () => {
                 <label for="admision_number" class="block font-bold mb-3">Admisión</label>
                 <InputText id="admision_number" v-model="audit.admission_number" required="true" disabled fluid />
             </div>
+
             <div>
                 <label for="description" class="block font-bold mb-3">Descripción</label>
                 <Textarea id="description" v-model="audit.description" required="true" rows="3" cols="20" autofocus fluid />

@@ -93,43 +93,6 @@ const formatAudits = async (data) => {
     dataGeneralSummary.value = [generalSummary(audits.value)];
 };
 
-// const resumenDevolutions = (data) => {
-//     console.log(data);
-//     const groupedData = data.reduce((acc, item) => {
-//         // Inicializar el objeto para el biller si no existe
-
-//         if (!acc[item.auditor]) {
-//             acc[item.auditor] = {
-//                 biller: item.auditor,
-//                 total: 0,
-//                 closedTrue: 0,
-//                 paidNotNull: 0,
-//                 invoiceNotNull: 0,
-//                 auditNotNull: 0,
-//                 audit_requested_at: 0,
-//                 devolutionNotNull: 0,
-//                 totalAmount: 0 // como añado el monto total de amount por biller
-//             };
-//         }
-
-//         // Actualizar los contadores
-//         acc[item.auditor].total++;
-//         let amount = parseFloat(item.amount);
-//         if (amount > 0) {
-//             acc[item.auditor].totalAmount += amount;
-//         }
-//         if (item.is_closed === 1) acc[item.auditor].closedTrue++;
-//         if (item.audit_requested_at !== null) acc[item.auditor].audit_requested_at++;
-//         if (item.paid_invoice_number !== null) acc[item.auditor].paidNotNull++;
-//         if (item.invoice_number !== null && item.invoice_number !== '') acc[item.auditor].invoiceNotNull++;
-//         if (item.audit_id !== null) acc[item.auditor].auditNotNull++;
-//         if (item.devolution_date !== null) acc[item.auditor].devolutionNotNull++;
-//         return acc;
-//     }, {});
-
-//     console.log('groupedData', groupedData);
-//     return groupedData;
-// };
 const generalSummary = (data) => {
     const resumen = {
         total: data.length,
@@ -201,59 +164,6 @@ const exportAudits = async () => {
 };
 </script>
 <template>
-    <!-- <div class="card">
-        <Toolbar class="mb-6">
-            <template #start>
-                <DataTable :value="dataGeneralSummary" tableStyle="min-width: 50rem" size="small" :style="{ fontSize: '12px', fontFamily: 'Arial, sans-serif' }" stripedRows>
-                    <Column field="approved" header="Aprobados">
-                        <template #body="slotProps">
-                            <span
-                                :class="{
-                                    'bg-green-100 text-green-800 px-2 py-1 rounded-full': true
-                                }"
-                            >
-                                {{ slotProps.data.approved }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column field="observed" header="Observados">
-                        <template #body="slotProps">
-                            <span
-                                :class="{
-                                    'bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full': true
-                                }"
-                            >
-                                {{ slotProps.data.observed }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column field="pending" header="Pendientes">
-                        <template #body="slotProps">
-                            <span
-                                :class="{
-                                    'bg-red-100 text-red-800 px-2 py-1 rounded-full': true
-                                }"
-                            >
-                                {{ slotProps.data.pending }}
-                            </span>
-                        </template>
-                    </Column>
-                    <Column field="total" header="Entregados"></Column>
-                    <Column field="rebilled" header="Refacturados">
-                        <template #body="slotProps">
-                            <span
-                                :class="{
-                                    'bg-blue-100 text-blue-800 px-2 py-1 rounded-full': true
-                                }"
-                            >
-                                {{ slotProps.data.rebilled }}
-                            </span>
-                        </template>
-                    </Column>
-                </DataTable>
-            </template>
-        </Toolbar>
-    </div> -->
     <div class="card">
         <Toolbar class="mb-6">
             <template #start>
@@ -351,6 +261,18 @@ const exportAudits = async () => {
             <Column field="insurer_name" header="Aseguradora" sortable></Column>
             <Column field="biller" header="Facturador" sortable></Column>
             <Column field="reason" header="Motivo" sortable style="min-width: 10rem"></Column>
+            <Column field="url" header="URL" sortable style="min-width: 10rem">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.url">
+                        <a :href="slotProps.data.url" target="_blank">
+                            <i class="pi pi-external-link text-blue-500"></i>
+                        </a>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="created_at" header="Fecha Audit." sortable>
                 <template #body="slotProps">
                     {{ slotProps.data.created_at ? dformatLocal(slotProps.data.created_at, 'DD/MM/YYYY') : '-' }}
