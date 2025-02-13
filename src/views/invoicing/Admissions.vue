@@ -204,6 +204,58 @@ const exportExcelPending = async () => {
     await exportToExcel(columns, data, 'admisiones_pendientes', 'admisiones_pendientes');
 };
 
+// Exportar a excel admisiones generadas
+const exportExcelGenerated = async () => {
+    const columns = [
+        { header: 'Admisión', key: 'admission', width: 15 },
+        { header: 'Fecha', key: 'attendance_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Días', key: 'daysPassed', width: 5 },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Médico', key: 'doctor', width: 30 },
+        { header: 'Aseguradora', key: 'insurer', width: 15 },
+        { header: 'Facturador', key: 'biller', width: 15 },
+        { header: 'Periodo', key: 'period', width: 15 },
+        { header: 'Tipo', key: 'type', width: 15 },
+        { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
+        { header: 'Factura', key: 'invoice_number', width: 20 },
+        { header: 'Fecha Envio', key: 'shipment_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Estado', key: 'status', width: 15 }
+    ];
+
+    let admissionData = admissions.value;
+
+    admissionData.forEach((admission) => {
+        // Convertir la fecha a formato Excel (número serial)
+        const date = new Date(admission.attendance_date);
+        admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+
+        if (admission.shipment) {
+            admission.shipment_date = new Date(admission.shipment.verified_shipment_date);
+        }
+        // Enviar el monto como número, sin formatear
+        admission.amount = Number(admission.amount);
+    });
+
+    let data = admissionData.map((admission) => ({
+        admission: admission.number,
+        medical_record_number: admission.medical_record_number,
+        attendance_date: admission.attendance_date,
+        daysPassed: admission.daysPassed,
+        patient: admission.patient,
+        doctor: admission.doctor,
+        insurer: admission.insurer_name,
+        biller: admission.biller,
+        period: admission.period,
+        type: admission.type,
+        amount: admission.amount,
+        invoice_number: admission.invoice_number,
+        shipment_date: admission.shipment_date,
+        status: admission.status
+    }));
+
+    await exportToExcel(columns, data, 'admisiones_generadas', 'admisiones_generadas');
+};
+
 // Importar Meta Liquidación
 const onUploadSettlements = async (event) => {
     const file = event.files[0];
@@ -334,6 +386,8 @@ const formatAdmissions = (data) => {
         }
 
         if (shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
+            admission.shipment = shipmentsData[admission.invoice_number];
+            console.log(admission);
             admission.status = 'Enviado';
         }
 
@@ -344,6 +398,8 @@ const formatAdmissions = (data) => {
             admission.daysPassed = daysPassed <= admission.shipping_period ? daysPassed : `Extemp. (${daysPassed - admission.shipping_period} d.)`;
         }
     });
+
+    console.log(admissions.value);
 };
 
 const searchAdmissionsByDate = async () => {
@@ -378,7 +434,9 @@ const searchAdmissions = async () => {
     <div>
         <div class="card">
             <div class="flex justify-start">
+                <Button label="Exp.Generadas" icon="pi pi-download" severity="secondary" class="mr-5" @click="exportExcelGenerated" />
                 <Button label="Exp. Devoluciones" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelDevolutions" :loading="devolutionsStore.loading" />
+
                 <Button label="Exp.Pendientes" icon="pi pi-download" severity="success" class="mr-5" @click="exportExcelPending" />
                 <FileUpload v-if="!isLoading" mode="basic" accept=".xlsx" :maxFileSize="100000000" label="Importar Meta Liquidación" chooseLabel="Listas" class="w-full inline-block" :auto="true" @select="onUploadSettlements($event)" />
             </div>
