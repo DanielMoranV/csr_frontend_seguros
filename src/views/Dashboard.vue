@@ -258,7 +258,14 @@ const processAdmissions = async (data) => {
     totalAdmissions.value = admissions.value.length;
 
     // Aquí puedes agregar código para procesar los datos de las aseguradoras
-    insurersDataSet.value.sort((a, b) => a.month - b.month);
+    insurersDataSet.value.sort((a, b) => {
+        if (a.month !== b.month) {
+            return a.month - b.month; // Ordenar por mes ascendente
+        }
+        return b.count - a.count; // Ordenar por count descendente dentro de cada mes
+    });
+
+    console.log(insurersDataSet.value);
     insurersDataSetSoles.value.sort((a, b) => a.month - b.month);
 };
 
