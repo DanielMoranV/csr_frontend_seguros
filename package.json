@@ -11,6 +11,8 @@
         "@primevue/themes": "^4.2.5",
         "axios": "^1.7.7",
         "chart.js": "^3.3.2",
+        "chartjs-plugin-datalabels": "^2.2.0",
+        "chartjs-plugin-zoom": "^2.2.0",
         "dayjs": "^1.11.13",
         "dayjs-plugin-utc": "^0.1.2",
         "exceljs": "^4.4.0",

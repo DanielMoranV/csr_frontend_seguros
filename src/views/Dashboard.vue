@@ -7,6 +7,9 @@ import { useInsurersStore } from '@/stores/insurersStore';
 import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { getCurrentPeriod, getMesEnEspanol, getMonth } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal, getDaysPassed } from '@/utils/day';
+import Chart from 'primevue/chart';
+
+import { useToast } from 'primevue/usetoast';
 import { onMounted, ref, watch } from 'vue';
 
 const { getPrimary, getSurface, isDarkTheme } = useLayout();
@@ -16,6 +19,8 @@ const admissionsListStore = useAdmissionsListsStore();
 const devolutionsStore = useDevolutionsStore();
 const insurersStore = useInsurersStore();
 const shipmentsStore = useShipmentsStore();
+const toast = useToast();
+
 const companiesMap = {
     'PETROLEOS DEL PERU PETROPERU S.A.': 'PETROPERU',
     'SISTEMAS ALTERNATIVOS DE BENEFICIOS S.A.': 'SABSA',
@@ -541,6 +546,28 @@ function setChartDataInsurers(dataSet) {
         data: groupedData[insurance],
         type: 'bar'
     }));
+
+    // Calcular el total por mes sumando los valores de todas las aseguradoras
+    const totalPerMonth = Array(12).fill(0);
+    Object.values(groupedData).forEach((counts) => {
+        counts.forEach((value, i) => {
+            totalPerMonth[i] += value;
+        });
+    });
+
+    // Agregar un dataset adicional para el total
+    datasets.push({
+        label: 'Total',
+        data: totalPerMonth,
+        type: 'line', // Usamos una línea para diferenciarla de las barras
+        borderColor: '#333333',
+        backgroundColor: '#333333',
+        borderWidth: 2,
+        fill: false,
+        tension: 0.3, // Suaviza la línea
+        yAxisID: 'y' // Asegúrate de que esté en el mismo eje o crea un eje separado si lo prefieres
+    });
+
     return {
         labels: invoiceStatusData.value.months,
         datasets
@@ -557,16 +584,37 @@ function setChartOptionsInsurers() {
         maintainAspectRatio: false,
         aspectRatio: 0.8,
         plugins: {
-            tooltips: {
-                mode: 'index',
-                intersect: false
+            tooltip: {
+                mode: 'nearest',
+                intersect: true
             },
             legend: {
                 labels: {
                     color: textColor
                 }
+            },
+            title: {
+                display: true,
+                text: 'Estado de Facturación Según Aseguradora'
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'x', // Permite desplazar horizontalmente
+                    modifierKey: 'ctrl' // Opcional, para que el pan solo se active al presionar Ctrl
+                },
+                zoom: {
+                    wheel: {
+                        enabled: true
+                    },
+                    pinch: {
+                        enabled: true
+                    },
+                    mode: 'x' // Permite hacer zoom horizontalmente. Puedes usar 'y' o 'xy' según necesites.
+                }
             }
         },
+        responsive: true,
         scales: {
             x: {
                 stacked: true,
