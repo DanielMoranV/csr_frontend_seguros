@@ -218,6 +218,7 @@ const exportExcelGenerated = async () => {
         { header: 'Tipo', key: 'type', width: 15 },
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Factura', key: 'invoice_number', width: 20 },
+        { header: 'Fecha Factura', key: 'invoice_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Fecha Envio', key: 'shipment_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
         { header: 'Estado', key: 'status', width: 15 }
     ];
@@ -228,6 +229,9 @@ const exportExcelGenerated = async () => {
         // Convertir la fecha a formato Excel (número serial)
         const date = new Date(admission.attendance_date);
         admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+
+        const dateInvoice = new Date(admission.invoice_date);
+        admission.invoice_date = (dateInvoice - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
 
         if (admission.shipment) {
             admission.shipment_date = new Date(admission.shipment.verified_shipment_date);
@@ -249,6 +253,7 @@ const exportExcelGenerated = async () => {
         type: admission.type,
         amount: admission.amount,
         invoice_number: admission.invoice_number,
+        invoice_date: admission.invoice_date,
         shipment_date: admission.shipment_date,
         status: admission.status
     }));
