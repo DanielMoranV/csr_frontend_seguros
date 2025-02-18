@@ -230,8 +230,10 @@ const exportExcelGenerated = async () => {
         const date = new Date(admission.attendance_date);
         admission.attendance_date = (date - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
 
-        const dateInvoice = new Date(admission.invoice_date);
-        admission.invoice_date = (dateInvoice - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+        if (admission.invoice_number) {
+            const dateInvoice = new Date(admission.invoice_date);
+            admission.invoice_date = (dateInvoice - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+        }
 
         if (admission.shipment) {
             admission.shipment_date = new Date(admission.shipment.verified_shipment_date);
