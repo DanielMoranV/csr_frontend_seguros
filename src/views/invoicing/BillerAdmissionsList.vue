@@ -245,10 +245,9 @@ const exportAdmissions = async () => {
         { header: 'Monto', key: 'amount', width: 15, style: { numFmt: '"S/"#,##0.00' } },
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Periodo', key: 'period', width: 15 },
-        { header: 'Fecha Inicio', key: 'start_date', width: 13 },
-        { header: 'Fecha Final', key: 'end_date', width: 13 },
         { header: 'Observacion Facturación', key: 'observations', width: 15 },
         { header: 'Entrega Historia', key: 'medical_record_request.status', width: 15 },
+        { header: 'Fecha Entrg. Hist.', key: 'medical_record_request.response_date', width: 15 },
         { header: 'Liquidado', key: 'is_closed', width: 15 },
         { header: 'Entrega  Auditoria', key: 'audit_requested_at', width: 15 },
         { header: 'Descripción Auditoria', key: 'audit.description', width: 15 },
@@ -269,16 +268,15 @@ const exportAdmissions = async () => {
             amount: Number(admission.amount),
             biller: admission.biller,
             period: admission.period,
-            start_date: admission.start_date ? dformat(admission.start_date, 'DD/MM/YYYY') : '-',
-            end_date: admission.end_date ? dformat(admission.end_date, 'DD/MM/YYYY') : '-',
             observations: admission.observations,
             'medical_record_request.status': admission.medical_record_request ? admission.medical_record_request.status : '-',
+            'medical_record_request.response_date': admission.medical_record_request.response_date ? dformatLocal(admission.medical_record_request.response_date, 'DD/MM/YYYY') : '-',
             is_closed: admission.is_closed ? 'Si' : 'No',
             audit_requested_at: admission.audit_requested_at ? dformatLocal(admission.audit_requested_at, 'DD/MM/YYYY') : '-',
             'audit.description': admission.audit ? admission.audit.description : '-',
             'audit.status': admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
-            'shipment.verified_shipment_date': admission.shipment ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
+            'shipment.verified_shipment_date': admission.shipment && admission.shipment.verified_shipment_date ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
             paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No'
         };
     });
@@ -527,6 +525,16 @@ const resendAudit = async (admission) => {
                                 'pi pi-times-circle text-red-500': slotProps.data.medical_record_request.status === 'Rechazado'
                             }"
                         ></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="medical_record_request.requested_at" header="Fecha Entr." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request.response_date">
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.medical_record_request.response_date, 'DD/MM') }}</span>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>

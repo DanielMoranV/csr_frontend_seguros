@@ -32,7 +32,7 @@ const model = ref([
         label: 'Facturación',
         items: [
             { label: 'Admisiones', icon: 'pi pi-fw pi-ticket', to: '/admissions', positions: ['ADMINISTRACION', 'AUDITOR MEDICO'] },
-            { label: 'Análisis de Metas', icon: 'pi pi-fw pi-map', to: '/admissions-lists', positions: ['ADMINISTRACION', 'AUDITOR MEDICO', 'ASISTENTE FACTURACION'] },
+            { label: 'Análisis de Metas', icon: 'pi pi-fw pi-map', to: '/admissions-lists', positions: ['ADMINISTRACION', 'AUDITOR MEDICO', 'ASISTENTE FACTURACION', 'FACTURACION'] },
             { label: 'Lista Facturador', icon: 'pi pi-fw pi-file', to: '/admissions-list-biller', positions: ['FACTURACION', 'ADMINISTRACION'] },
             { label: 'Devoluciones', icon: 'pi pi-fw pi-ban', to: '/devolutions', positions: ['FACTURACION', 'AUDITOR MEDICO', 'ADMINISTRACION'] },
             { label: 'Notas de Crédito', icon: 'pi pi-fw pi-dollar', to: '/credit-notes', positions: ['admin'] }
