@@ -19,6 +19,8 @@ const op = ref();
 const authStore = useAuthStore();
 const toast = useToast();
 const admissionsLists = ref([]);
+const confirmedReceipt = ref(false);
+const confirmedReturn = ref(false);
 const admission = ref([]);
 const submitted = ref(false);
 const resumenAdmissions = ref([]);
@@ -401,6 +403,30 @@ const resendAudit = async (admission) => {
         });
     }
 };
+
+const editConfirmedReceiptDate = async (admission) => {
+    console.log(admission);
+    // if ((admission.medical_record_request.confirmed_receipt_date = true)) {
+    //     // asignar fecha actual en formato para mysql
+    //     const currentDate = new Date();
+    //     const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+    //     admission.medical_record_request.confirmed_receipt_date = formattedDate;
+    // }
+    // let payload = {
+    //     id: admission.id,
+    //     medical_record_request: {
+    //         confirmed_receipt_date: admission.medical_record_request.confirmed_receipt_date
+    //     }
+    // };
+    // await admissionsListStore.updateAdmissionsList(payload);
+    // // modificar el registro de  admissionsLists segun admision.admision_number
+    // const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+    // if (index !== -1) {
+    //     admissionsLists.value[index].medical_record_request.confirmed_receipt_date = admission.medical_record_request.confirmed_receipt_date;
+    //     // modificar en indexedDB
+    //     await indexedDB.setItem('admissionsLists', admissionsLists.value);
+    // }
+};
 </script>
 <template>
     <div class="card">
@@ -536,6 +562,26 @@ const resendAudit = async (admission) => {
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
+                </template>
+            </Column>
+            <Column field="medical_record_request.confirmed_receipt_date" header="Confirm. Entr." sortable>
+                <template #body="slotProps">
+                    <Checkbox :v-model="true" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
+                </template>
+                <!-- <template #editor="slotProps">
+                    <span v-if="!slotProps.data.medical_record_request.confirmed_receipt_date">
+                        <Checkbox v-model="slotProps.data.medical_record_request.confirmed_receipt_date" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
+                    </span>
+                </template> -->
+            </Column>
+            <Column header="Acciones Entr." sortable>
+                <template #body="slotProps">
+                    <div class="button-container">
+                        <Button type="button" icon="pi pi-check-square" class="p-button-rounded p-button-outlined p-button-sm p-button-success" @click="viewAuditDescription($event, slotProps.data)" />
+                        <span v-if="slotProps.data.audit && slotProps.data.audit.status === 'Con Observaciones'" class="ml-2">
+                            <Button type="button" icon="pi pi-refresh" class="p-button-rounded p-button-outlined p-button-sm p-button-warning" @click="resendAudit(slotProps.data)" />
+                        </span>
+                    </div>
                 </template>
             </Column>
             <Column field="is_closed" header="Liquid." sortable>
