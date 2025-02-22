@@ -146,6 +146,18 @@ const formatAdmissionsLists = (data) => {
         } else {
             admission.status = 'Fuera de tiempo';
         }
+
+        if (admission.medical_record_request.confirmed_receipt_date) {
+            admission.isConfirmedReceipt = true;
+        } else {
+            admission.isConfirmedReceipt = false;
+        }
+
+        if (admission.medical_record_request.confirmed_return_date) {
+            admission.isConfirmedReturn = true;
+        } else {
+            admission.isConfirmedReturn = false;
+        }
     });
     return uniqueAdmissions;
 };
@@ -564,9 +576,9 @@ const editConfirmedReceiptDate = async (admission) => {
                     </span>
                 </template>
             </Column>
-            <Column field="medical_record_request.confirmed_receipt_date" header="Confirm. Entr." sortable>
+            <Column field="medical_record_request.isConfirmedReceipt" header="Confirm. Entr." sortable>
                 <template #body="slotProps">
-                    <Checkbox :v-model="true" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
+                    <Checkbox v-model="slotProps.data.isConfirmedReceipt" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
                 </template>
                 <!-- <template #editor="slotProps">
                     <span v-if="!slotProps.data.medical_record_request.confirmed_receipt_date">
