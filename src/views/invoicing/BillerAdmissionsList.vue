@@ -3,6 +3,7 @@ import { useAdmissionsListsStore } from '@/stores/admissionsListsStore';
 import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useAuditsStore } from '@/stores/AuditsStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
@@ -15,6 +16,7 @@ import { nextTick, onBeforeMount, onMounted, ref } from 'vue';
 const admissionsListStore = useAdmissionsListsStore();
 const admissionsStore = useAdmissionsStore();
 const auditsStore = useAuditsStore();
+const medicalRecordsRequestsStore = useMedicalRecordsRequestsStore();
 const op = ref();
 const authStore = useAuthStore();
 const toast = useToast();
@@ -147,17 +149,8 @@ const formatAdmissionsLists = (data) => {
             admission.status = 'Fuera de tiempo';
         }
 
-        if (admission.medical_record_request.confirmed_receipt_date) {
-            admission.isConfirmedReceipt = true;
-        } else {
-            admission.isConfirmedReceipt = false;
-        }
-
-        if (admission.medical_record_request.confirmed_return_date) {
-            admission.isConfirmedReturn = true;
-        } else {
-            admission.isConfirmedReturn = false;
-        }
+        admission.medical_record_request.isConfirmedReceipt = !!admission.medical_record_request.confirmed_receipt_date;
+        admission.medical_record_request.isConfirmedReturn = !!admission.medical_record_request.confirmed_return_date;
     });
     return uniqueAdmissions;
 };
@@ -418,26 +411,36 @@ const resendAudit = async (admission) => {
 
 const editConfirmedReceiptDate = async (admission) => {
     console.log(admission);
-    // if ((admission.medical_record_request.confirmed_receipt_date = true)) {
-    //     // asignar fecha actual en formato para mysql
-    //     const currentDate = new Date();
-    //     const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-    //     admission.medical_record_request.confirmed_receipt_date = formattedDate;
-    // }
-    // let payload = {
-    //     id: admission.id,
-    //     medical_record_request: {
-    //         confirmed_receipt_date: admission.medical_record_request.confirmed_receipt_date
-    //     }
-    // };
-    // await admissionsListStore.updateAdmissionsList(payload);
-    // // modificar el registro de  admissionsLists segun admision.admision_number
-    // const index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
-    // if (index !== -1) {
-    //     admissionsLists.value[index].medical_record_request.confirmed_receipt_date = admission.medical_record_request.confirmed_receipt_date;
-    //     // modificar en indexedDB
-    //     await indexedDB.setItem('admissionsLists', admissionsLists.value);
-    // }
+    if (admission.medical_record_request.isConfirmedReceipt) {
+        console.log(admission.medical_record_request.isConfirmedReceipt);
+        //  asignar fecha actual en formato para mysql
+        const currentDate = new Date();
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+        admission.medical_record_request.confirmed_receipt_date = formattedDate;
+    } else {
+        console.log(admission.medical_record_request.isConfirmedReceipt);
+        admission.medical_record_request.confirmed_receipt_date = null;
+    }
+
+    let payload = {
+        ...admission.medical_record_request,
+        confirmed_receipt_date: admission.medical_record_request.confirmed_receipt_date
+    };
+    let responseMedicalRecord = await medicalRecordsRequestsStore.updateMedicalRecordsRequest(payload);
+
+    if (responseMedicalRecord.success) {
+        let index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+        if (index !== -1) {
+            admissionsLists.value[index].medical_record_request = admission.medical_record_request;
+            // modificar en indexedDB
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Confirmación de recepción de historia ' + admission.medical_record_number + ' actualizada correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró la solicitud de historia', life: 3000 });
+        }
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar la solicitud de historia', life: 3000 });
+    }
 };
 </script>
 <template>
@@ -566,7 +569,7 @@ const editConfirmedReceiptDate = async (admission) => {
                     </span>
                 </template>
             </Column>
-            <Column field="medical_record_request.requested_at" header="Fecha Entr." sortable>
+            <Column field="medical_record_request.response_date" header="Fecha Entr." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.medical_record_request.response_date">
                         <span class="text-green-500">{{ dformatLocal(slotProps.data.medical_record_request.response_date, 'DD/MM') }}</span>
@@ -578,24 +581,25 @@ const editConfirmedReceiptDate = async (admission) => {
             </Column>
             <Column field="medical_record_request.isConfirmedReceipt" header="Confirm. Entr." sortable>
                 <template #body="slotProps">
-                    <Checkbox v-model="slotProps.data.isConfirmedReceipt" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
-                </template>
-                <!-- <template #editor="slotProps">
-                    <span v-if="!slotProps.data.medical_record_request.confirmed_receipt_date">
-                        <Checkbox v-model="slotProps.data.medical_record_request.confirmed_receipt_date" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
+                    <span v-if="slotProps.data.medical_record_request.response_date">
+                        <Checkbox :disabled="slotProps.data.medical_record_request.isConfirmedReceipt" v-model="slotProps.data.medical_record_request.isConfirmedReceipt" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
                     </span>
-                </template> -->
-            </Column>
-            <Column header="Acciones Entr." sortable>
-                <template #body="slotProps">
-                    <div class="button-container">
-                        <Button type="button" icon="pi pi-check-square" class="p-button-rounded p-button-outlined p-button-sm p-button-success" @click="viewAuditDescription($event, slotProps.data)" />
-                        <span v-if="slotProps.data.audit && slotProps.data.audit.status === 'Con Observaciones'" class="ml-2">
-                            <Button type="button" icon="pi pi-refresh" class="p-button-rounded p-button-outlined p-button-sm p-button-warning" @click="resendAudit(slotProps.data)" />
-                        </span>
-                    </div>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
                 </template>
             </Column>
+            <Column field="medical_record_request.isConfirmedReturn" header="Confirm. Dev. Exp." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request.confirmed_receipt_date">
+                        <Checkbox disabled v-model="slotProps.data.medical_record_request.isConfirmedReturn" binary />
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+
             <Column field="is_closed" header="Liquid." sortable>
                 <template #body="slotProps">
                     <i

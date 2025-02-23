@@ -113,6 +113,9 @@ const formatAdmissionsLists = (data) => {
         } else {
             admission.status = 'Fuera de tiempo';
         }
+
+        admission.medical_record_request.isConfirmedReceipt = !!admission.medical_record_request.confirmed_receipt_date;
+        admission.medical_record_request.isConfirmedReturn = !!admission.medical_record_request.confirmed_return_date;
     });
     return uniqueAdmissions;
 };
@@ -323,6 +326,39 @@ const confirmRejectMedicalRecord = (data) => {
         }
     });
 };
+
+const editConfirmedReturn = async (admission) => {
+    if (admission.medical_record_request.isConfirmedReturn) {
+        //  asignar fecha actual en formato para mysql
+        const currentDate = new Date();
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+        admission.medical_record_request.confirmed_return_date = formattedDate;
+    } else {
+        console.log(admission.medical_record_request.isConfirmedReturn);
+        admission.medical_record_request.confirmed_return_date = null;
+    }
+
+    let payload = {
+        ...admission.medical_record_request,
+        confirmed_return_date: admission.medical_record_request.confirmed_return_date,
+        status: 'Devuelto'
+    };
+    let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
+
+    if (responseMedicalRecord.success) {
+        let index = admissionsLists.value.findIndex((item) => item.admission_number === admission.admission_number);
+        if (index !== -1) {
+            admissionsLists.value[index].medical_record_request = admission.medical_record_request;
+            // modificar en indexedDB
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Confirmación de devolución de historia ' + admission.medical_record_number + ' actualizada correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró la solicitud de historia', life: 3000 });
+        }
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar la solicitud de historia', life: 3000 });
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -451,7 +487,16 @@ const confirmRejectMedicalRecord = (data) => {
                     <InputText v-model="slotProps.data.observations" @blur="editObservation(slotProps.data)" />
                 </template>
             </Column>
-
+            <Column field="medical_record_request.response_date" header="Fecha Entr." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request.response_date">
+                        <span class="text-green-500">{{ dformatLocal(slotProps.data.medical_record_request.response_date, 'DD/MM') }}</span>
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="medical_record_request.status" header="Entr." sortable="">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.medical_record_request">
@@ -462,6 +507,27 @@ const confirmRejectMedicalRecord = (data) => {
                                 'pi pi-times-circle text-red-500': slotProps.data.medical_record_request.status === 'Rechazado'
                             }"
                         ></i>
+                    </span>
+                </template>
+            </Column>
+
+            <Column field="medical_record_request.isConfirmedReceipt" header="Confirm. Entr." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request.response_date">
+                        <Checkbox disabled="" v-model="slotProps.data.medical_record_request.isConfirmedReceipt" binary />
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="medical_record_request.isConfirmedReturn" header="Confirm. Dev. Exp." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request.confirmed_receipt_date">
+                        <Checkbox :disabled="slotProps.data.medical_record_request.isConfirmedReturn" v-model="slotProps.data.medical_record_request.isConfirmedReturn" binary @blur="editConfirmedReturn(slotProps.data)" />
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
                     </span>
                 </template>
             </Column>
