@@ -503,7 +503,7 @@ const editConfirmedReturn = async (admission) => {
             <Column field="medical_record_request.isConfirmedReceipt" header="Confirm. Entr." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.medical_record_request.response_date">
-                        <Checkbox disabled="" v-model="slotProps.data.medical_record_request.isConfirmedReceipt" binary />
+                        <Checkbox :disabled="slotProps.data.isConfirmedReceipt || nickName !== slotProps.data.requester_nick" v-model="slotProps.data.medical_record_request.isConfirmedReceipt" binary />
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>

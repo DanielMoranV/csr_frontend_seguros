@@ -100,7 +100,7 @@ const loadData = async () => {
         start_date: dformat(starDate.value, 'MM-DD-YYYY'),
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
-    admissions.value = await admissionsStore.initializeStoreAdmissionsDateRangeApi(payloadAdmissions);
+    admissions.value = await admissionsStore.initializeStoreAdmissionsDateRangeApiDashboard(payloadAdmissions);
     console.log('Admisiones', admissions.value);
 
     admissionsLists.value = await admissionsListStore.initializeStoreByPeriod(period.value);
@@ -128,9 +128,9 @@ const processAdmissions = async (data) => {
         const latestDate = group[0].invoice_date;
         const latestInvoices = group.filter((invoice) => invoice.invoice_date === latestDate);
 
-        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-"
+        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-" o "006-"
         if (latestInvoices.length > 2) {
-            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-')) || latestInvoices[0];
+            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-') && !invoice.invoice_number.startsWith('006-')) || latestInvoices[0];
         }
 
         // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
@@ -184,8 +184,8 @@ const processAdmissions = async (data) => {
             insurersDataSetSoles.value.push(insurerDataSetSoles);
         }
 
-        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
-            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
+        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-')) {
+            admission.invoice_number = admission.invoice_number?.startsWith('005-') || admission.invoice_number?.startsWith('006-') ? '' : admission.invoice_number;
             admission.status = 'Pendiente';
             admission.biller = '';
         } else if (admission.devolution_date !== null && admission.paid_invoice_number === null) {
@@ -213,7 +213,7 @@ const processAdmissions = async (data) => {
                     if (!invoiceStatusDataSoles.value.pendingData[admission.month]) {
                         invoiceStatusDataSoles.value.pendingData[admission.month] = 0;
                     }
-                    invoiceStatusDataSoles.value.pendingData[admission.month] = amount;
+                    invoiceStatusDataSoles.value.pendingData[admission.month] += amount;
                 }
             }
 
@@ -235,12 +235,16 @@ const processAdmissions = async (data) => {
                     invoiceStatusDataSoles.value.invoicedData[admission.month] += amount;
                 }
             }
+        }
 
-            if (admission.paid_invoice_number !== null) {
-                admissionsPaidSoles.value.paid += parseFloat(admission.amount) || 0;
-            } else {
-                admissionsPaidSoles.value.pending += parseFloat(admission.amount) || 0;
-            }
+        if (admission.paid_invoice_number == null && admission.invoice_number == null) {
+            admissionsPaidSoles.value.pending += parseFloat(admission.amount) || 0;
+        } else if (admission.paid_invoice_number) {
+            admissionsPaidSoles.value.paid += parseFloat(admission.amount) || 0;
+        }
+        // imprimir admisiones especificas
+        if (admission.number === '005-0000315033' || admission.number === '0000316043' || admission.number === '0000317188') {
+            console.log(admission);
         }
     });
     months.forEach((month) => {
@@ -254,8 +258,11 @@ const processAdmissions = async (data) => {
         }
     });
 
-    admissionsPaid.value.paid = admissions.value.filter((admission) => admission.paid_invoice_number !== null).length;
-    admissionsPaid.value.pending = admissions.value.filter((admission) => admission.paid_invoice_number === null).length;
+    // Facturas pagadas ignorar las facturas que inicie con "005-" o "006-"
+    admissionsPaid.value.paid = admissions.value.filter((admission) => admission.paid_invoice_number !== null && !admission.invoice_number.startsWith('005-') && !admission.invoice_number.startsWith('006-')).length;
+    admissionsPaid.value.pending = admissions.value.filter(
+        (admission) => admission.paid_invoice_number === null && admission.invoice_number !== null && admission.invoice_number !== '' && !admission.invoice_number.startsWith('005-') && !admission.invoice_number.startsWith('006-')
+    ).length;
 
     // ordenar los meses de admisiones
     months.sort((a, b) => Number(a) - Number(b));
@@ -269,8 +276,6 @@ const processAdmissions = async (data) => {
         }
         return b.count - a.count; // Ordenar por count descendente dentro de cada mes
     });
-
-    console.log(insurersDataSet.value);
     insurersDataSetSoles.value.sort((a, b) => a.month - b.month);
 };
 
@@ -353,7 +358,7 @@ const searchAdmissionsByDate = async () => {
         start_date: dformat(starDate.value, 'MM-DD-YYYY'),
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
-    const { success, data } = await admissionsStore.fetchAdmissionsDateRangeApi(payload);
+    const { success, data } = await admissionsStore.fetchAdmissionsDateRangeApiDashboard(payload);
 
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
@@ -366,14 +371,33 @@ const searchAdmissionsByDate = async () => {
         invoicedData: [],
         pendingData: []
     };
+    invoiceStatusDataSoles.value = {
+        months: [],
+        invoicedData: [],
+        pendingData: []
+    };
+    admissionsPaid.value = {
+        paid: 0,
+        pending: 0
+    };
 
-    processAdmissions(data);
+    await processAdmissions(data);
     invoicedData.value = Object.values(sortMonths(invoiceStatusData.value.invoicedData));
     pendingData.value = Object.values(sortMonths(invoiceStatusData.value.pendingData));
+
+    // Facturas pagadas
+    paidSet.value = [admissionsPaid.value.paid, admissionsPaid.value.pending];
+    chartDataPaid.value = setChartDataPaid();
+    chartOptionsPaid.value = setChartOptionsPaid();
+
+    // Facturas liquidadas y pendientes
     chartData.value = setChartData();
     chartOptions.value = setChartOptions();
+
+    // Grafico de admisiones por seguros
     chartDataInsurers.value = setChartDataInsurers(insurersDataSet.value);
     chartOptionsInsurers.value = setChartOptionsInsurers();
+
     loadingData.value = false;
 };
 
@@ -418,8 +442,8 @@ function setChartDataPaid() {
         datasets: [
             {
                 data: paidSet.value,
-                backgroundColor: [documentStyle.getPropertyValue('--p-cyan-500'), documentStyle.getPropertyValue('--p-orange-500'), documentStyle.getPropertyValue('--p-gray-500')],
-                hoverBackgroundColor: [documentStyle.getPropertyValue('--p-cyan-400'), documentStyle.getPropertyValue('--p-orange-400'), documentStyle.getPropertyValue('--p-gray-400')]
+                backgroundColor: [documentStyle.getPropertyValue('--p-cyan-500'), documentStyle.getPropertyValue('--p-gray-500'), documentStyle.getPropertyValue('--p-gray-500')],
+                hoverBackgroundColor: [documentStyle.getPropertyValue('--p-cyan-400'), documentStyle.getPropertyValue('--p-gray-400'), documentStyle.getPropertyValue('--p-gray-400')]
             }
         ]
     };
@@ -782,8 +806,11 @@ watch([getPrimary, getSurface, isDarkTheme], () => {
                         <i :class="isCostView ? 'pi pi-hashtag' : 'pi pi-dollar'"></i>
                     </button>
                 </div>
-                <Chart type="pie" :data="chartDataPaid" :options="chartOptionsPaid" class="w-full md:w-[25rem]" />
+                <div class="flex justify-center">
+                    <Chart type="pie" :data="chartDataPaid" :options="chartOptionsPaid" class="w-full md:w-[25rem]" />
+                </div>
             </div>
+
             <!-- <div class="card">
                 <div class="flex items-center justify-between mb-6">
                     <div class="font-semibold text-xl">Notifications</div>

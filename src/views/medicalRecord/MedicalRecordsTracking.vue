@@ -38,6 +38,8 @@ function getStatusClass(status) {
             return 'status-tag status-pendiente';
         case 'Rechazado':
             return 'status-tag status-rechazado';
+        case 'Devuelto':
+            return 'status-tag status-devuelto';
         default:
             return 'status-tag';
     }
@@ -215,6 +217,7 @@ const saveNewRequest = async () => {
         requester_nick: nickName.value,
         medical_record_number: medicalRecord.value.medical_record_number,
         request_date: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        status: 'Pendiente',
         remarks: medicalRecord.value.remarks
     };
     let responseNewRequest = await medicalRecordsRequestsStore.createMedicalRecordsRequest(payload);
@@ -282,14 +285,17 @@ const editConfirmedReturn = async (medicalRecord) => {
 
     let payload = {
         ...medicalRecord,
-        confirmed_return_date: medicalRecord.confirmed_return_date
+        confirmed_return_date: medicalRecord.confirmed_return_date,
+        status: 'Devuelto'
     };
+    medicalRecord.status = 'Devuelto';
     let responseMedicalRecord = await medicalRecordsRequestsStore.updateMedicalRecordsRequest(payload);
 
     if (responseMedicalRecord.success) {
         let index = medicalRecords.value.findIndex((item) => item.medical_record_number === medicalRecord.medical_record_number);
         if (index !== -1) {
             medicalRecords.value[index].medical_record_request = medicalRecord.medical_record_request;
+
             // modificar en indexedDB
             await indexedDB.setItem('admissionsLists', medicalRecords.value);
             toast.add({ severity: 'success', summary: 'Éxito', detail: 'Confirmación de devolución de historia ' + medicalRecord.medical_record_number + ' actualizada correctamente', life: 3000 });
@@ -380,8 +386,7 @@ const editConfirmedReturn = async (medicalRecord) => {
             <Column field="isConfirmedReceipt" header="Confirm. Entr." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.response_date">
-                        {{ slotProps.data.requested_nick }}
-                        <Checkbox :disabled="slotProps.data.isConfirmedReceipt || nickName !== slotProps.data.requested_nick" v-model="slotProps.data.isConfirmedReceipt" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
+                        <Checkbox :disabled="slotProps.data.isConfirmedReceipt || nickName !== slotProps.data.requester_nick" v-model="slotProps.data.isConfirmedReceipt" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
@@ -391,7 +396,7 @@ const editConfirmedReturn = async (medicalRecord) => {
             <Column field="isConfirmedReturn" header="Confirm. Dev. Exp." sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.confirmed_receipt_date">
-                        <Checkbox :disabled="slotProps.data.isConfirmedReturn && position === 'ARCHIVO HISTORIAS'" v-model="slotProps.data.isConfirmedReturn" binary @blur="editConfirmedReturn(slotProps.data)" />
+                        <Checkbox :disabled="slotProps.data.isConfirmedReturn || position !== 'ARCHIVO HISTORIAS'" v-model="slotProps.data.isConfirmedReturn" binary @blur="editConfirmedReturn(slotProps.data)" />
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>

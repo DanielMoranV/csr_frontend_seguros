@@ -355,9 +355,9 @@ const formatAdmissions = (data) => {
         const latestDate = group[0].invoice_date;
         const latestInvoices = group.filter((invoice) => invoice.invoice_date === latestDate);
 
-        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-"
+        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-" o "006-"
         if (latestInvoices.length > 2) {
-            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-')) || latestInvoices[0];
+            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-') && !invoice.invoice_number.startsWith('006-')) || latestInvoices[0];
         }
 
         // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
@@ -380,8 +380,8 @@ const formatAdmissions = (data) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
         admission.daysPassed = daysPassed;
 
-        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-')) {
-            admission.invoice_number = admission.invoice_number?.startsWith('005-') ? '' : admission.invoice_number;
+        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-')) {
+            admission.invoice_number = admission.invoice_number?.startsWith('005-') || admission.invoice_number?.startsWith('006-') ? '' : admission.invoice_number;
             admission.status = 'Pendiente';
             admission.biller = '';
         } else if (admission.devolution_date !== null && admission.paid_invoice_number === null) {
@@ -392,9 +392,9 @@ const formatAdmissions = (data) => {
             admission.status = 'Liquidado';
         }
 
-        if (shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
+        // Solo establece 'Enviado' si el estado no es 'Pagado'
+        if (admission.status !== 'Pagado' && shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
             admission.shipment = shipmentsData[admission.invoice_number];
-            console.log(admission);
             admission.status = 'Enviado';
         }
 

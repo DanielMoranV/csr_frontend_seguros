@@ -43,6 +43,17 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             this.loading = false;
             return this.admissions;
         },
+        async initializeStoreAdmissionsDateRangeApiDashboard(payload) {
+            // Carga inicial desde IndexedDB
+            this.loading = true;
+            const admissionsFromCache = await indexedDB.getItem('admissions');
+            this.admissions = admissionsFromCache || [];
+            if (this.admissions.length === 0) {
+                await this.fetchAdmissionsDateRangeApiDashboard(payload);
+            }
+            this.loading = false;
+            return this.admissions;
+        },
 
         async fetchAdmissionsDateRange(payload) {
             this.loading = true;
@@ -59,6 +70,18 @@ export const useAdmissionsStore = defineStore('admissionsStore', {
             this.loading = true;
             // let responde = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
             const { data } = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
+            if (this.success) {
+                this.admissions = data;
+                await indexedDB.setItem('admissions', this.admissions);
+            } else {
+                this.admissions = [];
+            }
+            return { success: this.success, data: this.admissions };
+        },
+        async fetchAdmissionsDateRangeApiDashboard(payload) {
+            this.loading = true;
+            // let responde = await handleResponseStore(FastApiService.admisionsByRange(payload), this);
+            const { data } = await handleResponseStore(FastApiService.admisionsByRangeDashboard(payload), this);
             if (this.success) {
                 this.admissions = data;
                 await indexedDB.setItem('admissions', this.admissions);
