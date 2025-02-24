@@ -329,9 +329,9 @@ const confirmRejectMedicalRecord = (data) => {
 
 const editConfirmedReturn = async (admission) => {
     if (admission.medical_record_request.isConfirmedReturn) {
-        //  asignar fecha actual en formato para mysql
+        //  asignar fecha y hora actual en formato para mysql
         const currentDate = new Date();
-        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} ${currentDate.getHours().toString().padStart(2, '0')}:${currentDate.getMinutes().toString().padStart(2, '0')}:${currentDate.getSeconds().toString().padStart(2, '0')}`;
         admission.medical_record_request.confirmed_return_date = formattedDate;
     } else {
         console.log(admission.medical_record_request.isConfirmedReturn);
@@ -343,6 +343,8 @@ const editConfirmedReturn = async (admission) => {
         confirmed_return_date: admission.medical_record_request.confirmed_return_date,
         status: 'Devuelto'
     };
+
+    admission.medical_record_request.status = 'Devuelto';
     let responseMedicalRecord = await medicalRecordStore.updateMedicalRecordsRequest(payload);
 
     if (responseMedicalRecord.success) {
@@ -497,19 +499,6 @@ const editConfirmedReturn = async (admission) => {
                     </span>
                 </template>
             </Column>
-            <Column field="medical_record_request.status" header="Entr." sortable="">
-                <template #body="slotProps">
-                    <span v-if="slotProps.data.medical_record_request">
-                        <i
-                            :class="{
-                                'pi pi-check-circle text-green-500': slotProps.data.medical_record_request.status === 'Atendido',
-                                'pi pi-clock text-yellow-500': slotProps.data.medical_record_request.status === 'Pendiente',
-                                'pi pi-times-circle text-red-500': slotProps.data.medical_record_request.status === 'Rechazado'
-                            }"
-                        ></i>
-                    </span>
-                </template>
-            </Column>
 
             <Column field="medical_record_request.isConfirmedReceipt" header="Confirm. Entr." sortable>
                 <template #body="slotProps">
@@ -528,6 +517,20 @@ const editConfirmedReturn = async (admission) => {
                     </span>
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="medical_record_request.status" header="Entr. Estado" sortable="">
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.medical_record_request">
+                        <i
+                            :class="{
+                                'pi pi-check-circle text-green-500': slotProps.data.medical_record_request.status === 'Atendido',
+                                'pi pi-clock text-yellow-500': slotProps.data.medical_record_request.status === 'Pendiente',
+                                'pi pi-times-circle text-red-500': slotProps.data.medical_record_request.status === 'Rechazado',
+                                'pi pi-replay text-blue-500': slotProps.data.medical_record_request.status === 'Devuelto'
+                            }"
+                        ></i>
                     </span>
                 </template>
             </Column>

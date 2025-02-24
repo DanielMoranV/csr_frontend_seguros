@@ -60,6 +60,13 @@ onMounted(async () => {
 
     if (responseMedicalRecords.data) {
         medicalRecords.value = responseMedicalRecords.data;
+
+        if (medicalRecords.value.length > 0) {
+            medicalRecords.value.forEach((medicalRecord) => {
+                medicalRecord.isConfirmedReceipt = !!medicalRecord.confirmed_receipt_date;
+                medicalRecord.isConfirmedReturn = !!medicalRecord.confirmed_return_date;
+            });
+        }
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Datos cargados correctamente', life: 3000 });
     }
 });
@@ -231,6 +238,68 @@ const saveNewRequest = async () => {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar la solicitud', life: 3000 });
     }
 };
+
+const editConfirmedReceiptDate = async (medicalRecord) => {
+    if (medicalRecord.isConfirmedReceipt) {
+        //  asignar fecha y hora actual en formato para mysql
+        const currentDate = new Date();
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} ${currentDate.getHours().toString().padStart(2, '0')}:${currentDate.getMinutes().toString().padStart(2, '0')}:${currentDate.getSeconds().toString().padStart(2, '0')}`;
+        medicalRecord.confirmed_receipt_date = formattedDate;
+    } else {
+        medicalRecord.confirmed_receipt_date = null;
+    }
+
+    let payload = {
+        ...medicalRecord,
+        confirmed_receipt_date: medicalRecord.confirmed_receipt_date
+    };
+    let responseMedicalRecord = await medicalRecordsRequestsStore.updateMedicalRecordsRequest(payload);
+
+    if (responseMedicalRecord.success) {
+        let index = medicalRecords.value.findIndex((item) => item.medical_record_number === medicalRecord.medical_record_number);
+        if (index !== -1) {
+            medicalRecords.value[index].medical_record_request = medicalRecord.medical_record_request;
+            // modificar en indexedDB
+            await indexedDB.setItem('admissionsLists', medicalRecords.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Confirmación de recepción de historia ' + medicalRecord.medical_record_number + ' actualizada correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró la solicitud de historia', life: 3000 });
+        }
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar la solicitud de historia', life: 3000 });
+    }
+};
+
+const editConfirmedReturn = async (medicalRecord) => {
+    if (medicalRecord.isConfirmedReturn) {
+        //  asignar fecha y hora actual en formato para mysql
+        const currentDate = new Date();
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} ${currentDate.getHours().toString().padStart(2, '0')}:${currentDate.getMinutes().toString().padStart(2, '0')}:${currentDate.getSeconds().toString().padStart(2, '0')}`;
+        medicalRecord.confirmed_return_date = formattedDate;
+    } else {
+        medicalRecord.confirmed_return_date = null;
+    }
+
+    let payload = {
+        ...medicalRecord,
+        confirmed_return_date: medicalRecord.confirmed_return_date
+    };
+    let responseMedicalRecord = await medicalRecordsRequestsStore.updateMedicalRecordsRequest(payload);
+
+    if (responseMedicalRecord.success) {
+        let index = medicalRecords.value.findIndex((item) => item.medical_record_number === medicalRecord.medical_record_number);
+        if (index !== -1) {
+            medicalRecords.value[index].medical_record_request = medicalRecord.medical_record_request;
+            // modificar en indexedDB
+            await indexedDB.setItem('admissionsLists', medicalRecords.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Confirmación de devolución de historia ' + medicalRecord.medical_record_number + ' actualizada correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró la solicitud de historia', life: 3000 });
+        }
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar la solicitud de historia', life: 3000 });
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -308,6 +377,27 @@ const saveNewRequest = async () => {
                     <InputText v-model="slotProps.data.remarks" @blur="editRemarks(slotProps.data)" />
                 </template>
             </Column>
+            <Column field="isConfirmedReceipt" header="Confirm. Entr." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.response_date">
+                        {{ slotProps.data.requested_nick }}
+                        <Checkbox :disabled="slotProps.data.isConfirmedReceipt || nickName !== slotProps.data.requested_nick" v-model="slotProps.data.isConfirmedReceipt" binary @blur="editConfirmedReceiptDate(slotProps.data)" />
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
+            <Column field="isConfirmedReturn" header="Confirm. Dev. Exp." sortable>
+                <template #body="slotProps">
+                    <span v-if="slotProps.data.confirmed_receipt_date">
+                        <Checkbox :disabled="slotProps.data.isConfirmedReturn && position === 'ARCHIVO HISTORIAS'" v-model="slotProps.data.isConfirmedReturn" binary @blur="editConfirmedReturn(slotProps.data)" />
+                    </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+            </Column>
             <Column field="status" header="Estado" sortable>
                 <template #body="slotProps">
                     <span :class="getStatusClass(slotProps.data.status)">
@@ -377,5 +467,9 @@ const saveNewRequest = async () => {
 
 .status-rechazado {
     background-color: red;
+}
+
+.status-devuelto {
+    background-color: blue;
 }
 </style>

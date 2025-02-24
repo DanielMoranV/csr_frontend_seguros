@@ -413,9 +413,9 @@ const editConfirmedReceiptDate = async (admission) => {
     console.log(admission);
     if (admission.medical_record_request.isConfirmedReceipt) {
         console.log(admission.medical_record_request.isConfirmedReceipt);
-        //  asignar fecha actual en formato para mysql
+        //  asignar fecha y hora actual en formato para mysql
         const currentDate = new Date();
-        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+        const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} ${currentDate.getHours().toString().padStart(2, '0')}:${currentDate.getMinutes().toString().padStart(2, '0')}:${currentDate.getSeconds().toString().padStart(2, '0')}`;
         admission.medical_record_request.confirmed_receipt_date = formattedDate;
     } else {
         console.log(admission.medical_record_request.isConfirmedReceipt);
