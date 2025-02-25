@@ -218,7 +218,7 @@ const exportAdmissions = async () => {
             auditDescription: admission.audit ? admission.audit.description : '-',
             auditStatus: admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
-            shipmentVerifiedShipmentDate: admission.shipment ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
+            shipmentVerifiedShipmentDate: admission.shipment && admission.shipment.verified_shipment_date ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
             paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No'
         };
     });

@@ -165,6 +165,8 @@ const exportAdmissions = async () => {
         { header: 'Facturador', key: 'biller', width: 15 },
         { header: 'Estado Audit', key: 'auditStatus', width: 15 },
         { header: 'Factura', key: 'invoice_number', width: 15 },
+        { header: 'Fecha Factura', key: 'invoice_date', width: 15 },
+        { header: 'Días', key: 'daysPassed', width: 5 },
         { header: 'Pago', key: 'paid_invoice_number', width: 15 },
         { header: 'Env Iniciado', key: 'shipment_id', width: 15 },
         { header: 'Env. Trama', key: 'shipment.trama_date', width: 15 },
@@ -175,10 +177,33 @@ const exportAdmissions = async () => {
         { header: 'Verif. Envío', key: 'shipmentVerifiedShipmentDate', width: 15 }
     ];
 
+    const getDaysPassed = (from, to) => {
+        console.log('from', from);
+        console.log('to', to);
+
+        const date1 = new Date(from);
+        const date2 = new Date(to);
+
+        // Normaliza las fechas eliminando el efecto de la zona horaria
+        const timeDiff = Math.abs(date2 - date1);
+        const diffDays = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+        console.log('date1', date1);
+        console.log('date2', date2);
+        console.log('Días de diferencia:', diffDays);
+
+        return diffDays;
+    };
+
     const data = admissionsLists.value.map((admission) => {
         const formatDate = (date) => {
             return date ? dformat(date, 'DD/MM/YYYY') : '-';
         };
+
+        // calcular los dias pasados entre attendance_date y invoice_date
+        const daysPassed = getDaysPassed(admission.attendance_date, admission.invoice_date);
+        admission.daysPassed = daysPassed;
+
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
@@ -191,6 +216,9 @@ const exportAdmissions = async () => {
             biller: admission.biller,
             auditStatus: admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
+            invoice_date: admission.invoice_date ? dformatLocal(admission.invoice_date, 'DD/MM/YYYY') : '-',
+            // calcular los dias pasados entre attendance_date y invoice_date
+            daysPassed: admission.daysPassed,
             shipmentVerifiedShipmentDate: admission.shipment ? formatDate(admission.shipment.verified_shipment_date) : '-',
             paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No',
             shipment_id: admission.shipment_id ? 'Si' : 'No',
