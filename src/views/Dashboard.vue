@@ -110,173 +110,135 @@ const loadData = async () => {
 };
 
 const processAdmissions = async (data) => {
+    // Reiniciar variables reactivas antes de procesar nuevos datos
+    admissions.value = [];
+    insurersDataSet.value = [];
+    insurersDataSetSoles.value = [];
+    invoiceStatusData.value = { pendingData: {}, invoicedData: {}, months: [] };
+    invoiceStatusDataSoles.value = { pendingData: {}, invoicedData: {} };
+    admissionsPaid.value = { paid: 0, pending: 0 };
+    admissionsPaidSoles.value = { paid: 0, pending: 0 };
+
     // Agrupar por número de admisión
-    const groupedAdmissions = data.reduce((acc, admission) => {
-        if (!acc[admission.number]) {
-            acc[admission.number] = [];
+    const groupedAdmissions = new Map();
+    data.forEach((admission) => {
+        if (!groupedAdmissions.has(admission.number)) {
+            groupedAdmissions.set(admission.number, []);
         }
-        acc[admission.number].push(admission);
-        return acc;
-    }, {});
+        groupedAdmissions.get(admission.number).push(admission);
+    });
 
-    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
-    const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
-        // Ordenamos por fecha descendente
+    // Obtener el registro con la fecha de factura más reciente para cada grupo
+    const uniqueAdmissions = Array.from(groupedAdmissions.values()).map((group) => {
         group.sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date));
-
-        // Filtramos facturas con la fecha más reciente
         const latestDate = group[0].invoice_date;
-        const latestInvoices = group.filter((invoice) => invoice.invoice_date === latestDate);
+        const latestInvoices = group.filter((inv) => inv.invoice_date === latestDate);
 
-        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-" o "006-"
         if (latestInvoices.length > 2) {
-            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-') && !invoice.invoice_number.startsWith('006-')) || latestInvoices[0];
+            return latestInvoices.find((inv) => !inv.invoice_number.startsWith('005-') && !inv.invoice_number.startsWith('006-')) || latestInvoices[0];
         }
-
-        // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
         return latestInvoices[0];
     });
 
-    // Obtener los periodos de envío de las aseguradoras en un objeto para acceso rápido
-    const shippingPeriods = insurers.value.reduce((acc, insurer) => {
-        acc[insurer.name.trim().toLowerCase()] = insurer.shipping_period;
-        return acc;
-    }, {});
+    // Obtener los periodos de envío de las aseguradoras y envíos verificados
+    const shippingPeriods = new Map(insurers.value.map((insurer) => [insurer.name.trim().toLowerCase(), insurer.shipping_period]));
+    const shipmentsData = new Map(shipments.value.map((shipment) => [shipment.invoice_number, shipment]));
 
-    const shipmentsData = shipments.value.reduce((acc, shipment) => {
-        acc[shipment.invoice_number] = shipment;
-        return acc;
-    }, {});
+    let months = new Set();
 
-    admissions.value = uniqueAdmissions;
-    let months = [];
-
-    admissions.value.forEach((admission) => {
+    uniqueAdmissions.forEach((admission) => {
         let daysPassed = getDaysPassed(admission.attendance_date);
         admission.daysPassed = daysPassed;
+        admission.month = Number(getMonth(admission.attendance_date));
+        months.add(admission.month);
 
-        // obtener el mes de admision.attendance_date
-        const month = Number(getMonth(admission.attendance_date));
+        // Actualizar aseguradoras por mes
+        updateInsurersData(insurersDataSet.value, admission);
+        updateInsurersData(insurersDataSetSoles.value, admission, true);
 
-        // Asignar el mes de admision.attendance_date a admision.month
-        admission.month = month;
-        // añadir a invoiceStatusData.months si no existe
-        if (!months.includes(month)) {
-            months.push(month);
-        }
+        // Determinar estado del invoice
+        admission.status = determineInvoiceStatus(admission, shipmentsData);
+        admission.shipping_period = shippingPeriods.get(admission.insurer_name.trim().toLowerCase()) || null;
 
-        let insurerDataSet = {
-            insurance: admission.insurer_name,
-            month: month,
-            count: 1
-        };
-        let insurerDataSetSoles = {
-            insurance: admission.insurer_name,
-            month: month,
-            count: parseFloat(admission.amount) || 0
-        };
-        if (insurersDataSet.value.find((item) => item.insurance === admission.insurer_name && item.month === month)) {
-            insurersDataSet.value.find((item) => item.insurance === admission.insurer_name && item.month === month).count++;
-
-            insurersDataSetSoles.value.find((item) => item.insurance === admission.insurer_name && item.month === month).count += parseFloat(admission.amount);
-        } else {
-            insurersDataSet.value.push(insurerDataSet);
-            insurersDataSetSoles.value.push(insurerDataSetSoles);
-        }
-
-        if (admission.invoice_number === null || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-')) {
-            admission.invoice_number = admission.invoice_number?.startsWith('005-') || admission.invoice_number?.startsWith('006-') ? '' : admission.invoice_number;
-            admission.status = 'Pendiente';
-            admission.biller = '';
-        } else if (admission.devolution_date !== null && admission.paid_invoice_number === null) {
-            admission.status = 'Devolución';
-        } else if (admission.paid_invoice_number !== null) {
-            admission.status = 'Pagado';
-        } else {
-            admission.status = 'Liquidado';
-        }
-
-        if (shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
-            admission.status = 'Enviado';
-        }
-
-        // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
-        admission.shipping_period = shippingPeriods[admission.insurer_name.trim().toLowerCase()];
-
-        if (admission.status === 'Pendiente') {
-            // Contar cuantas admisiones pendientes hay en cada mes admision.month
-            if (months.includes(admission.month)) {
-                invoiceStatusData.value.pendingData[admission.month] = (invoiceStatusData.value.pendingData[admission.month] ?? 0) + 1;
-
-                let amount = parseFloat(admission.amount);
-                if (amount > 0) {
-                    if (!invoiceStatusDataSoles.value.pendingData[admission.month]) {
-                        invoiceStatusDataSoles.value.pendingData[admission.month] = 0;
-                    }
-                    invoiceStatusDataSoles.value.pendingData[admission.month] += amount;
-                }
-            }
-
-            admission.daysPassed = daysPassed <= admission.shipping_period ? daysPassed : `Extemp. (${daysPassed - admission.shipping_period} d.)`;
-        }
-
-        if (admission.status !== 'Pendiente') {
-            if (months.includes(admission.month)) {
-                invoiceStatusData.value.invoicedData[admission.month] = (invoiceStatusData.value.invoicedData[admission.month] ?? 0) + 1;
-
-                let amount = parseFloat(admission.amount);
-
-                if (amount > 0) {
-                    // Asegurarse de que invoiceStatusDataSoles.value.invoicedData[admission.month] esté inicializado como un número
-                    if (!invoiceStatusDataSoles.value.invoicedData[admission.month]) {
-                        invoiceStatusDataSoles.value.invoicedData[admission.month] = 0;
-                    }
-                    // Sumar el monto
-                    invoiceStatusDataSoles.value.invoicedData[admission.month] += amount;
-                }
-            }
-        }
-
-        if (admission.paid_invoice_number == null && admission.invoice_number == null) {
-            admissionsPaidSoles.value.pending += parseFloat(admission.amount) || 0;
-        } else if (admission.paid_invoice_number) {
-            admissionsPaidSoles.value.paid += parseFloat(admission.amount) || 0;
-        }
-        // imprimir admisiones especificas
-        if (admission.number === '005-0000315033' || admission.number === '0000316043' || admission.number === '0000317188') {
-            console.log(admission);
-        }
+        updateInvoiceMetrics(admission, daysPassed);
+        updateAdmissionsPaid(admission);
     });
+
+    // Completar los meses que no existen en invoiceStatusData
     months.forEach((month) => {
-        if (!invoiceStatusData.value.pendingData.hasOwnProperty(month)) {
-            invoiceStatusData.value.pendingData[month] = 0;
-            invoiceStatusDataSoles.value.pendingData[month] = 0;
-        }
-        if (!invoiceStatusData.value.invoicedData.hasOwnProperty(month)) {
-            invoiceStatusData.value.invoicedData[month] = 0;
-            invoiceStatusDataSoles.value.invoicedData[month] = 0;
-        }
+        invoiceStatusData.value.pendingData[month] ??= 0;
+        invoiceStatusDataSoles.value.pendingData[month] ??= 0;
+        invoiceStatusData.value.invoicedData[month] ??= 0;
+        invoiceStatusDataSoles.value.invoicedData[month] ??= 0;
     });
 
-    // Facturas pagadas ignorar las facturas que inicie con "005-" o "006-"
-    admissionsPaid.value.paid = admissions.value.filter((admission) => admission.paid_invoice_number !== null && !admission.invoice_number.startsWith('005-') && !admission.invoice_number.startsWith('006-')).length;
-    admissionsPaid.value.pending = admissions.value.filter(
-        (admission) => admission.paid_invoice_number === null && admission.invoice_number !== null && admission.invoice_number !== '' && !admission.invoice_number.startsWith('005-') && !admission.invoice_number.startsWith('006-')
-    ).length;
+    // Ordenar los meses de admisiones
+    invoiceStatusData.value.months = [...months].sort((a, b) => a - b).map(getMesEnEspanol);
+    totalAdmissions.value = uniqueAdmissions.length;
 
-    // ordenar los meses de admisiones
-    months.sort((a, b) => Number(a) - Number(b));
-    invoiceStatusData.value.months = months.map((month) => getMesEnEspanol(Number(month)));
-    totalAdmissions.value = admissions.value.length;
-
-    // Aquí puedes agregar código para procesar los datos de las aseguradoras
-    insurersDataSet.value.sort((a, b) => {
-        if (a.month !== b.month) {
-            return a.month - b.month; // Ordenar por mes ascendente
-        }
-        return b.count - a.count; // Ordenar por count descendente dentro de cada mes
-    });
+    // Ordenar aseguradoras por mes y cantidad
+    insurersDataSet.value.sort(sortByMonthAndCount);
     insurersDataSetSoles.value.sort((a, b) => a.month - b.month);
+};
+
+// Función auxiliar para actualizar datos de aseguradoras
+const updateInsurersData = (dataSet, admission, isAmount = false) => {
+    let existingEntry = dataSet.find((item) => item.insurance === admission.insurer_name && item.month === admission.month);
+    if (existingEntry) {
+        existingEntry.count += isAmount ? parseFloat(admission.amount) || 0 : 1;
+    } else {
+        dataSet.push({
+            insurance: admission.insurer_name,
+            month: admission.month,
+            count: isAmount ? parseFloat(admission.amount) || 0 : 1
+        });
+    }
+};
+
+// Determinar estado de la admisión
+const determineInvoiceStatus = (admission, shipmentsData) => {
+    if (!admission.invoice_number || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-')) {
+        return 'Pendiente';
+    }
+    if (admission.devolution_date && !admission.paid_invoice_number) return 'Devolución';
+    if (admission.paid_invoice_number) return 'Pagado';
+    if (shipmentsData.has(admission.invoice_number) && shipmentsData.get(admission.invoice_number).verified_shipment_date) {
+        return 'Enviado';
+    }
+    return 'Liquidado';
+};
+
+// Actualizar métricas de invoices
+const updateInvoiceMetrics = (admission, daysPassed) => {
+    let month = admission.month;
+    let amount = parseFloat(admission.amount) || 0;
+
+    if (admission.status === 'Pendiente') {
+        invoiceStatusData.value.pendingData[month] = (invoiceStatusData.value.pendingData[month] ?? 0) + 1;
+        invoiceStatusDataSoles.value.pendingData[month] = (invoiceStatusDataSoles.value.pendingData[month] ?? 0) + amount;
+        admission.daysPassed = daysPassed <= admission.shipping_period ? daysPassed : `Extemp. (${daysPassed - admission.shipping_period} d.)`;
+    } else {
+        invoiceStatusData.value.invoicedData[month] = (invoiceStatusData.value.invoicedData[month] ?? 0) + 1;
+        invoiceStatusDataSoles.value.invoicedData[month] = (invoiceStatusDataSoles.value.invoicedData[month] ?? 0) + amount;
+    }
+};
+
+// Actualizar métricas de admisiones pagadas
+const updateAdmissionsPaid = (admission) => {
+    let amount = parseFloat(admission.amount) || 0;
+    if (!admission.paid_invoice_number && admission.invoice_number && !admission.invoice_number.startsWith('005-') && !admission.invoice_number.startsWith('006-')) {
+        admissionsPaidSoles.value.pending += amount;
+        admissionsPaid.value.pending++;
+    } else if (admission.paid_invoice_number) {
+        admissionsPaidSoles.value.paid += amount;
+        admissionsPaid.value.paid++;
+    }
+};
+
+// Función para ordenar aseguradoras por mes y cantidad
+const sortByMonthAndCount = (a, b) => {
+    if (a.month !== b.month) return a.month - b.month;
+    return b.count - a.count;
 };
 
 const processAdmissionsLists = async (data) => {
