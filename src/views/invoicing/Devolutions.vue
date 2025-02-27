@@ -314,7 +314,7 @@ const exportDevolutions = async () => {
             </Column>
             <Column field="period_dev" header="Periodo" sortable></Column>
             <Column field="type" header="Tipo" sortable></Column>
-            <Column field="reason" header="Motivo" sorteable></Column>
+            <Column field="reason" header="Motivo de devolución" sorteable style="min-width: 15rem"></Column>
             <Column field="status" header="Estado" sortable>
                 <template #body="slotProps">
                     <span v-if="slotProps.data.status">

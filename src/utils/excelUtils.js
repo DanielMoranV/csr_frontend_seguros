@@ -123,23 +123,23 @@ export const processDataDatabaseShipments = (rows) => {
         .slice(2)
         .filter((row) => row[1] !== '')
         .filter((row) => row[11] != '')
-        .filter((row) => row[13])
-        .filter((row) => row[14])
         .filter((row) => row[15])
         .filter((row) => row[16])
         .filter((row) => row[17])
         .filter((row) => row[18])
         .filter((row) => row[19])
+        .filter((row) => row[20])
+        .filter((row) => row[21])
         .map((row) => ({
             admission_number: row[1],
             invoice_number: row[11],
-            isNewShipment: row[13]?.toLowerCase() === 'no' ? true : row[13]?.toLowerCase() === 'si' ? false : null,
-            trama_date: row[14] ? row[14] : null,
-            courier_date: row[15] ? row[15] : null,
-            email_verified_date: row[16] ? row[16] : null,
-            url_sustenance: row[17] ? (typeof row[17] === 'object' ? row[17].text || row[17].hyperlink || null : row[17]) : null,
-            remarks: row[18] ? row[18] : null,
-            verified_shipment_date: row[19] ? validateDate(row[19]) : null
+            isNewShipment: row[15]?.toLowerCase() === 'no' ? true : row[15]?.toLowerCase() === 'si' ? false : null,
+            trama_date: row[16] ? row[16] : null,
+            courier_date: row[17] ? row[17] : null,
+            email_verified_date: row[18] ? row[18] : null,
+            url_sustenance: row[19] ? (typeof row[19] === 'object' ? row[19].text || row[19].hyperlink || null : row[19]) : null,
+            remarks: row[20] ? row[20] : null,
+            verified_shipment_date: row[21] ? validateDate(row[21]) : null
         }));
     return dataSetShipments;
 };

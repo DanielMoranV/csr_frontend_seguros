@@ -5,7 +5,7 @@ import { useAdmissionsStore } from '@/stores/admissionsStore';
 import { useDevolutionsStore } from '@/stores/devolutionsStore';
 import { useInsurersStore } from '@/stores/insurersStore';
 import { useShipmentsStore } from '@/stores/shipmentsStore';
-import { getCurrentPeriod, getMesEnEspanol, getMonth } from '@/utils/dataProcessingHelpers';
+import { getMesEnEspanol, getMonth } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal, getDaysPassed } from '@/utils/day';
 import Chart from 'primevue/chart';
 
@@ -72,7 +72,6 @@ const starDate = ref(new Date(new Date().getFullYear(), 0, 1));
 const endDate = ref(new Date());
 const period = ref(null);
 const totalAdmissions = ref(0);
-const totalPeriodAdmissions = ref(0);
 
 const invoiceStatusData = ref({
     months: [],
@@ -80,9 +79,6 @@ const invoiceStatusData = ref({
     pendingData: []
 });
 
-period.value = getCurrentPeriod();
-
-const products = ref(null);
 const chartData = ref(null);
 const chartOptions = ref(null);
 const chartOptionsInsurers = ref(null);
@@ -241,65 +237,9 @@ const sortByMonthAndCount = (a, b) => {
     return b.count - a.count;
 };
 
-const processAdmissionsLists = async (data) => {
-    if (data.length === 0) {
-        admissionsLists.value = [];
-        toast.add({
-            severity: 'info',
-            summary: 'No hay datos',
-            detail: 'No se encontraron admisiones para el periodo seleccionado.',
-            life: 5000
-        });
-        return [];
-    }
-    // Agrupar por número de admisión
-    const groupedAdmissions = data.reduce((acc, admission) => {
-        if (!acc[admission.number]) {
-            acc[admission.number] = [];
-        }
-        acc[admission.number].push(admission);
-        return acc;
-    }, {});
-
-    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
-    const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
-        // Ordenamos por fecha descendente
-        group.sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date));
-
-        // Filtramos facturas con la fecha más reciente
-        const latestDate = group[0].invoice_date;
-        const latestInvoices = group.filter((invoice) => invoice.invoice_date === latestDate);
-
-        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-" o "006-"
-        if (latestInvoices.length > 2) {
-            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-') && !invoice.invoice_number.startsWith('006-')) || latestInvoices[0];
-        }
-
-        // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
-        return latestInvoices[0];
-    });
-
-    uniqueAdmissions.forEach((admission) => {
-        if (!admission.invoice_number || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-')) {
-            admission.invoice_number = !admission.invoice_number || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-') ? '' : admission.invoice_number;
-        }
-
-        if (admission.devolution_date && admission.devolution_invoice_number == admission.invoice_number) {
-            admission.isDevolution = true;
-            console.log('admision devolución', admission);
-        } else {
-            admission.isDevolution = false;
-        }
-    });
-
-    admissionsLists.value = uniqueAdmissions;
-    totalPeriodAdmissions.value = admissionsLists.value.length;
-};
 onMounted(async () => {
     await loadData();
     await processAdmissions(admissions.value);
-    await processAdmissionsLists(admissionsLists.value);
-
     invoicedData.value = Object.values(sortMonths(invoiceStatusData.value.invoicedData));
     pendingData.value = Object.values(sortMonths(invoiceStatusData.value.pendingData));
 
@@ -363,11 +303,6 @@ const searchAdmissionsByDate = async () => {
     loadingData.value = false;
 };
 
-const searchPeriod = async () => {
-    // let response = await admissionsListStore.fetchAdmissionsListsByPeriod(period.value);
-    // admissionsLists.value = formatAdmissionsLists(response.data);
-    // resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
-};
 const toggleView = () => {
     isCostView.value = !isCostView.value;
     // Aquí puedes cambiar los datos del gráfico según la vista seleccionada
@@ -651,18 +586,13 @@ watch([getPrimary, getSurface, isDarkTheme], () => {
                             </div>
                         </template>
                         <template v-else>
-                            <p class="text-gray-700 flex items-center gap-2">
-                                <i class="pi pi-calendar text-blue-500"></i>
-                                <strong> Período de Facturación:</strong> <span class="text-gray-900">{{ period || 'N/A' }}</span>
-                            </p>
-
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                                 <p class="text-gray-700 flex items-center gap-2">
-                                    <i class="pi pi-clock text-green-500"></i>
+                                    <i class="pi pi-calendar text-green-500"></i>
                                     <strong> Desde:</strong> <span class="text-gray-900">{{ dformatLocal(starDate, 'DD/MM/YYYY') }}</span>
                                 </p>
                                 <p class="text-gray-700 flex items-center gap-2">
-                                    <i class="pi pi-clock text-red-500"></i>
+                                    <i class="pi pi-calendar text-red-500"></i>
                                     <strong> Hasta:</strong> <span class="text-gray-900">{{ dformatLocal(endDate, 'DD/MM/YYYY') }}</span>
                                 </p>
                             </div>
@@ -673,19 +603,9 @@ watch([getPrimary, getSurface, isDarkTheme], () => {
                                     <strong> Admisiones Generadas:</strong>
                                     <span class="text-gray-900">{{ totalAdmissions || 'N/A' }}</span>
                                 </p>
-                                <p class="text-gray-700 flex items-center gap-2 mt-2">
-                                    <i class="pi pi-chart-pie text-orange-500"></i>
-                                    <strong> Asignadas a Periodo: </strong>
-                                    <span class="text-gray-900">{{ totalPeriodAdmissions || 'N/A' }}</span>
-                                </p>
                             </div>
                         </template>
                     </div>
-
-                    <p class="text-gray-500 text-sm mt-3">
-                        <i class="pi pi-info-circle text-cyan-500"></i>
-                        Reporte de <strong>Clínica Santa Rosa Sullana</strong> con información detallada de admisiones.
-                    </p>
                 </template>
             </Card>
         </div>
@@ -698,29 +618,19 @@ watch([getPrimary, getSurface, isDarkTheme], () => {
                         <Avatar icon="pi pi-cog" shape="circle" class="bg-cyan-500 text-white" />
                         <div>
                             <h1 class="text-xl font-semibold text-gray-800">Configuración</h1>
-                            <p class="text-gray-500 text-sm">Filtrar datos según necesidades</p>
+                            <p class="text-gray-500 text-sm">Seleccione el rango de fechas de las admisiones</p>
                         </div>
                     </div>
 
                     <!-- Contenedor flexible para mantener misma altura -->
                     <div class="flex-1 flex flex-col justify-between">
                         <!-- Búsqueda por período -->
-                        <div class="p-3 bg-gray-100 rounded-lg mb-4 shadow-md">
-                            <p class="text-gray-600 mb-2">
-                                <i class="pi pi-calendar text-cyan-500"></i>
-                                <strong> Análisis de Metas de Facturación</strong>
-                            </p>
-                            <div class="flex gap-2">
-                                <InputText v-model="period" placeholder="Ingrese período (ej. 202501)" class="w-full" />
-                                <Button label="Buscar" icon="pi pi-search" class="w-full md:w-auto" @click="searchPeriod" />
-                            </div>
-                        </div>
 
                         <!-- Búsqueda por rango de fechas -->
                         <div class="p-3 bg-gray-100 rounded-lg shadow-md">
                             <p class="text-gray-600 mb-2">
                                 <i class="pi pi-clock text-cyan-500"></i>
-                                <strong> Buscar por Rango de Fechas</strong>
+                                <strong> Buscar por Fechas</strong>
                             </p>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <DatePicker v-model="starDate" placeholder="Fecha inicio" class="w-full" />

@@ -47,7 +47,8 @@ function initFilters() {
         period: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
         start_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
         end_date: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.DATE_IS }] },
-        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
+        status: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+        remarks: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] }
     };
 }
 
@@ -74,6 +75,7 @@ const searchShipmentsByDate = async () => {
         from: dformat(starDate.value, 'YYYY-MM-DD'),
         to: dformat(endDate.value.setHours(23, 59, 59), 'YYYY-MM-DD HH:mm:ss')
     };
+    console.log(payload);
     let response = await shipmentsStore.fetchShipmentsByDateRange(payload);
     shipments.value = response.data;
 };
@@ -189,7 +191,7 @@ const onUploadShipments = async (event) => {
             size="small"
             filterDisplay="menu"
             :loading="shipmentsStore.loading"
-            :globalFilterFields="['admission_number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status']"
+            :globalFilterFields="['admission_number', 'attendance_date', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'period', 'start_date', 'end_date', 'medical_record_number', 'status', 'remarks']"
             paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
             :rowsPerPageOptions="[5, 10, 25, 50, 100]"
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
