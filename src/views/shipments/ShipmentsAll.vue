@@ -75,7 +75,6 @@ const searchShipmentsByDate = async () => {
         from: dformat(starDate.value, 'YYYY-MM-DD'),
         to: dformat(endDate.value.setHours(23, 59, 59), 'YYYY-MM-DD HH:mm:ss')
     };
-    console.log(payload);
     let response = await shipmentsStore.fetchShipmentsByDateRange(payload);
     shipments.value = response.data;
 };
@@ -139,6 +138,8 @@ const onUploadShipments = async (event) => {
                 newShipments,
                 updatedShipments
             };
+
+            console.log(payload);
 
             let { success, data } = await shipmentsStore.createAndUpdateShipments(payload);
 

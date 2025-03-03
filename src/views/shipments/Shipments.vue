@@ -178,19 +178,12 @@ const exportAdmissions = async () => {
     ];
 
     const getDaysPassed = (from, to) => {
-        console.log('from', from);
-        console.log('to', to);
-
         const date1 = new Date(from);
         const date2 = new Date(to);
 
         // Normaliza las fechas eliminando el efecto de la zona horaria
         const timeDiff = Math.abs(date2 - date1);
         const diffDays = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-
-        console.log('date1', date1);
-        console.log('date2', date2);
-        console.log('Días de diferencia:', diffDays);
 
         return diffDays;
     };

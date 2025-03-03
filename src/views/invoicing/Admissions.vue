@@ -405,8 +405,6 @@ const formatAdmissions = (data) => {
             admission.daysPassed = daysPassed <= admission.shipping_period ? daysPassed : `Extemp. (${daysPassed - admission.shipping_period} d.)`;
         }
     });
-
-    console.log(admissions.value);
 };
 
 const searchAdmissionsByDate = async () => {

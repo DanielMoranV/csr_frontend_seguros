@@ -64,6 +64,12 @@ const invoicedData = ref([]);
 const pendingData = ref([]);
 const insurersDataSet = ref([]);
 const insurersDataSetSoles = ref([]);
+const auditorsList = ref(new Set());
+const auditorsDataSet = ref([]);
+const auditorsDataSetSoles = ref([]);
+const billersList = ref(new Set());
+const billersDataSet = ref([]);
+const billersDataSetSoles = ref([]);
 
 const isCostView = ref(false);
 const invoiceStatusDataSoles = ref({ invoicedData: [], pendingData: [] });
@@ -82,13 +88,16 @@ const invoiceStatusData = ref({
 
 period.value = getCurrentPeriod();
 
-const products = ref(null);
 const chartData = ref(null);
 const chartOptions = ref(null);
 const chartOptionsInsurers = ref(null);
 const chartDataInsurers = ref(null);
 const chartDataPaid = ref(null);
 const chartOptionsPaid = ref(null);
+const chartDataAuditors = ref(null);
+const chartOptionsAuditors = ref(null);
+const chartDataBillers = ref(null);
+const chartOptionsBillers = ref(null);
 
 const loadData = async () => {
     loadingData.value = true;
@@ -241,8 +250,33 @@ const sortByMonthAndCount = (a, b) => {
     return b.count - a.count;
 };
 
+// Actualizar métricas de auditores usando Map para eficiencia O(1)
+const updateAuditorsData = (dataSet, admission, isAmount = false) => {
+    const key = `${admission.audit.auditor}-${admission.statusAuditor}`;
+    if (!dataSet.has(key)) {
+        dataSet.set(key, {
+            auditor: admission.audit.auditor,
+            status: admission.statusAuditor,
+            count: 0
+        });
+    }
+    dataSet.get(key).count += isAmount ? parseFloat(admission.amount) || 0 : 1;
+};
+
+const updateBillersData = (dataSet, admission, isAmount = false) => {
+    const key = `${admission.biller}-${admission.statusBiller}`;
+    if (!dataSet.has(key)) {
+        dataSet.set(key, {
+            biller: admission.biller,
+            status: admission.statusBiller,
+            count: 0
+        });
+    }
+    dataSet.get(key).count += isAmount ? parseFloat(admission.amount) || 0 : 1;
+};
+
 const processAdmissionsLists = async (data) => {
-    if (data.length === 0) {
+    if (!data.length) {
         admissionsLists.value = [];
         toast.add({
             severity: 'info',
@@ -252,49 +286,94 @@ const processAdmissionsLists = async (data) => {
         });
         return [];
     }
-    // Agrupar por número de admisión
+
+    // // Reiniciar variables reactivas
+    auditorsDataSet.value = [];
+    auditorsDataSetSoles.value = [];
+    auditorsList.value = new Set();
+
+    billersDataSet.value = [];
+    billersDataSetSoles.value = [];
+    billersList.value = new Set();
+
+    // Agrupar admisiones por número
     const groupedAdmissions = data.reduce((acc, admission) => {
-        if (!acc[admission.number]) {
-            acc[admission.number] = [];
-        }
-        acc[admission.number].push(admission);
+        (acc[admission.number] ||= []).push(admission);
         return acc;
     }, {});
 
-    // Seleccionar el registro con la fecha de factura más reciente para cada grupo
+    // Seleccionar la admisión con la factura más reciente
     const uniqueAdmissions = Object.values(groupedAdmissions).map((group) => {
-        // Ordenamos por fecha descendente
+        // Ordenar y tomar la primera (más reciente)
         group.sort((a, b) => new Date(b.invoice_date) - new Date(a.invoice_date));
+        const latestInvoices = group.filter(({ invoice_date }) => invoice_date === group[0].invoice_date);
 
-        // Filtramos facturas con la fecha más reciente
-        const latestDate = group[0].invoice_date;
-        const latestInvoices = group.filter((invoice) => invoice.invoice_date === latestDate);
-
-        // Si hay más de dos facturas con la misma fecha, excluimos las que inician con "005-" o "006-"
-        if (latestInvoices.length > 2) {
-            return latestInvoices.find((invoice) => !invoice.invoice_number.startsWith('005-') && !invoice.invoice_number.startsWith('006-')) || latestInvoices[0];
-        }
-
-        // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
-        return latestInvoices[0];
+        // Si hay más de dos, eliminar las que inician con "005-" o "006-"
+        return latestInvoices.length > 2 ? latestInvoices.find(({ invoice_number }) => !/^00[56]-/.test(invoice_number)) || latestInvoices[0] : latestInvoices[0];
     });
+
+    const auditorsSet = new Set();
+    const auditorsData = new Map();
+    const auditorsDataSoles = new Map();
+
+    const billersSet = new Set();
+    const billersData = new Map();
+    const billersDataSoles = new Map();
 
     uniqueAdmissions.forEach((admission) => {
-        if (!admission.invoice_number || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-')) {
-            admission.invoice_number = !admission.invoice_number || admission.invoice_number.startsWith('005-') || admission.invoice_number.startsWith('006-') ? '' : admission.invoice_number;
+        // Normalizar invoice_number
+        if (/^00[56]-/.test(admission.invoice_number)) admission.invoice_number = '';
+
+        // Determinar si es una devolución
+        admission.isDevolution = admission.devolution_date && admission.devolution_invoice_number === admission.invoice_number;
+
+        // Obtener auditor y actualizar métricas
+        if (admission.audit) {
+            auditorsSet.add(admission.audit.auditor);
+            auditorsList.value.add(admission.audit.auditor);
+
+            admission.statusAuditor = admission.paid_invoice_number ? 'PAGADO' : admission.isDevolution ? 'DEVOLUCION' : 'AUDITADO';
+
+            console.log('Admision', admission);
+
+            updateAuditorsData(auditorsData, admission);
+            updateAuditorsData(auditorsDataSoles, admission, true);
         }
 
-        if (admission.devolution_date && admission.devolution_invoice_number == admission.invoice_number) {
-            admission.isDevolution = true;
-            console.log('admision devolución', admission);
-        } else {
-            admission.isDevolution = false;
+        if (admission.biller) {
+            billersSet.add(admission.biller);
+            billersList.value.add(admission.biller);
+            if (admission.invoice_number) {
+                // Determinar el estado de la factura en orden de prioridad
+                if (admission.paid_invoice_number) {
+                    admission.statusBiller = 'PAGADO';
+                } else if (admission.isDevolution) {
+                    admission.statusBiller = 'DEVOLUCION';
+                } else if (admission.shipment?.verified_shipment_date) {
+                    admission.statusBiller = 'ENVIADO';
+                } else {
+                    admission.statusBiller = 'FACTURADO';
+                }
+
+                updateBillersData(billersData, admission);
+                updateBillersData(billersDataSoles, admission, true);
+            }
         }
+
+        // Determinar estado del biller
     });
+
+    // Convertir Map a array y ordenar auditores
+    auditorsDataSet.value = Array.from(auditorsData.values()).sort((a, b) => a.auditor.localeCompare(b.auditor));
+    auditorsDataSetSoles.value = Array.from(auditorsDataSoles.values()).sort((a, b) => a.auditor.localeCompare(b.auditor));
+
+    billersDataSet.value = Array.from(billersData.values()).sort((a, b) => a.biller.localeCompare(b.biller));
+    billersDataSetSoles.value = Array.from(billersDataSoles.values()).sort((a, b) => a.biller.localeCompare(b.biller));
 
     admissionsLists.value = uniqueAdmissions;
     totalPeriodAdmissions.value = admissionsLists.value.length;
 };
+
 onMounted(async () => {
     await loadData();
     await processAdmissions(admissions.value);
@@ -312,6 +391,12 @@ onMounted(async () => {
 
     chartDataInsurers.value = setChartDataInsurers(insurersDataSet.value);
     chartOptionsInsurers.value = setChartOptionsInsurers();
+
+    chartDataAuditors.value = setChartDataAuditors(auditorsDataSet.value);
+    chartOptionsAuditors.value = setChartOptionsAuditors();
+
+    chartDataBillers.value = setChartDataBillers(billersDataSet.value);
+    chartOptionsBillers.value = setChartOptionsBillers();
 });
 
 const searchAdmissionsByDate = async () => {
@@ -364,9 +449,21 @@ const searchAdmissionsByDate = async () => {
 };
 
 const searchPeriod = async () => {
-    // let response = await admissionsListStore.fetchAdmissionsListsByPeriod(period.value);
-    // admissionsLists.value = formatAdmissionsLists(response.data);
-    // resumenAdmissions.value = Object.values(resumenAdmissionsList(admissionsLists.value));
+    loadingData.value = true;
+    const { success, data } = await admissionsListStore.fetchAdmissionsListsByPeriod(period.value);
+
+    if (!success) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
+        return;
+    }
+
+    await processAdmissionsLists(data);
+    chartDataAuditors.value = setChartDataAuditors(auditorsDataSet.value);
+    chartOptionsAuditors.value = setChartOptionsAuditors();
+    chartDataBillers.value = setChartDataBillers(billersDataSet.value);
+    chartOptionsBillers.value = setChartOptionsBillers();
+
+    loadingData.value = false;
 };
 const toggleView = () => {
     isCostView.value = !isCostView.value;
@@ -385,6 +482,11 @@ const updateChartData = () => {
         paidSet.value = [admissionsPaidSoles.value.paid, admissionsPaidSoles.value.pending];
         chartDataPaid.value = setChartDataPaid();
         chartOptionsPaid.value = setChartOptionsPaid();
+
+        chartDataAuditors.value = setChartDataAuditors(auditorsDataSetSoles.value);
+        chartOptionsAuditors.value = setChartOptionsAuditors();
+        chartDataBillers.value = setChartDataBillers(billersDataSetSoles.value);
+        chartOptionsBillers.value = setChartOptionsBillers();
     } else {
         invoicedData.value = Object.values(sortMonths(invoiceStatusData.value.invoicedData));
         pendingData.value = Object.values(sortMonths(invoiceStatusData.value.pendingData));
@@ -392,6 +494,11 @@ const updateChartData = () => {
         paidSet.value = [admissionsPaid.value.paid, admissionsPaid.value.pending];
         chartDataPaid.value = setChartDataPaid();
         chartOptionsPaid.value = setChartOptionsPaid();
+
+        chartDataAuditors.value = setChartDataAuditors(auditorsDataSet.value);
+        chartOptionsAuditors.value = setChartOptionsAuditors();
+        chartDataBillers.value = setChartDataBillers(billersDataSet.value);
+        chartOptionsBillers.value = setChartOptionsBillers();
     }
     chartData.value = setChartData();
 };
@@ -624,9 +731,269 @@ function setChartOptionsInsurers() {
     };
 }
 
+function setChartDataAuditors(data) {
+    const colorList = ['#00B294', '#FFD740', '#FF6F61'];
+
+    // Convertir el Set en array
+    let auditors = Array.from(auditorsList.value);
+
+    // Inicializar estructura para agrupar datos
+    const groupedData = {};
+    data.forEach(({ auditor, status, count }) => {
+        if (!groupedData[status]) {
+            // Inicializar en 0 para todos los auditores
+            groupedData[status] = Array(auditors.length).fill(0);
+        }
+
+        // Obtener el índice del auditor en la lista
+        const auditorIndex = auditors.indexOf(auditor);
+        if (auditorIndex !== -1) {
+            groupedData[status][auditorIndex] = count;
+        }
+    });
+
+    // Construir datasets para el gráfico
+    const datasets = Object.keys(groupedData).map((status, index) => ({
+        label: status,
+        backgroundColor: colorList[index % colorList.length],
+        data: groupedData[status],
+        type: 'bar'
+    }));
+
+    // Calcular totales por auditor
+    const totalPerAuditor = Array(auditors.length).fill(0);
+    Object.values(groupedData).forEach((counts) => {
+        counts.forEach((value, i) => {
+            totalPerAuditor[i] += value; // Sumar correctamente los valores
+        });
+    });
+
+    // Agregar dataset para la línea de totales
+    datasets.push({
+        label: 'Total',
+        data: totalPerAuditor,
+        type: 'line',
+        borderColor: '#333333',
+        backgroundColor: '#333333',
+        borderWidth: 2,
+        fill: false,
+        tension: 0.3,
+        yAxisID: 'y'
+    });
+
+    return {
+        labels: auditors,
+        datasets
+    };
+}
+
+function setChartOptionsAuditors() {
+    const documentStyle = getComputedStyle(document.documentElement);
+    const textColor = documentStyle.getPropertyValue('--p-text-color');
+    const textColorSecondary = documentStyle.getPropertyValue('--p-text-muted-color');
+    const surfaceBorder = documentStyle.getPropertyValue('--p-content-border-color');
+
+    return {
+        maintainAspectRatio: false,
+        aspectRatio: 0.8,
+        plugins: {
+            legend: {
+                labels: {
+                    color: textColor
+                }
+            },
+            title: {
+                display: true,
+                text: 'Estado de Auditoria Médicas'
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'x', // Permite desplazar horizontalmente
+                    modifierKey: 'ctrl' // Opcional, para que el pan solo se active al presionar Ctrl
+                },
+                zoom: {
+                    wheel: {
+                        enabled: true
+                    },
+                    pinch: {
+                        enabled: true
+                    },
+                    mode: 'x' // Permite hacer zoom horizontalmente. Puedes usar 'y' o 'xy' según necesites.
+                }
+            }
+        },
+        responsive: true,
+        scales: {
+            x: {
+                stacked: true,
+                ticks: {
+                    color: textColorSecondary
+                },
+                grid: {
+                    color: surfaceBorder
+                }
+            },
+            y: {
+                stacked: true,
+                ticks: {
+                    color: textColorSecondary
+                },
+                grid: {
+                    color: surfaceBorder
+                }
+            }
+        }
+    };
+}
+
+function setChartDataBillers(dataSet) {
+    const colorList = [
+        '#00B294',
+        '#FFD740',
+        '#3CB44B',
+        '#FF6384',
+        '#36A2EB',
+        '#FFCE56',
+        '#4BC0C0',
+        '#9966FF',
+        '#FF9F40',
+        '#E6194B',
+        '#FFE119',
+        '#0082C8',
+        '#F58231',
+        '#911EB4',
+        '#46F0F0',
+        '#F032E6',
+        '#D2F53C',
+        '#FABEBE',
+        '#008080',
+        '#E6BEFF',
+        '#AA6E28',
+        '#800000',
+        '#A9A9A9'
+    ];
+
+    // Convertir el Set en array
+    let billers = Array.from(billersList.value);
+
+    // Inicializar estructura para agrupar datos
+    const groupedData = {};
+    dataSet.forEach(({ biller, status, count }) => {
+        if (!groupedData[status]) {
+            // Inicializar en 0 para todos los billers
+            groupedData[status] = Array(billers.length).fill(0);
+        }
+
+        // Obtener el índice del biller en la lista
+        const billerIndex = billers.indexOf(biller);
+        if (billerIndex !== -1) {
+            groupedData[status][billerIndex] = count;
+        }
+    });
+
+    // Construir datasets para el gráfico
+    const datasets = Object.keys(groupedData).map((status, index) => ({
+        label: status,
+        backgroundColor: colorList[index % colorList.length],
+        data: groupedData[status],
+        type: 'bar'
+    }));
+
+    // Calcular totales por biller
+    const totalPerBiller = Array(billers.length).fill(0);
+    Object.values(groupedData).forEach((counts) => {
+        counts.forEach((value, i) => {
+            totalPerBiller[i] += value; // Sumar correctamente los valores
+        });
+    });
+
+    // Agregar dataset para la línea de totales
+    datasets.push({
+        label: 'Total',
+        data: totalPerBiller,
+        type: 'line',
+        borderColor: '#333333',
+        backgroundColor: '#333333',
+        borderWidth: 2,
+        fill: false,
+        tension: 0.3,
+        yAxisID: 'y'
+    });
+
+    return {
+        labels: billers,
+        datasets
+    };
+}
+
+function setChartOptionsBillers() {
+    const documentStyle = getComputedStyle(document.documentElement);
+    const textColor = documentStyle.getPropertyValue('--p-text-color');
+    const textColorSecondary = documentStyle.getPropertyValue('--p-text-muted-color');
+    const surfaceBorder = documentStyle.getPropertyValue('--p-content-border-color');
+
+    return {
+        maintainAspectRatio: false,
+        aspectRatio: 0.8,
+        plugins: {
+            legend: {
+                labels: {
+                    color: textColor
+                }
+            },
+            title: {
+                display: true,
+                text: 'Estado de Facturación'
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'x', // Permite desplazar horizontalmente
+                    modifierKey: 'ctrl' // Opcional, para que el pan solo se active al presionar Ctrl
+                },
+                zoom: {
+                    wheel: {
+                        enabled: true
+                    },
+                    pinch: {
+                        enabled: true
+                    },
+                    mode: 'x' // Permite hacer zoom horizontalmente. Puedes usar 'y' o 'xy' según necesites.
+                }
+            }
+        },
+        responsive: true,
+        scales: {
+            x: {
+                stacked: true,
+                ticks: {
+                    color: textColorSecondary
+                },
+                grid: {
+                    color: surfaceBorder
+                }
+            },
+            y: {
+                stacked: true,
+                ticks: {
+                    color: textColorSecondary
+                },
+                grid: {
+                    color: surfaceBorder
+                }
+            }
+        }
+    };
+}
+
 watch([getPrimary, getSurface, isDarkTheme], () => {
     chartData.value = setChartData();
     chartOptions.value = setChartOptions();
+    chartDataInsurers.value = setChartDataInsurers(insurersDataSet.value);
+    chartOptionsInsurers.value = setChartOptionsInsurers();
+    chartDataPaid.value = setChartDataPaid();
+    chartOptionsPaid.value = setChartOptionsPaid();
 });
 </script>
 
@@ -753,11 +1120,15 @@ watch([getPrimary, getSurface, isDarkTheme], () => {
                 </div>
                 <Chart type="bar" :data="chartData" :options="chartOptions" class="h-[25rem]" />
             </div>
-            <!-- <div class="card">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="font-semibold text-xl">Best Selling Products</div>
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="font-semibold text-xl">Seguimiento de Auditorias</div>
+                    <button @click="toggleView" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition flex items-center gap-2">
+                        <i :class="isCostView ? 'pi pi-hashtag' : 'pi pi-dollar'"></i>
+                    </button>
                 </div>
-            </div> -->
+                <Chart type="bar" :data="chartDataAuditors" :options="chartOptionsAuditors" class="h-[25rem]" />
+            </div>
         </div>
 
         <div class="col-span-12 xl:col-span-6">
@@ -773,11 +1144,15 @@ watch([getPrimary, getSurface, isDarkTheme], () => {
                 </div>
             </div>
 
-            <!-- <div class="card">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="font-semibold text-xl">Notifications</div>
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="font-semibold text-xl">Seguimiento de Facturadores</div>
+                    <button @click="toggleView" class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition flex items-center gap-2">
+                        <i :class="isCostView ? 'pi pi-hashtag' : 'pi pi-dollar'"></i>
+                    </button>
                 </div>
-            </div> -->
+                <Chart type="bar" :data="chartDataBillers" :options="chartOptionsBillers" class="h-[25rem]" />
+            </div>
         </div>
     </div>
 </template>

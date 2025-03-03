@@ -61,8 +61,6 @@ onMounted(async () => {
     shipments.value = await shipmentsStore.initializeStore();
     devolutions.value = await devolutionsStore.initializeStoreDevolutionsDataRange(payload);
     formatDevolitions(devolutions.value);
-
-    console.log(devolutions.value);
 });
 
 const formatDevolitions = async (data) => {
@@ -110,14 +108,6 @@ const formatDevolitions = async (data) => {
             devolution.status = 'Enviado';
         }
 
-        // if (shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
-        //     console.log('enviado');
-        //     console.log(devolution.invoice_number);
-        //     console.log(shipmentsData[devolution.invoice_number]?.verified_shipment_date);
-        //     console.log(shipmentsData[devolution.invoice_number]);
-        //     devolution.status = 'Enviado';
-        // }
-
         if (devolution.paid_admission === 1) {
             devolution.status = 'Pagado';
         }
@@ -163,12 +153,10 @@ const sendAudit = async () => {
 };
 
 const editAuditUrl = async (audit) => {
-    console.log(audit);
     let payload = {
         id: audit.id,
         url: audit.url
     };
-    console.log(payload);
     await auditsStore.updateAudit(payload);
 
     // modificar el registro de  admissionsLists segun admision.admision_number
@@ -181,8 +169,6 @@ const editAuditUrl = async (audit) => {
 
     const indexDevolutions = devolutions.value.findIndex((item) => item.id === audit.id);
     if (indexDevolutions !== -1) {
-        console.log(audit.url);
-        console.log(devolutions.value[indexDevolutions].audit.url);
         devolutions.value[indexDevolutions].audit.url = audit.url;
         // modificar en indexedDB
         await indexedDB.setItem('devolutions', devolutions.value);

@@ -412,7 +412,6 @@ const resendAudit = async (admission) => {
 };
 
 const editConfirmedReceiptDate = async (admission) => {
-    console.log(admission);
     let medicalRecord = admission.medical_record_request;
     if (medicalRecord.isConfirmedReceipt) {
         //  asignar fecha y hora actual en formato para mysql
@@ -427,8 +426,6 @@ const editConfirmedReceiptDate = async (admission) => {
         ...medicalRecord,
         confirmed_receipt_date: medicalRecord.confirmed_receipt_date
     };
-
-    console.log('payload', payload);
 
     let responseMedicalRecord = await medicalRecordsRequestsStore.updateMedicalRecordsRequest(payload);
 

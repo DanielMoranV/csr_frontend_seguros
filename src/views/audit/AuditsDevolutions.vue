@@ -102,7 +102,6 @@ const generalSummary = (data) => {
         audited: data.filter((item) => item.status !== 'Pendiente').length,
         rebilled: data.filter((item) => item.rebilled === true).length
     };
-    console.log('resumenGeneral', resumen);
     return resumen;
 };
 
