@@ -153,7 +153,7 @@ export default {
                 ${DEVOLUCIONES}.fec_doc BETWEEN STR_TO_DATE('${mysqlStartDate}', '%Y-%m-%d') AND STR_TO_DATE('${mysqlEndDate}', '%Y-%m-%d')
                 AND ${ASEGURADORAS}.nom_cia <> 'PARTICULAR'
                 AND ${ASEGURADORAS}.nom_cia <> 'PACIENTES PARTICULARES'
-                ORDER BY ${DEVOLUCIONES}.num_doc DESC;
+                ORDER BY ${DEVOLUCIONES}.id_dev DESC;
                 `;
         try {
             const response = await executeQuery({ query });
@@ -198,8 +198,9 @@ export default {
                 AND ${ADMISIONES}.tot_doc >= 0
                 AND ${ADMISIONES}.nom_pac <> ''
                 AND ${ADMISIONES}.nom_pac <> 'No existe...'
-                AND ${ASEGURADORAS}.nom_cia <> 'PARTICULAR'
-                AND ${ASEGURADORAS}.nom_cia <> 'PACIENTES PARTICULARES'
+                AND ${ASEGURADORAS}.cod_cia <> '90'
+                AND ${ASEGURADORAS}.cod_cia <> '28'
+                AND ${ASEGURADORAS}.cod_cia <> '37'
             ORDER BY
                 ${ADMISIONES}.num_doc DESC;
         `;

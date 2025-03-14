@@ -6,6 +6,7 @@ import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { classifyShipments, getCurrentPeriod } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseShipments, validateData, validateHeaders } from '@/utils/excelUtils';
+import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
@@ -17,6 +18,7 @@ const shipmentsStore = useShipmentsStore();
 const medicalRecordStore = useMedicalRecordsRequestsStore();
 const isLoading = ref(false);
 const confirm = useConfirm();
+const editChecked = ref(true);
 const toast = useToast();
 const admissionsLists = ref([]);
 const authStore = useAuthStore();
@@ -115,6 +117,11 @@ const formatAdmissionsLists = (data) => {
         // Determinar si la admisión está a tiempo o fuera de tiempo
         admission.isLate = new Date(admission.end_date) >= new Date(admission.invoice_date);
         admission.status = admission.isLate ? 'A tiempo' : 'Fuera de tiempo';
+        admission.isTramaDate = admission.shipment?.trama_date ? true : false;
+        admission.isCourierDate = admission.shipment?.courier_date ? true : false;
+        admission.isEmailVerifiedDate = admission.shipment?.email_verified_date ? true : false;
+        admission.isUrlSustenance = admission.shipment?.url_sustenance ? true : false;
+        admission.isVerifiedShipmentDate = admission.shipment?.verified_shipment_date ? true : false;
     });
 
     return uniqueAdmissions;
@@ -271,6 +278,63 @@ const onUploadShipments = async (event) => {
     }
     isLoading.value = false;
 };
+
+const editTramaDate = async (admission) => {
+    let shipment = admission.shipment;
+    let payloadShipment = {
+        id: shipment.id,
+        trama_date: admission.isTramaDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+    };
+
+    let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+    if (success) {
+        let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
+        admissionsLists.value[index].shipment.trama_date = admission.isTramaDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+        admissionsLists.value[index].isTramaDate = admission.isTramaDate;
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+    }
+};
+
+const editCourierDate = async (admission) => {
+    let shipment = admission.shipment;
+    let payloadShipment = {
+        id: shipment.id,
+        courier_date: admission.isCourierDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+    };
+
+    let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+    if (success) {
+        let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
+        admissionsLists.value[index].shipment.courier_date = admission.isCourierDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+        admissionsLists.value[index].isCourierDate = admission.isCourierDate;
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+    }
+};
+
+const editEmailDate = async (admission) => {
+    let shipment = admission.shipment;
+    let payloadShipment = {
+        id: shipment.id,
+        email_verified_date: admission.isEmailVerifiedDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+    };
+
+    let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+    if (success) {
+        let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
+        admissionsLists.value[index].shipment.email_verified_date = admission.isEmailVerifiedDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
+        admissionsLists.value[index].isEmailVerifiedDate = admission.isEmailVerifiedDate;
+        await indexedDB.setItem('admissionsLists', admissionsLists.value);
+        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -331,6 +395,7 @@ const onUploadShipments = async (event) => {
                     <div class="mb-4 mt-2 w-full flex justify-center" v-if="isLoading">
                         <ProgressSpinner style="width: 20px; height: 20px" strokeWidth="8" fill="transparent" animationDuration=".5s" aria-label="Custom ProgressSpinner" />
                     </div>
+                    <ToggleButton v-model="editChecked" onLabel="Ver" offLabel="Editar" onIcon="pi pi-lock" offIcon="pi pi-lock-open" class="w-36" aria-label="Do you confirm" />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
@@ -357,6 +422,9 @@ const onUploadShipments = async (event) => {
             <Column field="insurer_name" header="Aseguradora" sortable style="min-width: 10rem">
                 <template #body="slotProps">
                     {{ slotProps.data.insurer_name || '-' }}
+                </template>
+                <template #filter="{ filterModel }">
+                    <InputText v-model="filterModel.value" placeholder="Buscar..." />
                 </template>
             </Column>
             <Column field="amount" header="Monto" sortable style="min-width: 5rem">
@@ -388,32 +456,44 @@ const onUploadShipments = async (event) => {
             </Column>
             <Column field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.trama_date">
-                        {{ dformat(slotProps.data.shipment.trama_date, 'DD/MM/YYYY') }}
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
+                    <template v-if="!editChecked">
+                        <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isTramaDate" binary @blur="editTramaDate(slotProps.data)" />
+                    </template>
+
+                    <template v-else>
+                        <span v-if="slotProps.data.shipment?.trama_date">
+                            {{ dformat(slotProps.data.shipment.trama_date, 'DD/MM/YYYY') }}
+                        </span>
+                        <i v-else class="pi pi-clock text-yellow-500"></i>
+                    </template>
                 </template>
             </Column>
             <Column field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.courier_date">
-                        {{ dformatLocal(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
+                    <template v-if="!editChecked">
+                        <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isCourierDate" binary @blur="editCourierDate(slotProps.data)" />
+                    </template>
+
+                    <template v-else>
+                        <span v-if="slotProps.data.shipment?.courier_date">
+                            {{ dformatLocal(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
+                        </span>
+                        <i v-else class="pi pi-clock text-yellow-500"></i>
+                    </template>
                 </template>
             </Column>
             <Column field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
                 <template #body="slotProps">
-                    <span v-if="slotProps.data.shipment && slotProps.data.shipment.email_verified_date">
-                        {{ dformatLocal(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
-                    </span>
-                    <span v-else>
-                        <i class="pi pi-clock text-yellow-500"></i>
-                    </span>
+                    <template v-if="!editChecked">
+                        <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isEmailVerifiedDate" binary @blur="editEmailDate(slotProps.data)" />
+                    </template>
+
+                    <template v-else>
+                        <span v-if="slotProps.data.shipment?.email_verified_date">
+                            {{ dformatLocal(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
+                        </span>
+                        <i v-else class="pi pi-clock text-yellow-500"></i>
+                    </template>
                 </template>
             </Column>
             <Column field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 5rem">

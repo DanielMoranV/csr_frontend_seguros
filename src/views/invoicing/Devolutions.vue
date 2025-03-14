@@ -105,7 +105,18 @@ const formatDevolitions = async (data) => {
         }
 
         if (shipmentsData[devolution.invoice_number] && shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
-            devolution.status = 'Enviado';
+            // Convertir las fechas a objetos Date
+            let shipmentDate = new Date(shipmentsData[devolution.invoice_number].verified_shipment_date); // "2023-11-04 00:00:00"
+
+            // Convertir la fecha de devolución (DD/MM/YYYY HH:mm:ss → YYYY-MM-DDTHH:mm:ss)
+            let [datePart, timePart] = devolution.date_dev.split(' ');
+            let [day, month, year] = datePart.split('/');
+            let devolutionDate = new Date(`${year}-${month}-${day}T${timePart}`);
+
+            // Solo asignar "Enviado" si la fecha de devolución NO es mayor que la fecha de envío
+            if (devolutionDate <= shipmentDate) {
+                devolution.status = 'Enviado';
+            }
         }
 
         if (devolution.paid_admission === 1) {
