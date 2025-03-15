@@ -159,10 +159,11 @@ export const processDataDatabaseShipmentsAll = (rows) => {
         .map((row) => ({
             admission_number: row[1],
             invoice_number: row[2],
-            isNewShipment: row[3]?.toLowerCase() === 'no' ? true : row[3]?.toLowerCase() === 'si' ? false : null,
-            trama_date: row[4] ? row[4] : null,
-            courier_date: row[5] ? row[5] : null,
-            email_verified_date: row[6] ? row[6] : null,
+            // isNewShipment: row[3]?.toLowerCase() === 'no' ? true : row[3]?.toLowerCase() === 'si' ? false : null,
+            isNewShipment: false,
+            // trama_date: row[4] ? row[4] : null,
+            // courier_date: row[5] ? row[5] : null,
+            // email_verified_date: row[6] ? row[6] : null,
             url_sustenance: row[7] ? (typeof row[7] === 'object' ? row[7].text || row[7].hyperlink || null : row[7]) : null,
             remarks: row[8] ? row[8] : null,
             verified_shipment_date: row[9] ? validateDate(row[9]) : null

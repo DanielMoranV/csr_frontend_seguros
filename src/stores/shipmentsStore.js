@@ -81,7 +81,7 @@ export const useShipmentsStore = defineStore('shipmentsStore', {
                 indexedDB.setItem('shipments', this.shipments);
                 this.message = 'Envío creado correctamente';
             }
-            return this.success;
+            return { success: this.success, data: data };
         },
         async updateShipment(payload, id) {
             const { data } = await handleResponseStore(updateShipment(payload, id), this);

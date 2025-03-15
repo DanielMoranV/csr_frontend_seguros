@@ -278,63 +278,54 @@ const onUploadShipments = async (event) => {
     }
     isLoading.value = false;
 };
+const editShipmentDate = async (admission, field, flagField) => {
+    if (admission.shipment_id) {
+        let shipment = admission.shipment;
+        let payloadShipment = {
+            id: shipment.id,
+            [field]: admission[flagField] ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+        };
 
-const editTramaDate = async (admission) => {
-    let shipment = admission.shipment;
-    let payloadShipment = {
-        id: shipment.id,
-        trama_date: admission.isTramaDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
-    };
+        let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+        if (success) {
+            let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
+            admissionsLists.value[index].shipment[field] = payloadShipment[field];
+            admissionsLists.value[index][flagField] = admission[flagField];
 
-    let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
-    if (success) {
-        let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
-        admissionsLists.value[index].shipment.trama_date = admission.isTramaDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
-        admissionsLists.value[index].isTramaDate = admission.isTramaDate;
-        await indexedDB.setItem('admissionsLists', admissionsLists.value);
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+        }
     } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+        let newShipmentPayload = {
+            admission_number: admission.admission_number,
+            invoice_number: admission.invoice_number,
+            [field]: admission[flagField] ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+        };
+
+        console.log(newShipmentPayload);
+
+        let { data, success } = await shipmentsStore.createShipment(newShipmentPayload);
+        if (success) {
+            let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
+            admissionsLists.value[index].shipment_id = data.id;
+            admissionsLists.value[index].shipment = data;
+            admissionsLists.value[index].shipment[field] = newShipmentPayload[field];
+            admissionsLists.value[index][flagField] = admission[flagField];
+
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío creado correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al crear el envío', life: 3000 });
+        }
     }
 };
 
-const editCourierDate = async (admission) => {
-    let shipment = admission.shipment;
-    let payloadShipment = {
-        id: shipment.id,
-        courier_date: admission.isCourierDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
-    };
-
-    let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
-    if (success) {
-        let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
-        admissionsLists.value[index].shipment.courier_date = admission.isCourierDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
-        admissionsLists.value[index].isCourierDate = admission.isCourierDate;
-        await indexedDB.setItem('admissionsLists', admissionsLists.value);
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
-    } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
-    }
-};
-
-const editEmailDate = async (admission) => {
-    let shipment = admission.shipment;
-    let payloadShipment = {
-        id: shipment.id,
-        email_verified_date: admission.isEmailVerifiedDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
-    };
-
-    let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
-    if (success) {
-        let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
-        admissionsLists.value[index].shipment.email_verified_date = admission.isEmailVerifiedDate ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null;
-        admissionsLists.value[index].isEmailVerifiedDate = admission.isEmailVerifiedDate;
-        await indexedDB.setItem('admissionsLists', admissionsLists.value);
-        toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
-    } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
-    }
-};
+// Funciones específicas llamando a la función genérica
+const editTramaDate = (admission) => editShipmentDate(admission, 'trama_date', 'isTramaDate');
+const editCourierDate = (admission) => editShipmentDate(admission, 'courier_date', 'isCourierDate');
+const editEmailDate = (admission) => editShipmentDate(admission, 'email_verified_date', 'isEmailVerifiedDate');
 </script>
 <template>
     <div class="card">
