@@ -100,13 +100,15 @@ const formatDevolitions = async (data) => {
         }
         devolution.audit = audit;
         devolution.status = 'Pendiente';
+
         if (devolution.invoice_date < devolution.date_last_invoice) {
             devolution.status = 'Facturado';
         }
 
-        if (shipmentsData[devolution.invoice_number] && shipmentsData[devolution.invoice_number]?.verified_shipment_date !== null) {
+        if (shipmentsData[devolution.last_invoice] && shipmentsData[devolution.last_invoice]?.verified_shipment_date !== null && devolution.invoice_date != devolution.date_last_invoice) {
             // Convertir las fechas a objetos Date
-            let shipmentDate = new Date(shipmentsData[devolution.invoice_number].verified_shipment_date); // "2023-11-04 00:00:00"
+
+            let shipmentDate = new Date(shipmentsData[devolution.last_invoice].verified_shipment_date); // "2023-11-04 00:00:00"
 
             // Convertir la fecha de devolución (DD/MM/YYYY HH:mm:ss → YYYY-MM-DDTHH:mm:ss)
             let [datePart, timePart] = devolution.date_dev.split(' ');

@@ -156,24 +156,24 @@ export const classifyShipments = async (dataSet) => {
 
     // Procesar cada envío en el dataSet
     dataSet.forEach((shipment) => {
-        const { isNewShipment, ...rest } = shipment;
+        const { isNewShipment, trama_date, courier_date, email_verified_date, ...rest } = shipment;
 
         // Función para procesar una fecha
-        // const processDate = (dateValue) => {
-        //     if (dateValue?.toLowerCase() === 'x') {
-        //         return getCurrentDate(); // Asignar fecha actual si es "x" o "X"
-        //     } else if (dateValue) {
-        //         return null; // Eliminar el campo si tiene un valor distinto a "x" o "X"
-        //     }
-        //     return null; // Si está vacío, dejar como null
-        // };
+        const processDate = (dateValue) => {
+            if (typeof dateValue === 'string' && dateValue.toLowerCase() === 'x') {
+                return getCurrentDate(); // Asignar fecha actual si es "x" o "X"
+            } else if (dateValue) {
+                return null; // Eliminar el campo si tiene un valor distinto a "x" o "X"
+            }
+            return null; // Si está vacío, dejar como null
+        };
 
         // Crear un nuevo objeto con las fechas procesadas
         const processedShipment = {
-            ...rest
-            // ...(processDate(trama_date) && { trama_date: processDate(trama_date) }),
-            // ...(processDate(courier_date) && { courier_date: processDate(courier_date) }),
-            // ...(processDate(email_verified_date) && { email_verified_date: processDate(email_verified_date) })
+            ...rest,
+            ...(processDate(trama_date) && { trama_date: processDate(trama_date) }),
+            ...(processDate(courier_date) && { courier_date: processDate(courier_date) }),
+            ...(processDate(email_verified_date) && { email_verified_date: processDate(email_verified_date) })
         };
 
         // Clasificar el envío en newShipments o updatedShipments

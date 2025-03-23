@@ -204,6 +204,8 @@ const exportAdmissions = async () => {
         const daysPassed = getDaysPassed(admission.attendance_date, admission.invoice_date);
         admission.daysPassed = daysPassed;
 
+        console.log(admission);
+
         return {
             admission_number: admission.admission_number,
             medical_record_number: admission.medical_record_number,
@@ -260,6 +262,8 @@ const onUploadShipments = async (event) => {
                 newShipments,
                 updatedShipments
             };
+
+            console.log(payload);
 
             let { success, data } = await shipmentsStore.createAndUpdateShipments(payload);
 
