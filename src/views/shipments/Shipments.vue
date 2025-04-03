@@ -330,6 +330,28 @@ const editShipmentDate = async (admission, field, flagField) => {
 const editTramaDate = (admission) => editShipmentDate(admission, 'trama_date', 'isTramaDate');
 const editCourierDate = (admission) => editShipmentDate(admission, 'courier_date', 'isCourierDate');
 const editEmailDate = (admission) => editShipmentDate(admission, 'email_verified_date', 'isEmailVerifiedDate');
+
+const editUrlSustenance = async (admission) => {
+    admission.shipment.url_sustenance = admission.shipment.url_sustenance ? admission.shipment.url_sustenance : '';
+
+    if (admission.shipment_id) {
+        let shipment = admission.shipment;
+        let payloadShipment = {
+            id: shipment.id,
+            url_sustenance: admission.shipment.url_sustenance
+        };
+        let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+        if (success) {
+            let index = admissionsLists.value.findIndex((item) => item.id === admission.id);
+            admissionsLists.value[index].shipment.url_sustenance = payloadShipment.url_sustenance;
+            admissionsLists.value[index].shipment.url_sustenance = admissionsLists.value[index].shipment.url_sustenance ? admissionsLists.value[index].shipment.url_sustenance : '';
+            await indexedDB.setItem('admissionsLists', admissionsLists.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'URL Sust. actualizada correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+        }
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -498,6 +520,12 @@ const editEmailDate = (admission) => editShipmentDate(admission, 'email_verified
                             <i class="pi pi-external-link text-blue-500"></i>
                         </a>
                     </span>
+                    <span v-else>
+                        <i class="pi pi-clock text-yellow-500"></i>
+                    </span>
+                </template>
+                <template #editor="slotProps">
+                    <InputText v-if="slotProps.data.shipment" v-model="slotProps.data.shipment.url_sustenance" @blur="editUrlSustenance(slotProps.data)" />
                     <span v-else>
                         <i class="pi pi-clock text-yellow-500"></i>
                     </span>
