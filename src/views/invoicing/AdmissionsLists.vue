@@ -190,6 +190,7 @@ const exportAdmissions = async () => {
         { header: 'Descripción Auditoria', key: 'auditDescription', width: 15 },
         { header: 'Estado Audit', key: 'auditStatus', width: 15 },
         { header: 'Factura', key: 'invoice_number', width: 15 },
+        { header: 'Fecha Factura', key: 'invoice_date', width: 15 },
         { header: 'Fecha Envío', key: 'shipmentVerifiedShipmentDate', width: 15 },
         { header: 'Pago', key: 'paid_invoice_number', width: 15 }
     ];
@@ -220,6 +221,7 @@ const exportAdmissions = async () => {
             auditDescription: admission.audit ? admission.audit.description : '-',
             auditStatus: admission.audit ? admission.audit.status : '-',
             invoice_number: admission.invoice_number ? admission.invoice_number : '-',
+            invoice_date: admission.invoice_date ? dformat(admission.invoice_date, 'DD/MM/YYYY') : '-',
             shipmentVerifiedShipmentDate: admission.shipment && admission.shipment.verified_shipment_date ? dformat(admission.shipment.verified_shipment_date, 'DD/MM/YYYY') : '-',
             paid_invoice_number: admission.paid_invoice_number ? 'Si' : 'No'
         };

@@ -1,4 +1,4 @@
-import { createAndUpdateShipments, createShipment, deleteShipment, fetchShipments, fetchShipmentsByAdmissionNumber, fetchShipmentsByDateRange, updateShipment } from '@/api';
+import { createAndUpdateShipments, createShipment, deleteShipment, fetchShipments, fetchShipmentsByAdmissionNumber, fetchShipmentsByAdmissionsList, fetchShipmentsByDateRange, updateShipment } from '@/api';
 import indexedDB from '@/utils/indexedDB';
 import { handleResponseStore } from '@/utils/response';
 import { defineStore } from 'pinia';
@@ -55,6 +55,18 @@ export const useShipmentsStore = defineStore('shipmentsStore', {
         async fetchShipmentsByAdmissionNumber(admissionNumber) {
             this.loading = true;
             const { data } = await handleResponseStore(fetchShipmentsByAdmissionNumber(admissionNumber), this);
+            if (this.success) {
+                this.shipments = data;
+                indexedDB.setItem('shipments', this.shipments);
+            } else {
+                this.shipments = [];
+            }
+            return { success: this.success, data: this.shipments };
+        },
+
+        async fetchShipmentsByAdmissionsList(admissionsList) {
+            this.loading = true;
+            const { data } = await handleResponseStore(fetchShipmentsByAdmissionsList(admissionsList), this);
             if (this.success) {
                 this.shipments = data;
                 indexedDB.setItem('shipments', this.shipments);

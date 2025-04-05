@@ -43,9 +43,10 @@ onMounted(async () => {
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     insurers.value = await insurersStore.initializeStore();
-    shipments.value = await shipmentsStore.initializeStore();
 
     let response = await admissionsStore.initializeStoreAdmissionsDateRangeApi(payload);
+
+    //shipments.value = await shipmentsStore.initializeStore();
     formatAdmissions(response);
 });
 
@@ -60,6 +61,7 @@ const insurers = ref([]);
 const selectedAdmissions = ref();
 const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 const endDate = ref(new Date());
+const editChecked = ref(false);
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS }
 });
@@ -336,7 +338,22 @@ const formatDevolutionsPending = (data) => {
         devolution.invoice_amount = Number(devolution.invoice_amount);
     });
 };
-const formatAdmissions = (data) => {
+
+async function getShipmentByAdmissionsList(admissionsList) {
+    // devolver un array de numeros de admisiones , el campo que necesito es number
+    const admissionNumbers = admissionsList.map((admission) => admission.number);
+
+    let response = await shipmentsStore.fetchShipmentsByAdmissionsList({ admissionsList: admissionNumbers });
+
+    console.log(response);
+
+    if (response.success) {
+        shipments.value = response.data;
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar los envíos', life: 3000 });
+    }
+}
+const formatAdmissions = async (data) => {
     // Agrupar por número de admisión
     const groupedAdmissions = data.reduce((acc, admission) => {
         if (!acc[admission.number]) {
@@ -363,6 +380,15 @@ const formatAdmissions = (data) => {
         // Si hay 2 o menos, simplemente tomamos la primera (más reciente)
         return latestInvoices[0];
     });
+
+    // Obtener los envíos de las facturas
+    let admissionNumbers = uniqueAdmissions.map((admission) => admission.number);
+    let response = await shipmentsStore.fetchShipmentsByAdmissionsList({ admissionsList: admissionNumbers });
+    if (response.success) {
+        shipments.value = response.data;
+    } else {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar los envíos', life: 3000 });
+    }
 
     // Obtener los periodos de envío de las aseguradoras en un objeto para acceso rápido
     const shippingPeriods = insurers.value.reduce((acc, insurer) => {
@@ -396,6 +422,8 @@ const formatAdmissions = (data) => {
         if (admission.status !== 'Pagado' && shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
             admission.shipment = shipmentsData[admission.invoice_number];
             admission.status = 'Enviado';
+            admission.shipment = shipmentsData[admission.invoice_number];
+            console.log(admission);
         }
 
         // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
@@ -491,6 +519,8 @@ const searchAdmissions = async () => {
                     <div class="flex flex-wrap gap-2 items-center justify-between">
                         <h4 class="m-0">Gestión de admisiones de seguro CSR</h4>
                         <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
+                        <ToggleButton v-model="editChecked" onLabel="Enviar" offLabel="Ver" onIcon="pi pi-send" offIcon="pi pi-eye" class="w-36" aria-label="Do you confirm" />
+
                         <IconField>
                             <InputIcon>
                                 <i class="pi pi-search" />
@@ -543,6 +573,86 @@ const searchAdmissions = async () => {
                     </template>
                     <template #filter="{ filterModel }">
                         <InputNumber v-model="filterModel.value" mode="currency" currency="PEN" locale="es-PE" />
+                    </template>
+                </Column>
+                <Column v-if="editChecked" field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem">
+                    <template #body="slotProps">
+                        <template v-if="!editChecked">
+                            <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isTramaDate" binary @blur="editTramaDate(slotProps.data)" />
+                        </template>
+
+                        <template v-else>
+                            <span v-if="slotProps.data.shipment?.trama_date">
+                                {{ dformat(slotProps.data.shipment.trama_date, 'DD/MM/YYYY') }}
+                            </span>
+                            <i v-else class="pi pi-clock text-yellow-500"></i>
+                        </template>
+                    </template>
+                </Column>
+                <Column v-if="editChecked" field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem">
+                    <template #body="slotProps">
+                        <template v-if="!editChecked">
+                            <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isCourierDate" binary @blur="editCourierDate(slotProps.data)" />
+                        </template>
+
+                        <template v-else>
+                            <span v-if="slotProps.data.shipment?.courier_date">
+                                {{ dformatLocal(slotProps.data.shipment.courier_date, 'DD/MM/YYYY') }}
+                            </span>
+                            <i v-else class="pi pi-clock text-yellow-500"></i>
+                        </template>
+                    </template>
+                </Column>
+                <Column v-if="editChecked" field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
+                    <template #body="slotProps">
+                        <template v-if="!editChecked">
+                            <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isEmailVerifiedDate" binary @blur="editEmailDate(slotProps.data)" />
+                        </template>
+
+                        <template v-else>
+                            <span v-if="slotProps.data.shipment?.email_verified_date">
+                                {{ dformatLocal(slotProps.data.shipment.email_verified_date, 'DD/MM/YYYY') }}
+                            </span>
+                            <i v-else class="pi pi-clock text-yellow-500"></i>
+                        </template>
+                    </template>
+                </Column>
+                <Column v-if="editChecked" field="shipment.url_sustenance" header="URL Sust." sortable style="min-width: 5rem">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.shipment && slotProps.data.shipment.url_sustenance">
+                            <a :href="slotProps.data.shipment.url_sustenance" target="_blank">
+                                <i class="pi pi-external-link text-blue-500"></i>
+                            </a>
+                        </span>
+                        <span v-else>
+                            <i class="pi pi-clock text-yellow-500"></i>
+                        </span>
+                    </template>
+                    <template #editor="slotProps">
+                        <InputText v-if="slotProps.data.shipment" v-model="slotProps.data.shipment.url_sustenance" @blur="editUrlSustenance(slotProps.data)" />
+                        <span v-else>
+                            <i class="pi pi-clock text-yellow-500"></i>
+                        </span>
+                    </template>
+                </Column>
+                <Column v-if="editChecked" field="shipment.remarks" header="Comentarios" sortable style="min-width: 5rem">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.shipment && slotProps.data.shipment.remarks">
+                            {{ slotProps.data.shipment.remarks }}
+                        </span>
+                        <span v-else>
+                            <i class="pi pi-clock text-yellow-500"></i>
+                        </span>
+                    </template>
+                </Column>
+                <Column v-if="editChecked" field="shipment.verified_shipment_date" sortable style="min-width: 5rem" header="Verif. Envío">
+                    <template #body="slotProps">
+                        <span v-if="slotProps.data.shipment && slotProps.data.shipment.verified_shipment_date">
+                            <span class="text-green-500">{{ dformatLocal(slotProps.data.shipment.verified_shipment_date, 'DD/MM/YYYY') }}</span>
+                        </span>
+                        <span v-else>
+                            <i class="pi pi-clock text-yellow-500"></i>
+                        </span>
                     </template>
                 </Column>
                 <Column field="status" header="Estado" sortable style="min-width: 7rem">
