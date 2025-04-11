@@ -104,18 +104,18 @@ const loadData = async () => {
 
     insurers.value = await insurersStore.initializeStore();
 
-    console.log('insurers', insurers.value);
+    //console.log('insurers', insurers.value);
     let payloadAdmissions = {
         start_date: dformat(starDate.value, 'MM-DD-YYYY'),
         end_date: dformat(endDate.value, 'MM-DD-YYYY')
     };
     admissions.value = await admissionsStore.initializeStoreAdmissionsDateRangeApiDashboard(payloadAdmissions);
-    console.log('Admisiones', admissions.value);
+    // console.log('Admisiones', admissions.value);
 
     admissionsLists.value = await admissionsListStore.initializeStoreByPeriod(period.value);
     loadingData.value = false;
 
-    console.log('Listas', admissionsLists.value);
+    //console.log('Listas', admissionsLists.value);
 };
 
 const processAdmissions = async (data) => {
@@ -333,8 +333,6 @@ const processAdmissionsLists = async (data) => {
             auditorsList.value.add(admission.audit.auditor);
 
             admission.statusAuditor = admission.paid_invoice_number ? 'PAGADO' : admission.isDevolution ? 'DEVOLUCION' : 'AUDITADO';
-
-            console.log('Admision', admission);
 
             updateAuditorsData(auditorsData, admission);
             updateAuditorsData(auditorsDataSoles, admission, true);
@@ -732,7 +730,7 @@ function setChartOptionsInsurers() {
 }
 
 function setChartDataAuditors(data) {
-    const colorList = ['#00B294', '#FFD740', '#FF6F61'];
+    const colorList = ['#00C49A', '#FFB300', '#FF5252'];
 
     // Convertir el Set en array
     let auditors = Array.from(auditorsList.value);
@@ -848,32 +846,13 @@ function setChartOptionsAuditors() {
 }
 
 function setChartDataBillers(dataSet) {
+    // añade un comentario que describa cada color
     const colorList = [
-        '#00B294',
-        '#FFD740',
-        '#3CB44B',
-        '#FF6384',
-        '#36A2EB',
-        '#FFCE56',
-        '#4BC0C0',
-        '#9966FF',
-        '#FF9F40',
-        '#E6194B',
-        '#FFE119',
-        '#0082C8',
-        '#F58231',
-        '#911EB4',
-        '#46F0F0',
-        '#F032E6',
-        '#D2F53C',
-        '#FABEBE',
-        '#008080',
-        '#E6BEFF',
-        '#AA6E28',
-        '#800000',
-        '#A9A9A9'
+        '#00C49A', // Verde menta vibrante
+        '#4285F4', // Azul Google moderno
+        '#FFB300', // Amarillo fuerte con buen contraste
+        '#FF5252' // Rojo coral intenso
     ];
-
     // Convertir el Set en array
     let billers = Array.from(billersList.value);
 

@@ -8,6 +8,7 @@ import { useShipmentsStore } from '@/stores/shipmentsStore';
 import { classifyAdmissionsLists } from '@/utils/dataProcessingHelpers';
 import { dformat, dformatLocal, getDaysPassed } from '@/utils/day';
 import { exportToExcel, loadExcelFile, processDataDatabaseSettlements, validateData, validateHeaders } from '@/utils/excelUtils';
+import indexedDB from '@/utils/indexedDB';
 import { formatCurrency } from '@/utils/validationUtils';
 import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { useToast } from 'primevue/usetoast';
@@ -339,20 +340,6 @@ const formatDevolutionsPending = (data) => {
     });
 };
 
-async function getShipmentByAdmissionsList(admissionsList) {
-    // devolver un array de numeros de admisiones , el campo que necesito es number
-    const admissionNumbers = admissionsList.map((admission) => admission.number);
-
-    let response = await shipmentsStore.fetchShipmentsByAdmissionsList({ admissionsList: admissionNumbers });
-
-    console.log(response);
-
-    if (response.success) {
-        shipments.value = response.data;
-    } else {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar los envíos', life: 3000 });
-    }
-}
 const formatAdmissions = async (data) => {
     // Agrupar por número de admisión
     const groupedAdmissions = data.reduce((acc, admission) => {
@@ -419,11 +406,17 @@ const formatAdmissions = async (data) => {
         }
 
         // Solo establece 'Enviado' si el estado no es 'Pagado'
-        if (admission.status !== 'Pagado' && shipmentsData[admission.invoice_number] && shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
+        if (admission.status !== 'Pagado' && shipmentsData[admission.invoice_number]) {
             admission.shipment = shipmentsData[admission.invoice_number];
-            admission.status = 'Enviado';
-            admission.shipment = shipmentsData[admission.invoice_number];
-            console.log(admission);
+            admission.isTramaDate = admission.shipment?.trama_date ? true : false;
+            admission.isCourierDate = admission.shipment?.courier_date ? true : false;
+            admission.isEmailVerifiedDate = admission.shipment?.email_verified_date ? true : false;
+            admission.isUrlSustenance = admission.shipment?.url_sustenance ? true : false;
+            admission.isVerifiedShipmentDate = admission.shipment?.verified_shipment_date ? true : false;
+            if (shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
+                admission.status = 'Enviado';
+            }
+            console.log('enviado', admission);
         }
 
         // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
@@ -460,6 +453,77 @@ const searchAdmissions = async () => {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     }
     formatAdmissions(data);
+};
+
+const editShipmentDate = async (admission, field, flagField) => {
+    if (admission.shipment) {
+        let shipment = admission.shipment;
+        let payloadShipment = {
+            id: shipment.id,
+            [field]: admission[flagField] ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+        };
+
+        let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+        if (success) {
+            let index = admissions.value.findIndex((item) => item.id === admission.id);
+            admissions.value[index].shipment[field] = payloadShipment[field];
+            admissions.value[index][flagField] = admission[flagField];
+
+            await indexedDB.setItem('admissions', admissions.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío actualizado correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+        }
+    } else {
+        let newShipmentPayload = {
+            admission_number: admission.number,
+            invoice_number: admission.invoice_number,
+            [field]: admission[flagField] ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
+        };
+
+        console.log(newShipmentPayload);
+
+        let { data, success } = await shipmentsStore.createShipment(newShipmentPayload);
+        if (success) {
+            let index = admissions.value.findIndex((item) => item.id === admission.id);
+            admissions.value[index].shipment_id = data.id;
+            admissions.value[index].shipment = data;
+            admissions.value[index].shipment[field] = newShipmentPayload[field];
+            admissions.value[index][flagField] = admission[flagField];
+
+            await indexedDB.setItem('admissions', admissions.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'Envío creado correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al crear el envío', life: 3000 });
+        }
+    }
+};
+
+// Funciones específicas llamando a la función genérica
+const editTramaDate = (admission) => editShipmentDate(admission, 'trama_date', 'isTramaDate');
+const editCourierDate = (admission) => editShipmentDate(admission, 'courier_date', 'isCourierDate');
+const editEmailDate = (admission) => editShipmentDate(admission, 'email_verified_date', 'isEmailVerifiedDate');
+
+const editUrlSustenance = async (admission) => {
+    admission.shipment.url_sustenance = admission.shipment.url_sustenance ? admission.shipment.url_sustenance : '';
+
+    if (admission.shipment) {
+        let shipment = admission.shipment;
+        let payloadShipment = {
+            id: shipment.id,
+            url_sustenance: admission.shipment.url_sustenance
+        };
+        let success = await shipmentsStore.updateShipment(payloadShipment, shipment.id);
+        if (success) {
+            let index = admissions.value.findIndex((item) => item.id === admission.id);
+            admissions.value[index].shipment.url_sustenance = payloadShipment.url_sustenance;
+            admissions.value[index].shipment.url_sustenance = admissions.value[index].shipment.url_sustenance ? admissions.value[index].shipment.url_sustenance : '';
+            await indexedDB.setItem('admissions', admissions.value);
+            toast.add({ severity: 'success', summary: 'Éxito', detail: 'URL Sust. actualizada correctamente', life: 3000 });
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar el envío', life: 3000 });
+        }
+    }
 };
 </script>
 
@@ -508,12 +572,13 @@ const searchAdmissions = async () => {
                 stripedRows
                 size="small"
                 filterDisplay="menu"
-                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'biller', 'amount', 'patient', 'status', 'medical_record_number']"
+                :globalFilterFields="['number', 'attendance_date', 'daysPassed', 'doctor', 'insurer_name', 'invoice_number', 'invoice_date', 'biller', 'amount', 'patient', 'status', 'medical_record_number']"
                 :loading="admissionsStore.loading"
                 paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
                 :rowsPerPageOptions="[5, 10, 25, 50, 100]"
                 showGridlines
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} admisiones"
+                editMode="cell"
             >
                 <template #header>
                     <div class="flex flex-wrap gap-2 items-center justify-between">
@@ -558,6 +623,11 @@ const searchAdmissions = async () => {
                     </template>
                 </Column>
                 <Column field="invoice_number" header="Factura" sortable style="min-width: 8rem"></Column>
+                <Column field="invoice_date" header="Fecha Factura" sortable style="min-width: 5rem">
+                    <template #body="slotProps">
+                        {{ slotProps.data.invoice_date ? dformatLocal(slotProps.data.invoice_date, 'DD/MM/YYYY') : '-' }}
+                    </template>
+                </Column>
                 <Column field="biller" header="Facturador" sortable style="min-width: 7rem">
                     <template #body="{ data }">
                         {{ data.biller }}
@@ -577,7 +647,7 @@ const searchAdmissions = async () => {
                 </Column>
                 <Column v-if="editChecked" field="shipment.trama_date" header="Env. Trama" sortable style="min-width: 5rem">
                     <template #body="slotProps">
-                        <template v-if="!editChecked">
+                        <template v-if="editChecked && slotProps.data.invoice_number && slotProps.data.status !== 'Pagado'">
                             <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isTramaDate" binary @blur="editTramaDate(slotProps.data)" />
                         </template>
 
@@ -591,7 +661,7 @@ const searchAdmissions = async () => {
                 </Column>
                 <Column v-if="editChecked" field="shipment.courier_date" header="Env. Currier" sortable style="min-width: 5rem">
                     <template #body="slotProps">
-                        <template v-if="!editChecked">
+                        <template v-if="editChecked && slotProps.data.invoice_number && slotProps.data.status !== 'Pagado'">
                             <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isCourierDate" binary @blur="editCourierDate(slotProps.data)" />
                         </template>
 
@@ -605,7 +675,7 @@ const searchAdmissions = async () => {
                 </Column>
                 <Column v-if="editChecked" field="shipment.email_verified_date" header="Env. Email" sortable style="min-width: 5rem">
                     <template #body="slotProps">
-                        <template v-if="!editChecked">
+                        <template v-if="editChecked && slotProps.data.invoice_number && slotProps.data.status !== 'Pagado'">
                             <Checkbox :disabled="slotProps.data.isVerifiedShipmentDate" v-model="slotProps.data.isEmailVerifiedDate" binary @blur="editEmailDate(slotProps.data)" />
                         </template>
 
