@@ -416,7 +416,6 @@ const formatAdmissions = async (data) => {
             if (shipmentsData[admission.invoice_number]?.verified_shipment_date !== null) {
                 admission.status = 'Enviado';
             }
-            console.log('enviado', admission);
         }
 
         // Asignar el periodo de envío de la aseguradora a la admisión para mostrarlo en la tabla de admisiones
@@ -480,8 +479,6 @@ const editShipmentDate = async (admission, field, flagField) => {
             invoice_number: admission.invoice_number,
             [field]: admission[flagField] ? new Date().toISOString().slice(0, 19).replace('T', ' ') : null
         };
-
-        console.log(newShipmentPayload);
 
         let { data, success } = await shipmentsStore.createShipment(newShipmentPayload);
         if (success) {
