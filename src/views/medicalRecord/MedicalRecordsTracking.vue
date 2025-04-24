@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/stores/authStore';
 import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsStore';
 import { dformat } from '@/utils/day';
+import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
@@ -61,17 +62,20 @@ onMounted(async () => {
     const responseMedicalRecords = await medicalRecordsRequestsStore.fetchMedicalRecordsRequestsByDateRange(payload);
 
     if (responseMedicalRecords.data) {
-        medicalRecords.value = responseMedicalRecords.data;
-
-        if (medicalRecords.value.length > 0) {
-            medicalRecords.value.forEach((medicalRecord) => {
-                medicalRecord.isConfirmedReceipt = !!medicalRecord.confirmed_receipt_date;
-                medicalRecord.isConfirmedReturn = !!medicalRecord.confirmed_return_date;
-            });
-        }
+        formatMedicalRecord(responseMedicalRecords.data);
         toast.add({ severity: 'success', summary: 'Éxito', detail: 'Datos cargados correctamente', life: 3000 });
     }
 });
+
+const formatMedicalRecord = (data) => {
+    medicalRecords.value = data;
+    if (medicalRecords.value.length > 0) {
+        medicalRecords.value.forEach((medicalRecord) => {
+            medicalRecord.isConfirmedReceipt = !!medicalRecord.confirmed_receipt_date;
+            medicalRecord.isConfirmedReturn = !!medicalRecord.confirmed_return_date;
+        });
+    }
+};
 
 const searchMedicalRecordsByDate = async () => {
     let payload = {
@@ -83,6 +87,7 @@ const searchMedicalRecordsByDate = async () => {
     if (!success) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al cargar las admisiones', life: 3000 });
     } else {
+        formatMedicalRecord(data);
         medicalRecords.value = data;
     }
 };
@@ -306,6 +311,23 @@ const editConfirmedReturn = async (medicalRecord) => {
         toast.add({ severity: 'error', summary: 'Error', detail: 'Error al actualizar la solicitud de historia', life: 3000 });
     }
 };
+
+const exportExcelMedicalRecords = async () => {
+    const columns = [
+        { header: 'N° Historia', key: 'medical_record_number', width: 15 },
+        { header: 'Paciente', key: 'patient', width: 30 },
+        { header: 'Aseguradora', key: 'insurer_name', width: 15 },
+        { header: 'Solicitante', key: 'requester_nick', width: 15 },
+        { header: 'Fecha Solicitud', key: 'request_date', width: 15, style: { numFmt: 'dd/mm/yyyy HH:mm:ss' } },
+        { header: 'Respondido por', key: 'requested_nick', width: 15 },
+        { header: 'Comentario', key: 'remarks', width: 15 },
+        { header: 'Fecha Respuesta', key: 'response_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Confirmación Recepción', key: 'confirmed_receipt_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Confirmación Devolución', key: 'confirmed_return_date', width: 15, style: { numFmt: 'dd/mm/yyyy' } },
+        { header: 'Estado', key: 'status', width: 15 }
+    ];
+    await exportToExcel(columns, medicalRecords.value, 'medical_records', 'medical_records');
+};
 </script>
 <template>
     <div class="card">
@@ -318,6 +340,8 @@ const editConfirmedReturn = async (medicalRecord) => {
                     <InputText v-model="searchMedicalRecord" placeholder="N° Historia" />
                 </IconField>
                 <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchByMedicalRecord" />
+
+                <Button label="Exportar" icon="pi pi-download" class="ml-2" @click="exportExcelMedicalRecords" />
             </template>
 
             <template #end>
