@@ -23,6 +23,7 @@ const searchMedicalRecord = ref(null);
 const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 const endDate = ref(new Date());
 
+const manualEntryMode = ref(false);
 function initFilters() {
     filters.value = {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS }
@@ -200,6 +201,7 @@ const editRemarks = async (medicalRecord) => {
     }
 };
 const searchPatient = async () => {
+    manualEntryMode.value = false;
     let dataPatient = await medicalRecordsRequestsStore.searchPatient(medicalRecord.value.medical_record_number);
 
     medicalRecord.value = {
@@ -207,6 +209,16 @@ const searchPatient = async () => {
     };
     if (!dataPatient) {
         toast.add({ severity: 'error', summary: 'Error', detail: 'No se encontró el paciente', life: 3000 });
+
+        // habilitar input para ingresar lo datos manualmente
+
+        manualEntryMode.value = true;
+        medicalRecord.value = {
+            medical_record_number: medicalRecord.value.medical_record_number, // conserva el número ingresado
+            patient: '',
+            insurer_name: '',
+            remarks: ''
+        };
     }
 };
 
@@ -328,6 +340,18 @@ const exportExcelMedicalRecords = async () => {
     ];
     await exportToExcel(columns, medicalRecords.value, 'medical_records', 'medical_records');
 };
+
+const handleDialogVisibility = (visible) => {
+    if (!visible) {
+        manualEntryMode.value = false;
+        medicalRecord.value = {
+            medical_record_number: '',
+            patient: '',
+            insurer_name: '',
+            remarks: ''
+        };
+    }
+};
 </script>
 <template>
     <div class="card">
@@ -340,8 +364,6 @@ const exportExcelMedicalRecords = async () => {
                     <InputText v-model="searchMedicalRecord" placeholder="N° Historia" />
                 </IconField>
                 <Button label="Buscar" icon="pi pi-search" class="ml-2" @click="searchByMedicalRecord" />
-
-                <Button label="Exportar" icon="pi pi-download" class="ml-2" @click="exportExcelMedicalRecords" />
             </template>
 
             <template #end>
@@ -373,6 +395,7 @@ const exportExcelMedicalRecords = async () => {
 
                     <Button type="button" icon="pi pi-filter-slash" label="Limpiar Filtros" outlined @click="clearFilter()" />
                     <Button type="button" severity="success" icon="pi pi-plus" label="Nueva Solicitud" @click="createNewRequest()" />
+                    <Button label="Exportar" icon="pi pi-download" class="ml-2" @click="exportExcelMedicalRecords" severity="secondary" />
                     <IconField>
                         <InputIcon>
                             <i class="pi pi-search" />
@@ -444,7 +467,7 @@ const exportExcelMedicalRecords = async () => {
             </Column>
         </DataTable>
     </div>
-    <Dialog v-model:visible="newRequestDialog" :style="{ width: '40vw' }" header="Añadir Solicitud de Historia" :modal="true" :closable="true">
+    <Dialog v-model:visible="newRequestDialog" :style="{ width: '40vw' }" header="Añadir Solicitud de Historia" :modal="true" :closable="true" @update:visible="handleDialogVisibility">
         <div class="flex flex-col gap-6">
             <div style="display: flex; align-items: center; gap: 0.5rem">
                 <IconField>
@@ -457,15 +480,15 @@ const exportExcelMedicalRecords = async () => {
             </div>
             <div>
                 <label for="medical_record_number" class="block font-bold mb-3">N° Historia</label>
-                <InputText id="medical_record_number" v-model.trim="medicalRecord.medical_record_number" required="true" fluid disabled />
+                <InputText id="medical_record_number" v-model.trim="medicalRecord.medical_record_number" :disabled="!manualEntryMode" required fluid />
             </div>
             <div>
                 <label for="patient" class="block font-bold mb-3">Paciente</label>
-                <InputText id="patient" v-model.trim="medicalRecord.patient" required="true" fluid disabled />
+                <InputText id="patient" v-model.trim="medicalRecord.patient" disabled required fluid />
             </div>
             <div>
                 <label for="insurer_name" class="block font-bold mb-3">Aseguradora</label>
-                <InputText id="patient" v-model.trim="medicalRecord.insurer_name" required="true" fluid disabled />
+                <InputText id="patient" v-model.trim="medicalRecord.insurer_name" disabled required fluid />
             </div>
             <div>
                 <label for="remarks" class="block font-bold mb-3">Comentario</label>
