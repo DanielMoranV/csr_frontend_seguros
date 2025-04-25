@@ -4,6 +4,7 @@ import { useMedicalRecordsRequestsStore } from '@/stores/medicalRecordsRequestsS
 import { dformat } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
+import useEcho from '@/utils/usePusher';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
@@ -29,6 +30,47 @@ function initFilters() {
         global: { value: null, matchMode: FilterMatchMode.CONTAINS }
     };
 }
+
+const listenForMedicalRecordEvents = () => {
+    useEcho.channel('medical-record-requests').listen('.request.sent', async (e) => {
+        console.log('Evento recibido:', e); // Log de todo el evento
+        console.log('Solicitud recibida remotamente:', e.medical_record_request);
+
+        const newRequest = e.medical_record_request;
+
+        // Verifica si ya existe la solicitud (actualización)
+        const index = medicalRecords.value.findIndex((record) => record.id === newRequest.id);
+
+        if (index !== -1) {
+            // Actualizar solicitud existente
+            medicalRecords.value[index] = {
+                ...medicalRecords.value[index],
+                ...newRequest
+            };
+
+            toast.add({
+                severity: 'info',
+                summary: 'Solicitud actualizada',
+                detail: `La solicitud #${newRequest.id} fue actualizada por otro usuario`,
+                life: 3000
+            });
+        } else {
+            // Agregar nueva solicitud
+            medicalRecords.value.unshift(newRequest);
+
+            toast.add({
+                severity: 'success',
+                summary: 'Nueva solicitud',
+                detail: `Se ha registrado una nueva solicitud de historia clínica`,
+                life: 3000
+            });
+        }
+
+        // Persistir en IndexedDB
+        await indexedDB.setItem('medicalRecordsRequests', medicalRecords.value);
+    });
+};
+
 onBeforeMount(() => {
     initFilters();
 });
@@ -53,6 +95,8 @@ function clearFilter() {
     initFilters();
 }
 onMounted(async () => {
+    listenForMedicalRecordEvents();
+
     nickName.value = authStore.getNickName;
     position.value = authStore.getUser.position;
     const payload = {
