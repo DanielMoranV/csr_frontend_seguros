@@ -4,6 +4,7 @@ import {
     deleteMedicalRecordsRequest,
     fetchMedicalRecordsRequests,
     fetchMedicalRecordsRequestsByDateRange,
+    fetchMedicalRecordsRequestsById,
     fetchMedicalRecordsRequestsByNumber,
     updateMedicalRecordsRequest,
     updateMedicalRecordsRequests
@@ -108,6 +109,18 @@ export const useMedicalRecordsRequestsStore = defineStore('medicalRecordsRequest
             this.loading = false;
             return { success: this.success, data: this.medicalRecordsRequests };
         },
+
+        async patientsByNumbers(numbers) {
+            this.loading = true;
+            let { results, errors } = await FastApiService.patientsByNumbers(numbers);
+            // Imprimir errores si existen
+            if (errors?.length) {
+                console.error('Errores en la consulta a FastAPI:', errors);
+            }
+            this.loading = false;
+
+            return results;
+        },
         async fetchMedicalRecordsRequestsByNumber(payload) {
             this.loading = true;
             const { data } = await handleResponseStore(fetchMedicalRecordsRequestsByNumber(payload), this);
@@ -133,6 +146,32 @@ export const useMedicalRecordsRequestsStore = defineStore('medicalRecordsRequest
             }
             this.loading = false;
             return { success: this.success, data: this.medicalRecordsRequests };
+        },
+
+        async fetchMedicalRecordsRequestsById(id) {
+            this.loading = true;
+            const { data } = await handleResponseStore(fetchMedicalRecordsRequestsById(id), this);
+
+            if (this.success) {
+                const patientNumber = data.medical_record_number.replace(/^0+/, '');
+
+                const { results, errors } = await FastApiService.patientsByNumbers([patientNumber]);
+
+                console.log('errors', errors);
+
+                // Buscar directamente
+                const patient = results.find((result) => result.medical_record_number.replace(/^0+/, '') === patientNumber);
+
+                const combinedObject = { ...data, ...patient };
+
+                if (combinedObject.medical_record_number) {
+                    return { success: this.success, data: combinedObject };
+                } else {
+                    return { success: this.success, data: [] };
+                }
+            } else {
+                return { success: this.success, data: [] };
+            }
         },
 
         async createMedicalRecordsRequest(payload) {

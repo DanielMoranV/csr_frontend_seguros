@@ -533,6 +533,16 @@ const editConfirmedReturn = async (admission) => {
                     </span>
                 </template>
             </Column>
+            <Column field="is_closed" header="Liquid." sortable>
+                <template #body="slotProps">
+                    <i
+                        :class="{
+                            'pi pi-check-circle text-green-500': slotProps.data.is_closed,
+                            'pi pi-times-circle text-red-500': !slotProps.data.is_closed
+                        }"
+                    ></i>
+                </template>
+            </Column>
             <Column field="invoice_number" header="Factura" sortable style="min-width: 5rem">
                 <template #body="slotProps">
                     <span v-if="slotProps.data.invoice_number">

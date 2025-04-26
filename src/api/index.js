@@ -87,6 +87,7 @@ export const fetchAuditsDateRange = (payload) => axios.post('/audits/by-date-ran
 
 // Medical Records Requests
 export const fetchMedicalRecordsRequests = () => axios.get('/medical-records-requests');
+export const fetchMedicalRecordsRequestsById = (id) => axios.get(`/medical-records-requests/${id}`);
 export const createMedicalRecordsRequest = (payload) => axios.post('/medical-records-requests', payload);
 export const updateMedicalRecordsRequest = (payload, id) => axios.put(`/medical-records-requests/${id}`, payload);
 export const deleteMedicalRecordsRequest = (id) => axios.delete(`/medical-records-requests/${id}`);

@@ -5,10 +5,13 @@ import { dformat } from '@/utils/day';
 import { exportToExcel } from '@/utils/excelUtils';
 import indexedDB from '@/utils/indexedDB';
 import useEcho from '@/utils/usePusher';
+import { useSound } from '@/utils/useSound';
 import { FilterMatchMode } from '@primevue/core/api';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
 import { onBeforeMount, onMounted, ref } from 'vue';
+
+const { playNotificationSound } = useSound();
 
 const toast = useToast();
 const confirm = useConfirm();
@@ -23,6 +26,7 @@ const filters = ref(null);
 const searchMedicalRecord = ref(null);
 const starDate = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 const endDate = ref(new Date());
+const userId = ref(null);
 
 const manualEntryMode = ref(false);
 function initFilters() {
@@ -36,34 +40,55 @@ const listenForMedicalRecordEvents = () => {
         console.log('Evento recibido:', e); // Log de todo el evento
         console.log('Solicitud recibida remotamente:', e.medical_record_request);
 
-        const newRequest = e.medical_record_request;
+        const newRequestId = e.medical_record_request.id;
+        const userEmitId = e.user_id;
+
+        if (userId.value == userEmitId) {
+            return;
+        }
 
         // Verifica si ya existe la solicitud (actualización)
-        const index = medicalRecords.value.findIndex((record) => record.id === newRequest.id);
+        const index = medicalRecords.value.findIndex((record) => record.id === newRequestId);
 
         if (index !== -1) {
             // Actualizar solicitud existente
-            medicalRecords.value[index] = {
-                ...medicalRecords.value[index],
-                ...newRequest
-            };
-
-            toast.add({
-                severity: 'info',
-                summary: 'Solicitud actualizada',
-                detail: `La solicitud #${newRequest.id} fue actualizada por otro usuario`,
-                life: 3000
-            });
+            const newRequest = await medicalRecordsRequestsStore.fetchMedicalRecordsRequestsById(newRequestId);
+            playNotificationSound();
+            if (newRequest.success) {
+                medicalRecords.value[index] = newRequest.data;
+                toast.add({
+                    severity: 'info',
+                    summary: 'Solicitud actualizada',
+                    detail: `La solicitud #${newRequest.data.id} fue actualizada por otro usuario`,
+                    life: 3000
+                });
+            }
         } else {
             // Agregar nueva solicitud
-            medicalRecords.value.unshift(newRequest);
 
-            toast.add({
-                severity: 'success',
-                summary: 'Nueva solicitud',
-                detail: `Se ha registrado una nueva solicitud de historia clínica`,
-                life: 3000
-            });
+            const newRequest = await medicalRecordsRequestsStore.fetchMedicalRecordsRequestsById(newRequestId);
+
+            console.log('newRequest', newRequest);
+            if (newRequest.success) {
+                medicalRecords.value.unshift(newRequest.data);
+                playNotificationSound();
+                toast.add({
+                    severity: 'success',
+                    summary: 'Nueva solicitud',
+                    detail: `Se ha registrado una nueva solicitud de historia clínica`,
+                    life: 3000
+                });
+            } else {
+                console.log('Error', newRequest);
+                toast.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: `Error al obtener la solicitud de historia clínica`,
+                    life: 3000
+                });
+            }
+
+            //medicalRecords.value.unshift(newRequest);
         }
 
         // Persistir en IndexedDB
@@ -99,6 +124,7 @@ onMounted(async () => {
 
     nickName.value = authStore.getNickName;
     position.value = authStore.getUser.position;
+    userId.value = authStore.getUser.id;
     const payload = {
         from: dformat(starDate.value, 'YYYY-MM-DD'),
         to: dformat(new Date(endDate.value.setHours(23, 0, 0, 0)), 'YYYY-MM-DD HH:mm:ss')
